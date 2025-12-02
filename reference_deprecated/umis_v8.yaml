@@ -1,0 +1,363 @@
+# ========================================
+# UMIS v8.0.0 - Value OS Skeleton (4-Plane + Value Engine)
+# File: umis_v8.yaml
+# ========================================
+
+umis_v8:
+  meta:
+    version: "8.0.0"
+    base_version: "7.11.x"
+    status: "design_review"
+    last_updated: "2025-12-01"
+    description: >
+      UMIS v8은 Value Graph를 중심으로 하는 4-Plane 아키텍처를 가진다.
+      Value Engine은 metric 단위로 Evidence/Calculation/Prior/Fusion을 조합해
+      결정 가능한 숫자(Decision-grade Numbers)를 Value Store(VAL-*)로 생산한다.
+
+  id_namespace:
+    prefixes:
+      SRC: "원천 데이터 (Validator)"
+      EST: "Estimator 이벤트/추정 결과 (학습/메모리용)"
+      VAL: "Value Store의 Canonical Value Record (SSoT)"
+      ASM: "Assumption (시나리오/민감도 입력)"
+      OPP: "기회 가설"
+      DEL: "산출물"
+      CAN: "Canonical Index 청크"
+      PRJ: "Projected Index 청크"
+      GND: "Graph Node"
+      GED: "Graph Edge"
+      MEM: "Guardian Memory"
+      RAE: "Guardian Evaluation"
+      tool: "System RAG 도구 키"
+    rules:
+      - "Business Layer(Observer/Explorer/Strategist)는 수치 사용 시 VAL-*만 직접 참조"
+      - "EST-*는 추정 이벤트/메모리 추적용으로만 사용(직접 노출 금지)"
+      - "CAN/PRJ/GND/GED는 RAG/Graph 내부에 한정"
+
+  terminology:
+    planes:
+      interaction_plane: "CLI/Web/API/Agent Call 등, UMIS와 상호작용하는 엔드포인트 계층"
+      agent_plane: "도메인/업무 역할을 가진 에이전트 계층"
+      data_plane: "RAG/KG/Raw/Memory 등 Evidence를 저장·검색하는 계층"
+      compute_governance_plane: "Value Engine, Fusion, Policy, Guardian/Validator 계층"
+    source_tier:
+      source_tier_1_official: "정부/공식 통계, DART, 국제기구"
+      source_tier_1b_curated_internal: "검수된 패턴/KG YAML (내부 큐레이션)"
+      source_tier_2_commercial: "검증된 상업 리포트/증권사"
+      source_tier_3_structured_estimation: "Value Engine 기반 구조적 추정 결과"
+      source_tier_4_llm_baseline: "일반 LLM 지식(Prior)"
+    origin_level:
+      level_1_official: "Validator/Official"
+      level_1b_curated: "EvidenceCollector/Curated Internal"
+      level_2_validated: "Validator 추가 검증 데이터"
+      level_3_calculated: "Calculator(Fermi/공식) 산출"
+      level_4_prior: "Estimator Prior"
+
+  # ========================================
+  # PLANES
+  # ========================================
+  planes:
+    interaction_plane:
+      description: "UMIS와 상호작용하는 모든 엔드포인트 정의"
+      entrypoints:
+        cli:
+          examples:
+            - "python scripts/query_rag.py \"구독 모델\""
+            - "python scripts/query_system_rag.py tool:explorer:complete"
+        api:
+          examples:
+            - "REST/GraphQL/gRPC 엔드포인트 (향후 확장)"
+        agent_calls:
+          examples:
+            - "@Observer, 이 시장 구조 분석해줘"
+            - "@Explorer, 이 섹터 기회 포트폴리오 만들어줘"
+
+    agent_plane:
+      description: "도메인/업무 역할을 가진 에이전트와 워크플로 정의"
+      agents:
+        tier_1_business_analysis:
+          observer:
+            id: observer
+            name: Albert
+            classification: "Domain Agent"
+            responsibility:
+              - "시장 구조/가치사슬/행위자/메커니즘 관찰"
+              - "규모/마진 구조 종합(계산/추정은 Value Engine 호출)"
+            produces:
+              - "DEL-MARKET_REALITY_REPORT-*"
+            uses_value_engine: true
+            must_not:
+              - "값 직접 추정 금지(Value Engine 경유 필수)"
+          explorer:
+            id: explorer
+            name: Steve
+            classification: "Domain Agent"
+            responsibility:
+              - "패턴/사례 기반 기회 발굴(RAG + Graph)"
+              - "기회별 Rough sizing/ROI 시사점 도출"
+            produces:
+              - "DEL-OPP_PORTFOLIO-*"
+            uses_value_engine: true
+            rules:
+              - "Draft 단계 Prior 사용 허용(명시적 experimental 태깅)"
+              - "보고/의사결정 수치 사용 전에는 항상 Value Engine 재계산"
+        tier_2_value_production:
+          calculator:
+            id: calculator
+            name: Bill
+            classification: "Support Agent"
+            role: "Formula Orchestrator & Fermi Decomposition & Convergence"
+            internal_tools:
+              - "calculator_engine"
+              - "fermi_decomposer"
+            tracks:
+              exact:
+                allow_estimated_inputs: false
+                write_to_value_store: true
+              convergence:
+                allow_estimated_inputs: true
+                write_to_value_store: false
+              fermi:
+                allow_estimated_inputs: true
+                write_to_value_store: false
+          estimator:
+            id: estimator
+            name: Fermi
+            classification: "Support Agent"
+            role: "Generative Prior Specialist (Last Resort)"
+            notes:
+              - "Estimator는 LLM Prior에 집중, 재귀 금지"
+              - "구조 기반 분해를 보조하되, 최종 Fusion은 전역 엔진이 담당"
+          validator:
+            id: validator
+            name: Rachel
+            classification: "Support Agent"
+            role: "Active Data Hunter + Definition/Lineage 검증"
+            operates_on:
+              - "source_tier_1_official"
+              - "source_tier_1b_curated_internal"
+              - "source_tier_2_commercial"
+        tier_3_supervision:
+          guardian:
+            id: guardian
+            name: Stewart
+            classification: "Supervision Agent"
+            role: "Policy/Quality/Memory/CircuitBreaker 감독"
+            outputs:
+              - ".project_meta.yaml"
+              - "deliverables_registry.yaml"
+              - "rae_memory.jsonl"
+      workflows:
+        observer_default:
+          entry_agent: observer
+          description: "시장 구조/가치사슬 관찰 기반 리포트 작성"
+          steps:
+            - "시장/세그먼트 정의"
+            - "구조/행위자/거래 메커니즘 관찰"
+            - "핵심 지표에 대해 value_engine.get 호출"
+            - "ValueRecord(VAL-*) 기반 구조/마진 구조 정리"
+            - "Guardian/Validator Fact-check 후 보고"
+        explorer_default:
+          entry_agent: explorer
+          description: "패턴/사례 기반 기회 발굴 및 Rough sizing"
+          steps:
+            - "패턴/사례 탐색(CAN/PRJ/KG)"
+            - "OPP 후보 생성"
+            - "기회별 핵심 지표에 대해 value_engine.get 호출"
+            - "ValueRecord(VAL-*) 기반 Rough sizing/검증"
+            - "Guardian/Validator 검증 후 포트폴리오 확정"
+
+    data_plane:
+      description: "Evidence를 저장/검색하는 모든 데이터 계층"
+      rag:
+        canonical_index:
+          id_prefix: "CAN-"
+          purpose: "정규화 원본 청크"
+          anchor_strategy: "anchor_path + content_hash"
+        projected_index:
+          id_prefix: "PRJ-"
+          purpose: "Agent/Task별 검색용 뷰"
+          projection_rules_ref: "config/projection_rules.yaml"
+      knowledge_graph:
+        node_prefix: "GND-"
+        edge_prefix: "GED-"
+        source_data:
+          type: "curated_yaml"
+          onboarding:
+            from_yaml_paths:
+              - "data/raw/umis_business_model_patterns.yaml"
+            policy: "prevalidated_by_user"
+          sot_integration:
+            treat_as: "evidence_high"
+            notes:
+              - "KG 수치/비율은 curated_internal로 분류"
+              - "EvidenceCollector fast path에 포함"
+      memory:
+        types:
+          - "MEM-query-*"
+          - "MEM-goal-*"
+          - "RAE-eval-*"
+        usage:
+          - "순환 방지"
+          - "목표 정렬"
+          - "평가 재사용"
+      data_sources:
+        source_tier:
+          source_tier_1_official: "정부/공식 통계, DART, 국제기구"
+          source_tier_1b_curated_internal: "검수된 패턴/KG YAML (내부 큐레이션)"
+          source_tier_2_commercial: "검증된 상업 리포트/증권사"
+          source_tier_3_structured_estimation: "Value Engine 기반 구조적 추정 결과"
+          source_tier_4_llm_baseline: "일반 LLM 지식(Prior)"
+
+    compute_governance_plane:
+      description: "Value Engine + Fusion + Policy + Guardian/Validator"
+
+      value_store:
+        id_prefix: "VAL-"
+        storage:
+          registry_ref: "data/value_store.jsonl"
+        value_record:
+          schema_ref: "config/schema_registry.yaml#ValueRecord"
+          fields:
+            - "metric_id"
+            - "value"
+            - "unit"
+            - "period"
+            - "source_mix"
+            - "lineage"
+            - "certainty"
+            - "policy_tag"
+          rules:
+            - "Business Layer는 VAL-*만 직접 참조"
+            - "Value Engine 출력만 ValueRecord로 승격해 사용"
+
+      value_engine:
+        api:
+          get: "value_engine.get(metric_id, context, policy)"
+          description: "Metric/Context/Policy를 입력으로 Decision-grade ValueRecord(VAL-*)를 반환"
+        components:
+          value_graph_manager:
+            description: "Metric 정의/의존성/공식을 관리하는 내부 그래프 관리자"
+            specs_ref: "umis_v8.compute_governance_plane.value_engine.metrics_spec"
+          evidence_engine:
+            description: "Data Plane에서 EvidenceBundle 수집"
+            output_type: "EvidenceBundle"
+            schema_ref_output: "config/schema_registry.yaml#EvidenceBundle"
+          compute_engine:
+            calculator:
+              description: "공식/분해/수렴을 통한 TruthCandidateList 생성"
+              output_type: "TruthCandidateList"
+              schema_ref_output: "config/schema_registry.yaml#TruthCandidateList"
+            estimator:
+              description: "부족 변수 Prior 생성 (Last Resort)"
+              output_type: "EstimationEvent"
+              schema_ref_output: "config/schema_registry.yaml#EstimationEvent"
+          fusion_engine:
+            description: "Evidence/Calculated/Prior 후보를 합성해 최종 EstimationResult 생성"
+            output_type: "EstimationResult"
+            schema_ref_output: "config/schema_registry.yaml#EstimationResult"
+            implementation:
+              interface_ref: "umis_rag/estimation/domain/fusion_policy.py"
+              config_ref: "config/runtime.yaml#estimator.fusion"
+            invariants:
+              - "Evidence 우선(official/curated > commercial > calculated > prior)"
+              - "hard_bounds 준수 + 일관성 검증"
+              - "early_return 허용(Stage 1/2 확신 high)"
+
+        pipeline_defaults:
+          stages:
+            - "evidence_collection"
+            - "structured_calculation"
+            - "prior_filling"
+            - "fusion_and_validation"
+          description: "Metric별 파이프라인이 별도로 정의되지 않을 때 사용하는 기본 순서"
+
+        metrics_spec:
+          description: "Metric 단위 미니 파이프라인 정의 (Value Graph의 노드 스펙)"
+          defaults:
+            quality_requirements:
+              min_literal_ratio: 0.5
+              max_spread_ratio: 0.5
+            allow_prior: true
+          metrics:
+            - id: "TAM_Korea_EdTech_2025"
+              category: "market_size"
+              dimensions:
+                - "country"
+                - "sector"
+                - "year"
+              default_context:
+                country: "KR"
+                sector: "EdTech"
+                year: 2025
+              pipeline:
+                stages:
+                  - "evidence_official"
+                  - "structured_calculation"
+                  - "fusion"
+                allow_prior: false
+              quality_requirements:
+                min_literal_ratio: 0.7
+                max_spread_ratio: 0.3
+              notes:
+                - "성숙 시장으로 Prior 사용을 금지하고 Evidence/공식 중심으로 계산"
+            - id: "TAM_Global_NewCategory_2030"
+              category: "market_size"
+              dimensions:
+                - "region"
+                - "year"
+              pipeline:
+                stages:
+                  - "evidence_wide"
+                  - "structured_calculation"
+                  - "prior"
+                  - "fusion"
+                allow_prior: true
+              quality_requirements:
+                min_literal_ratio: 0.3
+                max_spread_ratio: 0.7
+              notes:
+                - "신규/불확실 시장으로 Prior 사용 허용, policy_tag=experimental 우선 적용"
+
+      policies:
+        modes:
+          evidence_only:
+            description: "Prior/Estimator 사용 금지, Official/Curated/Commercial + 공식만 허용"
+          evidence_preferred:
+            description: "기본은 Evidence/공식, 부족 구간에서 제한적으로 Prior 허용"
+          exploration_first:
+            description: "탐색/아이디어 단계, Prior 사용 허용 폭 확대, 결과는 experimental로 태깅"
+        fact_check_gate:
+          validator_approval_required: true
+          applies_to:
+            - "모든 최종 보고서"
+            - "사용자 노출 수치"
+        quality:
+          metrics:
+            - "min_literal_ratio"
+            - "max_spread_ratio"
+            - "min_convergence_methods"
+          defaults:
+            min_literal_ratio: 0.5
+            max_spread_ratio: 0.5
+
+      runtime:
+        llm_provider:
+          interface_ref: "umis_rag/core/llm_interface.py"
+          task_types:
+            - "prior_estimation"
+            - "fermi_decomposition"
+            - "fusion_validation"
+        modes:
+          default: "rag_full"
+          options:
+            - "yaml_only"
+            - "hybrid"
+            - "rag_full"
+        circuit_breaker_ref: "config/runtime.yaml"
+
+  migration_from_v7:
+    note: >
+      v8은 Value Graph/Value Engine 중심 구조로 재설계되었으며,
+      v7의 Estimator 4-Stage Fusion 및 Quantifier 구조는 직접적인 하위 호환을 보장하지 않는다.
+      필요한 경우 별도 마이그레이션 문서를 통해 v7 호출을 v8 Metric/Policy 조합으로 재매핑한다.

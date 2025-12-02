@@ -1,0 +1,790 @@
+---
+umis_v9:
+  meta:
+    version: "9.0.0-alpha"
+    codename: "Reality-Pattern-Value OS"
+    description: >
+      Universal Market Intelligence System v9 – 시장/비즈니스 세계를
+      Reality/Pattern/Value/Decision 그래프로 표현하고,
+      구조 이해·기회 발굴·전략 설계·학습까지 수행하는 OS의 상위 스켈레톤.
+    status: "design_skeleton"
+    authors:
+      - "umis-architect"
+    references:
+      - "umis_architecture_blueprint_v7.x"   # 6-Agent, 4-Layer RAG, Estimator 4-Stage 등  [oai_citation:0‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
+      - "UMIS_ARCHITECTURE_BLUEPRINT_v8"     # Value OS, Value Graph, Metrics Spec, 4 Planes 등  [oai_citation:1‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+
+  philosophy:
+    identity: >
+      UMIS v9는 시장/비즈니스 세계를
+      (현실 구조 Reality)·(반복 패턴 Pattern)·(값/지표 Value)·(목표/전략 Decision)으로
+      동시에 다루는 Market Intelligence OS이다.
+    core_principles:
+      - "Model-first, Number-second"           # 세계 모델(구조/패턴)이 먼저, 숫자는 그 위의 결과
+      - "Evidence-first, Prior-last"           # 가능하면 증거/공식/구조 우선, Prior는 최후 수단  [oai_citation:2‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+      - "Graph-of-Graphs: R/P/V/D"
+      - "Trait 기반 패턴/모델 정의로 Ontology lock-in 최소화"
+      - "모든 답 = (세계, 변화, 결과, 논증 구조)"
+      - "Monotonic Improvability & Re-runnability"  # 새 Evidence/패턴이 들어와도 재실행으로 자동 개선
+      - "Agent = Persona + Workflow (엔진이 아님)"  # v7 6-Agent 철학 계승, 역할만 담당  [oai_citation:3‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
+
+  # ------------------------------------------------------------------
+  # 1. Ontology – 공통 최소 단위 정의 (모든 그래프/엔진이 공유)
+  # ------------------------------------------------------------------
+  ontology:
+    primitives:
+      actor:
+        description: "시장/비즈니스 세계의 행위자 (회사, 고객 세그먼트, 파트너, 채널, 규제 기관 등)"
+        fields:
+          actor_id:      { type: "string", required: true }
+          kind:          { type: "enum", values: ["company","customer_segment","partner","channel","regulator","individual","asset_pool","other"] }
+          name:          { type: "string", required: true }
+          traits:        { type: "trait_set_ref", required: false }
+          metadata:      { type: "dict", extra_allowed: true }
+
+      event:
+        description: "한 시점에 발생한 상호작용/행동 (구매, 구독 시작/종료, 방문, 유지보수 수행 등)"
+        fields:
+          event_id:      { type: "string", required: true }
+          event_type:    { type: "string", required: true }      # 도메인별 enum 확장
+          timestamp:     { type: "datetime", required: true }
+          actor_ids:     { type: "list[actor_id]", required: true }
+          resource_ids:  { type: "list[resource_id]", required: false }
+          money_flow_ids:{ type: "list[money_flow_id]", required: false }
+          context_id:    { type: "context_id", required: false }
+          traits:        { type: "trait_set_ref", required: false }
+
+      resource:
+        description: "거래/제공/소비되는 대상 (물건, 서비스, 데이터, 주의력 등)"
+        fields:
+          resource_id:   { type: "string", required: true }
+          kind:          { type: "enum", values: ["digital_service","software_license","physical_good","labor","data","attention","other"] }
+          name:          { type: "string", required: true }
+          traits:        { type: "trait_set_ref", required: false }
+          metadata:      { type: "dict", extra_allowed: true }
+
+      money_flow:
+        description: "어떤 가치 이동에 수반되는 금전 흐름 (정기 결제, 일회성 결제, 성과 기반 지급 등)"
+        fields:
+          money_flow_id: { type: "string", required: true }
+          payer_id:      { type: "actor_id", required: true }
+          payee_id:      { type: "actor_id", required: true }
+          quantity:      { type: "quantity_ref", required: true }   # money 타입 quantity
+          recurrence:    { type: "enum", values: ["one_off","monthly","quarterly","yearly","usage_based","custom"] }
+          related_event_id: { type: "event_id", required: false }
+          traits:        { type: "trait_set_ref", required: false }
+
+      contract:
+        description: "권리/의무/조건을 규정하는 관계 (구독 계약, SLA, 라이선스 계약 등)"
+        fields:
+          contract_id:   { type: "string", required: true }
+          party_ids:     { type: "list[actor_id]", required: true }
+          effective_from:{ type: "date", required: true }
+          effective_to:  { type: "date", required: false }
+          terms:         { type: "dict", required: false }
+          traits:        { type: "trait_set_ref", required: false }
+
+      state:
+        description: "시점별 속성/상태 (마진 구조, 경쟁 강도, 규제 레벨 등)"
+        fields:
+          state_id:      { type: "string", required: true }
+          target_type:   { type: "enum", values: ["actor","resource","market_segment","other"] }
+          target_id:     { type: "string", required: true }
+          as_of:         { type: "date", required: true }
+          properties:    { type: "dict", required: true }
+          traits:        { type: "trait_set_ref", required: false }
+
+      trait:
+        description: "Actor/Event/Resource/Pattern 등에 붙는 의미론적 라벨/속성 (delivery_channel, revenue_model 등)"
+        fields:
+          trait_id:      { type: "string", required: true }
+          key:           { type: "string", required: true }
+          value:         { type: "any", required: true }
+          value_type:    { type: "enum", values: ["enum","numeric","boolean","string","range","distribution"] }
+          origin:        { type: "enum", values: ["inferred","declared","learned"] }
+
+      quantity:
+        description: "단위/치수를 가진 값 (Money, Time, Count, Ratio 등) – Metric보다 더 아래 레벨의 값"
+        fields:
+          quantity_id:   { type: "string", required: true }
+          kind:          { type: "enum", values: ["money","time","count","ratio","index","custom"] }
+          amount:        { type: "number", required: true }
+          unit:          { type: "string", required: true }   # "KRW","USD","month","user" 등
+          per:           { type: "string", required: false }  # "month","user","year" 등
+          metadata:      { type: "dict", extra_allowed: true }
+
+    traits:
+      core_traits:
+        description: "모든 도메인에서 공통으로 사용하는 핵심 Trait 키 정의"
+        keys:
+          delivery_channel:
+            value_type: "enum"
+            allowed_values: ["online","offline","hybrid"]
+          revenue_model:
+            value_type: "enum"
+            allowed_values: ["one_off","subscription","usage_based","outcome_based","ad_supported","mixed"]
+          payment_recurs:
+            value_type: "boolean"
+          requires_physical_presence:
+            value_type: "boolean"
+          marginal_cost_profile:
+            value_type: "enum"
+            allowed_values: ["low","medium","high"]
+          inventory_risk:
+            value_type: "enum"
+            allowed_values: ["low","medium","high"]
+          update_frequency:
+            value_type: "enum"
+            allowed_values: ["continuous","daily","weekly","monthly","yearly","none"]
+
+      domain_traits:
+        description: "산업/도메인별 추가 Trait 정의 (파일 분리 가능)"
+        domains:
+          - id: "B2B_SaaS"
+            traits:
+              churn_pattern:
+                value_type: "enum"
+                allowed_values: ["land_and_expand","project_based","seasonal","other"]
+              contract_length_months:
+                value_type: "numeric"
+          - id: "Private_Education_KR"
+            traits:
+              after_school_ratio:
+                value_type: "ratio"
+
+    quantity_types:
+      money:
+        description: "금전 흐름에 사용되는 Quantity 타입"
+        fields:
+          amount:   { type: "number" }
+          currency: { type: "string" }
+          per:      { type: "string", allowed_values: ["transaction","month","year","user","custom"] }
+
+      time:
+        description: "기간/지속시간을 나타내는 Quantity 타입"
+        fields:
+          amount: { type: "number" }
+          unit:   { type: "string", allowed_values: ["day","month","year","hour","minute"] }
+
+      count:
+        description: "개수/사용자 수/거래 수 등을 나타내는 Quantity 타입"
+        fields:
+          amount: { type: "number" }
+          unit:   { type: "string", allowed_values: ["users","transactions","visits","contracts","custom"] }
+
+  # ------------------------------------------------------------------
+  # 2. Planes – Interaction / Role / Cognition / Substrate
+  # ------------------------------------------------------------------
+  planes:
+
+    # ---------------- Interaction Plane ----------------
+    interaction_plane:
+      description: "사람/외부 시스템이 UMIS와 상호작용하는 모든 인터페이스"
+      interfaces:
+        - id: "cli"
+          type: "command_line"
+          description: "분석가/엔지니어용 CLI"
+        - id: "notebook"
+          type: "jupyter"
+          description: "Python Notebook 기반 실험/모델링 인터페이스"
+        - id: "web_app"
+          type: "web"
+          description: "리포트/대시보드/전략 보드 UI"
+        - id: "api"
+          type: "http"
+          description: "외부 시스템 연동용 API (REST/GraphQL 등)"
+
+      default_role_bindings:
+        - interface_id: "cli"
+          default_role_id: "numerical_modeler"
+        - interface_id: "notebook"
+          default_role_id: "structure_analyst"
+        - interface_id: "web_app"
+          default_role_id: "structure_analyst"
+        - interface_id: "api"
+          default_role_id: "strategy_architect"
+
+    # ---------------- Role Plane (Agent) ----------------
+    role_plane:
+      description: "사람 역할/앱 관점 – Agent = Persona + Workflow + View"
+      roles:
+        - id: "structure_analyst"
+          label: "Structure Analyst (Observer 2.0)"
+          description: "시장/비즈니스 구조와 메커니즘을 이해하고 설명하는 역할"
+          primary_use_cases:
+            - "시장 구조/가치사슬 맵핑"
+            - "행위자/메커니즘 분석"
+          primary_engines: ["world_engine","pattern_engine","value_engine"]
+          default_policy_mode: "reporting_strict"
+          preferred_interfaces: ["web_app","notebook"]
+
+        - id: "opportunity_designer"
+          label: "Opportunity Designer (Explorer 2.0)"
+          description: "패턴/사례를 활용해 기회/가설을 설계"
+          primary_use_cases:
+            - "패턴 기반 기회 발굴"
+            - "Rough sizing / order-of-magnitude 평가"
+          primary_engines: ["pattern_engine","value_engine"]
+          default_policy_mode: "exploration_friendly"
+          preferred_interfaces: ["notebook","cli","web_app"]
+
+        - id: "strategy_architect"
+          label: "Strategy Architect"
+          description: "Goal에 맞는 전략/시나리오/포트폴리오 설계/비교"
+          primary_use_cases:
+            - "전략 공간 탐색"
+            - "Scenario planning / trade-off 분석"
+          primary_engines: ["strategy_engine","value_engine"]
+          default_policy_mode: "decision_balanced"
+          preferred_interfaces: ["web_app","notebook"]
+
+        - id: "numerical_modeler"
+          label: "Numerical Modeler"
+          description: "Metric/공식/시뮬레이션 모델링에 특화된 역할"
+          primary_use_cases:
+            - "새 Metric/공식 설계"
+            - "민감도 분석 / what-if 시뮬레이션"
+          primary_engines: ["value_engine"]
+          default_policy_mode: "reporting_strict"
+          preferred_interfaces: ["notebook","cli"]
+
+        - id: "reality_monitor"
+          label: "Reality Monitor"
+          description: "예상 vs 실제 결과를 비교하고 시스템 학습/품질 관리"
+          primary_use_cases:
+            - "Forecast vs 실제 비교"
+            - "Pattern/Metric 성능 모니터링"
+          primary_engines: ["learning_engine","value_engine"]
+          default_policy_mode: "reporting_strict"
+          preferred_interfaces: ["web_app"]
+
+    # ---------------- Substrate Plane (Data/Graphs) ----------------
+    substrate_plane:
+      description: "현실/패턴/값/결정을 그래프로 표현하고 Evidence/Memory를 저장하는 바닥층"
+
+      graphs:
+        reality_graph:
+          description: "현실 세계의 구조/행위/흐름을 나타내는 그래프 (R-Graph)"
+          node_types:
+            actor:      { ref: "ontology.primitives.actor" }
+            event:      { ref: "ontology.primitives.event" }
+            resource:   { ref: "ontology.primitives.resource" }
+            money_flow: { ref: "ontology.primitives.money_flow" }
+            contract:   { ref: "ontology.primitives.contract" }
+            state:      { ref: "ontology.primitives.state" }
+          edge_types:
+            actor_participates_in_event:
+              from: "actor"
+              to:   "event"
+              properties:
+                role: { type: "string" }
+            event_transfers_resource:
+              from: "event"
+              to:   "resource"
+              properties:
+                direction: { type: "enum", values: ["from_actor_to_actor","system_to_actor","actor_to_system"] }
+            event_triggers_money_flow:
+              from: "event"
+              to:   "money_flow"
+              properties: {}
+            actor_pays_actor:
+              from: "actor"
+              to:   "actor"
+              via:  "money_flow"
+              properties:
+                relationship: { type: "string" }
+            actor_has_contract_with_actor:
+              from: "actor"
+              to:   "actor"
+              via:  "contract"
+              properties:
+                contract_type: { type: "string" }
+            state_applies_to_actor:
+              from: "state"
+              to:   "actor"
+              properties: {}
+          time_slicing:
+            snapshot_key: ["as_of"]
+            default_as_of: "latest"
+
+        pattern_graph:
+          description: "반복되는 구조/메커니즘/비즈니스 모델 패턴 그래프 (P-Graph)"
+          node_types:
+            pattern:
+              fields:
+                pattern_id:   { type: "string", required: true }
+                name:         { type: "string", required: true }
+                description:  { type: "string", required: true }
+                traits:       { type: "trait_set_ref", required: false }
+                constraints:  { type: "list[trait_constraint]", required: false }  # R-Graph primitive에 대한 제약
+            pattern_family:
+              fields:
+                family_id:    { type: "string" }
+                name:         { type: "string" }
+            context_archetype:
+              fields:
+                archetype_id: { type: "string" }
+                name:         { type: "string" }
+          edge_types:
+            pattern_composes_with:
+              from: "pattern"
+              to:   "pattern"
+              properties:
+                relationship: { type: "enum", values: ["composes_with","conflicts_with","specializes","analogous_to"] }
+                confidence:   { type: "float" }
+            pattern_belongs_to_family:
+              from: "pattern"
+              to:   "pattern_family"
+              properties: {}
+            pattern_suited_for_context:
+              from: "pattern"
+              to:   "context_archetype"
+              properties: {}
+
+        value_graph:
+          description: "Metric/값/관계의 그래프 (V-Graph) – v8 Value Graph 확장판"  #  [oai_citation:4‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+          node_types:
+            metric:
+              fields:
+                metric_id:    { type: "string", required: true }
+                name:         { type: "string", required: true }
+                category:     { type: "enum", values: ["market_size","unit_economics","growth","profitability","risk","custom"] }
+                dimensions:   { type: "list[string]", required: false }
+                default_context: { type: "dict", required: false }
+                spec_ref:     { type: "metric_spec_ref", required: false }
+            value_record:
+              fields:
+                value_id:       { type: "string", required: true }
+                metric_id:      { type: "metric_id", required: true }
+                context:        { type: "dict", required: true }
+                point_estimate: { type: "number", required: false }
+                distribution:   { type: "distribution_ref", required: false }
+                quality:        { type: "dict", required: true }  # literal_ratio, spread_ratio 등
+                lineage:        { type: "lineage_ref", required: true }
+            parameter:
+              fields:
+                parameter_id: { type: "string", required: true }
+                name:         { type: "string", required: true }
+                description:  { type: "string", required: false }
+          edge_types:
+            formula:
+              from: "metric"
+              to:   "metric"
+              properties:
+                expression:   { type: "string" }    # 예: "Revenue = Users * ARPU"
+                role:         { type: "enum", values: ["exact","approximation"] }
+            empirical_relation:
+              from: "metric"
+              to:   "metric"
+              properties:
+                range:        { type: "dict" }
+                confidence:   { type: "float" }
+            depends_on_parameter:
+              from: "metric"
+              to:   "parameter"
+              properties: {}
+
+        decision_graph:
+          description: "목표/가설/전략/시나리오/행동을 표현하는 그래프 (D-Graph)"
+          node_types:
+            goal:
+              fields:
+                goal_id:      { type: "string", required: true }
+                name:         { type: "string", required: true }
+                target_metrics:{ type: "list[metric_id]", required: true }
+                target_horizon:{ type: "time_quantity_ref", required: true }
+            hypothesis:
+              fields:
+                hypothesis_id:{ type: "string", required: true }
+                statement:    { type: "string", required: true }
+                related_pattern_ids: { type: "list[pattern_id]", required: false }
+            strategy:
+              fields:
+                strategy_id:  { type: "string", required: true }
+                name:         { type: "string", required: true }
+                description:  { type: "string", required: false }
+            scenario:
+              fields:
+                scenario_id:  { type: "string", required: true }
+                base_strategy_id: { type: "strategy_id", required: true }
+                assumptions:  { type: "dict", required: true }  # Metric/파라미터 가정
+            action:
+              fields:
+                action_id:    { type: "string", required: true }
+                description:  { type: "string", required: true }
+          edge_types:
+            strategy_targets_goal:
+              from: "strategy"
+              to:   "goal"
+              properties: {}
+            strategy_based_on_hypothesis:
+              from: "strategy"
+              to:   "hypothesis"
+              properties: {}
+            scenario_implements_strategy:
+              from: "scenario"
+              to:   "strategy"
+              properties: {}
+            strategy_uses_pattern:
+              from: "strategy"
+              to:   "pattern"
+              properties: {}
+            scenario_assumes_metric:
+              from: "scenario"
+              to:   "metric"
+              properties:
+                assumption_key: { type: "string" }
+
+      stores:
+        evidence_store:
+          description: "문서/데이터/로그/리포트 등 외부 Evidence 저장소"
+          id_prefix: "EVD-"
+          schema:
+            fields:
+              evidence_id:   { type: "string", required: true }
+              source_tier:   { type: "enum", values: ["official","curated_internal","commercial","structured_estimation","llm_baseline","other"] }
+              url_or_path:   { type: "string", required: false }
+              content_ref:   { type: "string", required: true }
+              metadata:      { type: "dict", required: false }
+
+        outcome_store:
+          description: "실제로 실행된 전략/시나리오의 Outcome 기록 (실적, funnel, churn 등)"
+          id_prefix: "OUT-"
+
+        memory_store:
+          description: "Query/Goal/RAE/Drift 등 시스템 메모리 (v7 MEM/RAE 확장)"  #  [oai_citation:5‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
+          id_prefix: "MEM-"
+
+        value_store:
+          description: "ValueRecord(VAL-*) 영구 저장소 – 단일 진실의 원천 역할"  #  [oai_citation:6‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+          id_prefix: "VAL-"
+
+      data_sources:
+        description: "EvidenceEngine이 사용하는 외부/내부 데이터 소스 정의"
+        sources:
+          - id: "KOSIS_population"
+            type: "http_api"
+            description: "한국 통계청 KOSIS 인구/가구/소득 통계"
+            capabilities:
+              provides:
+                - "population_by_age"
+                - "household_income_distribution"
+            access:
+              base_url: "https://kosis.kr/openapi/..."
+              auth: "env:KOSIS_API_KEY"
+            mapping:
+              to_evidence_schema: "population_stats_v1"
+
+          - id: "GenericWebSearch"
+            type: "web_search"
+            description: "검색엔진 + LLM 기반 일반 웹 Evidence"
+            capabilities:
+              provides:
+                - "long_tail_facts"
+                - "recent_news"
+            cost_profile:
+              latency: "medium"
+              monetary_cost: "per_call"
+
+    # ---------------- Cognition Plane (Engines) ----------------
+    cognition_plane:
+      description: "R/P/V/D 그래프 위에서 추론/계산/학습/정책을 수행하는 엔진 계층"
+
+      engines:
+
+        evidence_engine:
+          description: "외부/내부 소스에서 Evidence를 on-demand로 수집·정규화·번들링하는 엔진"
+          inputs:
+            - "substrate_plane.data_sources"
+            - "substrate_plane.stores.evidence_store"
+          outputs:
+            - "evidence_bundles"
+          api:
+            - name: "fetch_for_metrics"
+              description: "요청된 Metric/컨텍스트에 필요한 Evidence를 외부/내부에서 수집"
+              input:
+                metric_requests: "list[MetricRequest]"
+                policy_ref: "policy_ref"
+              output:
+                evidence_bundle_ref: "evidence_bundle"
+            - name: "fetch_for_reality_slice"
+              description: "특정 시장/도메인 Reality Graph 구성을 위한 Evidence 수집"
+              input:
+                scope: "dict"   # market, region, sector 등
+                as_of: "date"
+              output:
+                evidence_bundle_ref: "evidence_bundle"
+
+        world_engine:
+          description: "Evidence를 Reality Graph(R-Graph) 스냅샷으로 정규화/업데이트하는 엔진"
+          inputs:
+            - "substrate_plane.stores.evidence_store"
+          outputs:
+            - "substrate_plane.graphs.reality_graph"
+          api:
+            - name: "ingest_evidence"
+              description: "새 Evidence를 받아 R-Graph에 반영"
+              input:
+                evidence_ids: "list[evidence_id]"
+              output:
+                updated_node_ids: "list[node_id]"
+            - name: "snapshot"
+              description: "특정 시점/컨텍스트 Reality Graph 서브그래프 반환 (필요시 EvidenceEngine 호출)"
+              input:
+                as_of: "date"
+                scope: "dict"
+              output:
+                graph_slice_ref: "reality_graph_subgraph"
+
+        pattern_engine:
+          description: "R/P-Graph 위에서 패턴 인식/조합/갭 탐지를 수행하는 엔진"
+          inputs:
+            - "substrate_plane.graphs.reality_graph"
+            - "substrate_plane.graphs.pattern_graph"
+          outputs:
+            - "pattern_matches"
+            - "gap_candidates"
+          api:
+            - name: "match_patterns"
+              description: "R-Graph에서 Trait/구조 기반 패턴 인스턴스 탐색"
+              input:
+                graph_slice_ref: "reality_graph_subgraph"
+              output:
+                pattern_match_set_ref: "pattern_match_set"
+            - name: "discover_gaps"
+              description: "적용 가능하지만 적용되지 않은 패턴/메커니즘 갭 탐지"
+              input:
+                graph_slice_ref: "reality_graph_subgraph"
+              output:
+                gap_candidates_ref: "gap_set"
+
+        value_engine:
+          description: "Metric Resolver를 중심으로 값을 계산·추론하는 핵심 엔진 (v8 Value Engine 진화)"  #  [oai_citation:7‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+          inputs:
+            - "substrate_plane.graphs.reality_graph"
+            - "substrate_plane.graphs.pattern_graph"
+            - "substrate_plane.graphs.value_graph"
+            - "substrate_plane.stores.evidence_store"
+            - "policy_engine"
+            - "evidence_engine"
+          outputs:
+            - "substrate_plane.stores.value_store"
+          api:
+            - name: "evaluate_metrics"
+              description: "Metric 목록과 컨텍스트/정책을 받아 ValueRecord 번들을 반환"
+              input:
+                metric_requests: "list[MetricRequest]"   # metric_id + context
+                policy_ref: "policy_ref"
+              output:
+                values: "list[value_record_ref]"
+                value_program_ref: "value_program_ref"
+            - name: "simulate_scenario"
+              description: "D-Graph의 Scenario에 대해 시뮬레이션 수행"
+              input:
+                scenario_id: "scenario_id"
+                policy_ref:  "policy_ref"
+              output:
+                values: "list[value_record_ref]"
+                value_program_ref: "value_program_ref"
+
+          metric_resolver:
+            description: >
+              하나의 Metric을 해결하기 위해
+              (1) Direct Evidence → (2) Derived/계산 → (3) Prior/구조 추정 → (4) Fusion을 수행하는 파이프라인.
+              v7 Estimator 4-Stage의 일반화 버전. 
+            stages:
+              - id: "direct_evidence"
+                uses: ["evidence_engine.fetch_for_metrics"]
+              - id: "derived"
+                uses: ["value_graph.formula","world_engine.snapshot","evidence_engine.fetch_for_metrics"]
+              - id: "prior_estimation"
+                uses: ["belief_engine","pattern_engine","LLM_prior"]
+              - id: "fusion_validation"
+                uses: ["fusion_engine","guardian_policy"]
+
+          metrics_spec:
+            description: "Metric 단위 미니 파이프라인 정의 (v8 metrics_spec 확장)"  #  [oai_citation:8‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+            defaults:
+              quality_requirements:
+                min_literal_ratio: 0.5
+                max_spread_ratio: 0.5
+              allow_prior: true
+            metrics: []   # 실제 Metric 정의는 별도 파일/섹션에서 채움
+
+        strategy_engine:
+          description: "Goal/Pattern/Reality/Value를 바탕으로 전략/포트폴리오 후보 탐색/평가 엔진"
+          inputs:
+            - "substrate_plane.graphs.reality_graph"
+            - "substrate_plane.graphs.pattern_graph"
+            - "substrate_plane.graphs.value_graph"
+            - "substrate_plane.graphs.decision_graph"
+            - "value_engine"
+          outputs:
+            - "strategy_candidates"
+          api:
+            - name: "search_strategies"
+              description: "Goal/제약을 입력받아 Strategy 후보 세트 생성"
+              input:
+                goal_id: "goal_id"
+                constraints: "dict"
+              output:
+                strategy_set_ref: "strategy_set"
+            - name: "evaluate_portfolio"
+              description: "여러 Strategy를 포트폴리오로 묶어 평가"
+              input:
+                strategy_ids: "list[strategy_id]"
+                policy_ref:   "policy_ref"
+              output:
+                portfolio_eval_ref: "portfolio_evaluation"
+
+        learning_engine:
+          description: "Outcome과 예상 값을 비교해 Belief/Pattern/Value Graph 업데이트"
+          inputs:
+            - "substrate_plane.stores.outcome_store"
+            - "substrate_plane.graphs.value_graph"
+            - "substrate_plane.graphs.pattern_graph"
+          outputs:
+            - "updated_beliefs"
+          api:
+            - name: "update_from_outcomes"
+              description: "실제 Outcome 기반 Metric/Pattern 분포/Belief 업데이트"
+              input:
+                outcome_ids: "list[outcome_id]"
+              output:
+                updated_entities: "dict"   # metric_ids, pattern_ids 등
+
+        policy_engine:
+          description: "Evidence-first, Prior-last, 리스크 허용도 등 정책 관리 및 다른 엔진에 제공"
+          policies:
+            modes:
+              - id: "reporting_strict"
+                description: "공식/Evidence 중심, Prior 최소"
+              - id: "decision_balanced"
+                description: "Evidence 우선, 필요 시 Prior 허용"
+              - id: "exploration_friendly"
+                description: "기회 탐색용, Prior/패턴 활용 허용"
+          api:
+            - name: "resolve_policy"
+              description: "Role/용도에 따라 적용할 Policy 결정"
+              input:
+                role_id: "role_id"
+                usage:   "enum[reporting,decision,exploration]"
+              output:
+                policy_ref: "policy_ref"
+
+  # ------------------------------------------------------------------
+  # 3. ID & Lineage Schema – 공통 식별자/추적 모델
+  # ------------------------------------------------------------------
+  ids_and_lineage:
+    id_prefixes:
+      actor:      "ACT-"
+      event:      "EVT-"
+      resource:   "RES-"
+      money_flow: "MFL-"
+      contract:   "CTR-"
+      state:      "STA-"
+      evidence:   "EVD-"
+      outcome:    "OUT-"
+      trait:      "TRI-"
+      quantity:   "QTY-"
+      metric:     "MET-"
+      value:      "VAL-"
+      pattern:    "PAT-"
+      goal:       "GOL-"
+      hypothesis: "HYP-"
+      strategy:   "STR-"
+      scenario:   "SCN-"
+      action:     "ACTN-"
+      artifact:   "ART-"
+      memory:     "MEM-"
+
+    lineage_schema:
+      description: "모든 주요 객체가 공유하는 lineage 스키마"
+      fields:
+        from_evidence_ids: { type: "list[evidence_id]", required: false }
+        from_value_ids:    { type: "list[value_id]",    required: false }
+        from_pattern_ids:  { type: "list[pattern_id]",  required: false }
+        from_program_id:   { type: "string",            required: false }  # Value Program / Reasoning trace
+        engine_ids:        { type: "list[string]",      required: false }  # value_engine, pattern_engine 등
+        policy_id:         { type: "string",            required: false }
+        created_by_role:   { type: "role_id",           required: false }
+        created_at:        { type: "datetime",          required: true }
+
+  # ------------------------------------------------------------------
+  # 4. Policies – 품질/리스크/모드 정의 (요약)
+  # ------------------------------------------------------------------
+  policies:
+    quality_profiles:
+      reporting_strict:
+        min_literal_ratio: 0.7
+        max_spread_ratio: 0.3
+        allow_prior: false
+      decision_balanced:
+        min_literal_ratio: 0.5
+        max_spread_ratio: 0.5
+        allow_prior: true
+      exploration_friendly:
+        min_literal_ratio: 0.3
+        max_spread_ratio: 0.7
+        allow_prior: true
+
+  # ------------------------------------------------------------------
+  # 5. Canonical Workflows – 역할별 상위 레벨 워크플로
+  # ------------------------------------------------------------------
+  canonical_workflows:
+    - id: "structure_analysis"
+      role_id: "structure_analyst"
+      description: "특정 시장/도메인의 구조/메커니즘 이해"
+      steps:
+        - call: "world_engine.snapshot"
+          with:
+            as_of: "latest"
+            scope: { market: "TBD" }
+        - call: "pattern_engine.match_patterns"
+          with:
+            graph_slice_ref: "@prev.graph_slice_ref"
+        - call: "value_engine.evaluate_metrics"
+          with:
+            metric_requests: "core_structure_metrics"   # TAM/SAM/SOM, 주요 actor별 share 등
+            policy_ref: "reporting_strict"
+
+    - id: "opportunity_discovery"
+      role_id: "opportunity_designer"
+      description: "패턴/구조 기반 기회 발굴 및 Rough sizing"
+      steps:
+        - call: "world_engine.snapshot"
+          with:
+            as_of: "latest"
+            scope: { market: "TBD" }
+        - call: "pattern_engine.discover_gaps"
+          with:
+            graph_slice_ref: "@prev.graph_slice_ref"
+        - call: "value_engine.evaluate_metrics"
+          with:
+            metric_requests: "rough_size_metrics"
+            policy_ref: "exploration_friendly"
+
+    - id: "strategy_design"
+      role_id: "strategy_architect"
+      description: "Goal에 맞는 전략/시나리오 설계 및 평가"
+      steps:
+        - call: "strategy_engine.search_strategies"
+          with:
+            goal_id: "TBD"
+            constraints: {}
+        - call: "strategy_engine.evaluate_portfolio"
+          with:
+            strategy_ids: "@prev.strategy_ids"
+            policy_ref: "decision_balanced"
+
+    - id: "reality_monitoring"
+      role_id: "reality_monitor"
+      description: "예상 vs 실제 결과 비교 및 시스템 학습"
+      steps:
+        - call: "learning_engine.update_from_outcomes"
+          with:
+            outcome_ids: "recent_outcomes"
+        - call: "value_engine.evaluate_metrics"
+          with:
+            metric_requests: "monitored_metrics"
+            policy_ref: "reporting_strict"
