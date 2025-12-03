@@ -7,25 +7,29 @@ umis_v9:
       Universal Market Intelligence System v9 – 시장/비즈니스 세계를
       Reality/Pattern/Value/Decision 그래프로 표현하고,
       구조 이해·기회 발굴·전략 설계·학습까지 수행하는 OS의 상위 스켈레톤.
-    status: "design_skeleton"
+    status: "draft_in_progress"
     authors:
       - "umis-architect"
     references:
       - "umis_architecture_blueprint_v7.x"   # 6-Agent, 4-Layer RAG, Estimator 4-Stage 등  [oai_citation:0‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
       - "UMIS_ARCHITECTURE_BLUEPRINT_v8"     # Value OS, Value Graph, Metrics Spec, 4 Planes 등  [oai_citation:1‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
+      - "umis_v9_philosophy_concept.md"      # v9 철학·컨셉·방향성 상세 설명
+      - "umis_v9_roadmap.md"                 # Phase/스프린트 기반 구현 로드맵
 
   philosophy:
     identity: >
       UMIS v9는 시장/비즈니스 세계를
       (현실 구조 Reality)·(반복 패턴 Pattern)·(값/지표 Value)·(목표/전략 Decision)으로
       동시에 다루는 Market Intelligence OS이다.
+      세부 철학은 `umis_v9_philosophy_concept.md`, 실행 단계는 `umis_v9_roadmap.md`의
+      Phase별 vertical slice 전략과 연동된다.
     core_principles:
       - "Model-first, Number-second"           # 세계 모델(구조/패턴)이 먼저, 숫자는 그 위의 결과
       - "Evidence-first, Prior-last"           # 가능하면 증거/공식/구조 우선, Prior는 최후 수단  [oai_citation:2‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
-      - "Graph-of-Graphs: R/P/V/D"
-      - "Trait 기반 패턴/모델 정의로 Ontology lock-in 최소화"
-      - "모든 답 = (세계, 변화, 결과, 논증 구조)"
-      - "Monotonic Improvability & Re-runnability"  # 새 Evidence/패턴이 들어와도 재실행으로 자동 개선
+      - "Graph-of-Graphs: R/P/V/D"          # roadmap Phase 2–4 Reality/Pattern/Value/Decision 루프 검증
+      - "Trait 기반 패턴/모델 정의로 Ontology lock-in 최소화"  # philosophy 섹션 4, roadmap Phase 3 패턴 작업 참조
+      - "모든 답 = (세계, 변화, 결과, 논증 구조)"  # canonical_workflows 전반과 연결
+      - "Monotonic Improvability & Re-runnability"  # roadmap Phase 4–5, learning_engine 루프
       - "Agent = Persona + Workflow (엔진이 아님)"  # v7 6-Agent 철학 계승, 역할만 담당  [oai_citation:3‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
 
   # ------------------------------------------------------------------
@@ -138,19 +142,20 @@ umis_v9:
             allowed_values: ["continuous","daily","weekly","monthly","yearly","none"]
 
       domain_traits:
-        description: "산업/도메인별 추가 Trait 정의 (파일 분리 가능)"
-        domains:
-          - id: "B2B_SaaS"
-            traits:
-              churn_pattern:
-                value_type: "enum"
-                allowed_values: ["land_and_expand","project_based","seasonal","other"]
-              contract_length_months:
-                value_type: "numeric"
-          - id: "Private_Education_KR"
-            traits:
-              after_school_ratio:
-                value_type: "ratio"
+        description: "산업/도메인별 추가 Trait 정의 (실제 정의는 도메인 YAML + domain_registry.yaml로 분리)"
+        schema:
+          description: "도메인 Trait 공통 스키마"
+          fields:
+            key:
+              type: "string"
+              required: true
+            value_type:
+              type: "enum"
+              allowed_values: ["enum","numeric","ratio","boolean","string","other"]
+              required: true
+            allowed_values:
+              type: "list"
+              required: false
 
     quantity_types:
       money:
@@ -303,6 +308,22 @@ umis_v9:
               from: "state"
               to:   "actor"
               properties: {}
+            actor_competes_with_actor:
+              from: "actor"
+              to:   "actor"
+              properties:
+                intensity: { type: "enum", values: ["low","medium","high"] }
+                scope:     { type: "string" }  # 예: "adult_language_education_KR"
+            actor_offers_resource:
+              from: "actor"
+              to:   "resource"
+              properties:
+                offer_role: { type: "enum", values: ["provider","reseller","platform"] }
+            actor_serves_actor:
+              from: "actor"
+              to:   "actor"
+              properties:
+                relationship: { type: "enum", values: ["educates","employs","sponsors_training_for","other"] }
           time_slicing:
             snapshot_key: ["as_of"]
             default_as_of: "latest"
@@ -445,30 +466,57 @@ umis_v9:
               source_tier:   { type: "enum", values: ["official","curated_internal","commercial","structured_estimation","llm_baseline","other"] }
               url_or_path:   { type: "string", required: false }
               content_ref:   { type: "string", required: true }
-              metadata:      { type: "dict", required: false }
+              metadata:      { type: "dict", required: false }  # 예: { subject: "adult_language_education_KR", year: 2025 }
+              retrieved_at:  { type: "datetime", required: false }
+              source_id:     { type: "string", required: false }  # data_sources.sources.id 참조
 
         outcome_store:
           description: "실제로 실행된 전략/시나리오의 Outcome 기록 (실적, funnel, churn 등)"
           id_prefix: "OUT-"
+          schema:
+            fields:
+              outcome_id:          { type: "string", required: true }
+              related_strategy_id: { type: "strategy_id", required: false }
+              related_scenario_id: { type: "scenario_id", required: false }
+              as_of:               { type: "date", required: true }
+              metrics:             { type: "dict", required: true }   # metric_id -> 값/분포
+              context:             { type: "dict", required: false }  # 시장/연도/세그먼트 등
+              metadata:            { type: "dict", required: false }
 
         memory_store:
           description: "Query/Goal/RAE/Drift 등 시스템 메모리 (v7 MEM/RAE 확장)"  #  [oai_citation:5‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
           id_prefix: "MEM-"
+          schema:
+            fields:
+              memory_id:    { type: "string", required: true }
+              memory_type:  { type: "enum", values: ["query_trace","goal_summary","drift_alert","pattern_note","other"] }
+              related_ids:  { type: "dict", required: false }   # goal_id, metric_ids 등
+              content_ref:  { type: "string", required: true }
+              created_at:   { type: "datetime", required: true }
+              updated_at:   { type: "datetime", required: false }
 
         value_store:
           description: "ValueRecord(VAL-*) 영구 저장소 – 단일 진실의 원천 역할"  #  [oai_citation:6‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
           id_prefix: "VAL-"
+          schema:
+            fields:
+              value_id:     { type: "string", required: true }
+              metric_id:    { type: "metric_id", required: true }
+              context:      { type: "dict", required: true }
+              payload_ref:  { type: "string", required: true }  # value_graph.node_types.value_record 참조
+              stored_at:    { type: "datetime", required: true }
 
       data_sources:
         description: "EvidenceEngine이 사용하는 외부/내부 데이터 소스 정의"
         sources:
           - id: "KOSIS_population"
             type: "http_api"
-            description: "한국 통계청 KOSIS 인구/가구/소득 통계"
+            description: "한국 통계청 KOSIS 인구/가구/소득 등 거시 통계"
             capabilities:
               provides:
                 - "population_by_age"
                 - "household_income_distribution"
+                - "macro_indicators_KR"
             access:
               base_url: "https://kosis.kr/openapi/..."
               auth: "env:KOSIS_API_KEY"
@@ -482,6 +530,119 @@ umis_v9:
               provides:
                 - "long_tail_facts"
                 - "recent_news"
+            cost_profile:
+              latency: "medium"
+              monetary_cost: "per_call"
+          - id: "KR_DART_filings"
+            type: "http_api"
+            description: "DART 전자공시 – 대한민국 상장사 재무·공시 자료"
+            capabilities:
+              provides:
+                - "financial_statements"
+                - "company_filings"
+                - "corporate_events"
+            access:
+              base_url: "https://opendart.fss.or.kr/api"
+              auth: "env:DART_API_KEY"
+            mapping:
+              to_evidence_schema: "dart_filings_v1"
+
+          - id: "KR_Gov_Stats_Generic"
+            type: "http_api"
+            description: "통계청, 한국은행, 정부부처 공개 통계/자료 집합"
+            capabilities:
+              provides:
+                - "macro_economic_indicators"
+                - "industry_stats_KR"
+            access:
+              base_url: "https://data.go.kr"
+              auth: "env:DATA_GOV_API_KEY"
+            mapping:
+              to_evidence_schema: "kr_gov_stats_v1"
+
+          - id: "Global_Official_Org_Stats"
+            type: "http_api"
+            description: "OECD, World Bank, UN 등 국제기구 통계/인디케이터"
+            capabilities:
+              provides:
+                - "macro_economic_global"
+                - "sector_benchmarks_global"
+            access:
+              base_url: "https://api.worldbank.org"
+              auth: "none"
+            mapping:
+              to_evidence_schema: "global_official_org_stats_v1"
+
+          - id: "Commercial_Market_Research"
+            type: "document_repository"
+            description: "시장조사기관 리포트 (가트너, IDC, 유로모니터 등) 메타데이터/문서"
+            capabilities:
+              provides:
+                - "market_size_reports"
+                - "vendor_landscapes"
+            access:
+              base_url: "s3://market-research-bucket"
+              auth: "env:MARKET_RESEARCH_CREDENTIAL"
+            mapping:
+              to_evidence_schema: "market_research_report_v1"
+
+          - id: "Consulting_Firm_Reports"
+            type: "document_repository"
+            description: "컨설팅사 리포트 (맥킨지, BCG, 베인 등)"
+            capabilities:
+              provides:
+                - "strategy_case_studies"
+                - "industry_perspectives"
+            access:
+              base_url: "s3://consulting-reports"
+              auth: "env:CONSULTING_REPORTS_CREDENTIAL"
+            mapping:
+              to_evidence_schema: "consulting_report_v1"
+
+          - id: "Brokerage_Research"
+            type: "document_repository"
+            description: "증권사 리서치 리포트"
+            capabilities:
+              provides:
+                - "equity_research"
+                - "sector_outlooks"
+            access:
+              base_url: "s3://brokerage-research"
+              auth: "env:BROKERAGE_RESEARCH_CREDENTIAL"
+            mapping:
+              to_evidence_schema: "brokerage_research_v1"
+
+          - id: "Credit_Rating_Reports"
+            type: "document_repository"
+            description: "신용평가사 보고서 (회사/채권/산업별 신용도)"
+            capabilities:
+              provides:
+                - "credit_ratings"
+                - "default_statistics"
+            access:
+              base_url: "s3://credit-rating-reports"
+              auth: "env:CREDIT_RATING_CREDENTIAL"
+            mapping:
+              to_evidence_schema: "credit_rating_report_v1"
+
+          - id: "Academic_Papers"
+            type: "web_search"
+            description: "학술 논문 검색 (예: Crossref, Semantic Scholar 등)"
+            capabilities:
+              provides:
+                - "academic_evidence"
+            cost_profile:
+              latency: "high"
+              monetary_cost: "per_call"
+
+          - id: "Industry_Media_and_Conferences"
+            type: "web_search"
+            description: "업계 전문지/매체, 컨퍼런스 발표자료, 공개 피치덱 등"
+            capabilities:
+              provides:
+                - "industry_news"
+                - "conference_talks"
+                - "pitch_decks"
             cost_profile:
               latency: "medium"
               monetary_cost: "per_call"
@@ -609,7 +770,441 @@ umis_v9:
                 min_literal_ratio: 0.5
                 max_spread_ratio: 0.5
               allow_prior: true
-            metrics: []   # 실제 Metric 정의는 별도 파일/섹션에서 채움
+            metrics:
+              - metric_id: "MET-TAM"
+                name: "Total Addressable Market"
+                category: "market_size"
+                default_quality_profile: "decision_balanced"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Consulting_Firm_Reports"
+                  - "Brokerage_Research"
+                derived_paths:
+                  - id: "TAM_from_N_customers_and_ARPU"
+                    metric_ids: ["MET-N_customers", "MET-ARPU"]
+                prior_estimation:
+                  enabled: true
+                  notes:
+                    - "Use pattern-based benchmarks when direct/derived evidence is weak"
+
+              - metric_id: "MET-SAM"
+                name: "Serviceable Available Market"
+                category: "market_size"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "SAM_from_TAM_and_target_segment_share"
+                    metric_ids: ["MET-TAM", "MET-target_segment_share"]
+                prior_estimation:
+                  enabled: true
+                resolution_protocol:
+                  description: "SAM 추정을 위한 복수 방법과 수렴 규칙 정의"
+                  target_convergence: "±30% 이내 수렴"
+                  methods:
+                    - id: "top_down"
+                      description: "TAM에서 시작해 정의/경계를 좁혀가는 Top-down 방식"
+                    - id: "bottom_up"
+                      description: "구성 요소(단위 수 × 빈도 × 가격 × 기간)를 쌓아 올리는 Bottom-up 방식"
+                      universal_formula: "units * frequency * price * period"
+                    - id: "proxy_validation"
+                      description: "유사 시장/국가/시점과 비교하는 Proxy 기반 검증"
+                    - id: "competitor_revenue_expansion"
+                      description: "상위 기업(Top-N) 경쟁 매출에서 SAM을 역산"
+                      reference_note: "reference_deprecated/umis.yaml:3718-3827 SAM 계산 방법 참고"
+
+              - metric_id: "MET-SOM"
+                name: "Serviceable Obtainable Market"
+                category: "market_size"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "SOM_from_SAM_and_reachable_share"
+                    metric_ids: ["MET-SAM", "MET-reachable_share"]
+                prior_estimation:
+                  enabled: true
+
+              # Market concentration / Top-N share metrics
+              - metric_id: "MET-Top3_revenue_share"
+                name: "Top 3 Players Revenue Share"
+                category: "market_size"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+                  notes:
+                    - "If not directly reported, compute from actor-level revenue in R-Graph."
+
+              - metric_id: "MET-Top5_revenue_share"
+                name: "Top 5 Players Revenue Share"
+                category: "market_size"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Top10_revenue_share"
+                name: "Top 10 Players Revenue Share"
+                category: "market_size"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-HHI_revenue"
+                name: "Herfindahl-Hirschman Index (Revenue-based)"
+                category: "risk"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-N_customers"
+                name: "Number of Customers"
+                category: "market_size"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KOSIS_population"
+                  - "KR_Gov_Stats_Generic"
+                  - "Global_Official_Org_Stats"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-target_segment_share"
+                name: "Target Segment Share of TAM"
+                category: "market_size"
+                default_quality_profile: "exploration_friendly"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-reachable_share"
+                name: "Reachable Share of SAM"
+                category: "market_size"
+                default_quality_profile: "exploration_friendly"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Avg_price_per_unit"
+                name: "Average Price per Unit"
+                category: "unit_economics"
+                default_quality_profile: "decision_balanced"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Industry_Media_and_Conferences"
+                  - "GenericWebSearch"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Revenue"
+                name: "Total Revenue"
+                category: "market_size"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                  - "Commercial_Market_Research"
+                derived_paths:
+                  - id: "Revenue_from_N_customers_and_ARPU"
+                    metric_ids: ["MET-N_customers", "MET-ARPU"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-ARPU"
+                name: "Average Revenue per User"
+                category: "unit_economics"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "ARPU_from_revenue_and_customers"
+                    metric_ids: ["MET-Revenue", "MET-N_customers"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Churn_rate"
+                name: "Churn Rate"
+                category: "growth"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Consulting_Firm_Reports"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-LTV"
+                name: "Customer Lifetime Value"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "LTV_from_ARPU_and_churn"
+                    metric_ids: ["MET-ARPU", "MET-Churn_rate"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-CAC"
+                name: "Customer Acquisition Cost"
+                category: "unit_economics"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "Commercial_Market_Research"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Payback_period"
+                name: "CAC Payback Period"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "Payback_from_CAC_and_ARPU"
+                    metric_ids: ["MET-CAC", "MET-ARPU"]
+                prior_estimation:
+                  enabled: true
+
+              # Financial statement metrics (core 재무지표)
+              - metric_id: "MET-COGS"
+                name: "Cost of Goods Sold"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-OPEX"
+                name: "Operating Expenses (OPEX)"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+                notes:
+                  - "Includes recurring operating expenses such as personnel expenses, facilities (including rent), IT infrastructure, marketing, etc."
+                  - "Excludes interest expenses, income taxes, and capital expenditures (CapEx)."
+
+              - metric_id: "MET-Gross_profit"
+                name: "Gross Profit"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                derived_paths:
+                  - id: "Gross_profit_from_revenue_and_COGS"
+                    metric_ids: ["MET-Revenue", "MET-COGS"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Operating_income"
+                name: "Operating Income"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                derived_paths:
+                  - id: "Operating_income_from_gross_profit_and_OPEX"
+                    metric_ids: ["MET-Gross_profit", "MET-OPEX"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Net_income"
+                name: "Net Income"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-FCF"
+                name: "Free Cash Flow"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                direct_evidence_sources:
+                  - "Brokerage_Research"
+                  - "Commercial_Market_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Gross_margin"
+                name: "Gross Margin"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "Gross_margin_from_gross_profit_and_revenue"
+                    metric_ids: ["MET-Gross_profit", "MET-Revenue"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Operating_margin"
+                name: "Operating Margin"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "Operating_margin_from_operating_income_and_revenue"
+                    metric_ids: ["MET-Operating_income", "MET-Revenue"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Net_margin"
+                name: "Net Margin"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "Net_margin_from_net_income_and_revenue"
+                    metric_ids: ["MET-Net_income", "MET-Revenue"]
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-FCF_margin"
+                name: "Free Cash Flow Margin"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                derived_paths:
+                  - id: "FCF_margin_from_FCF_and_revenue"
+                    metric_ids: ["MET-FCF", "MET-Revenue"]
+                prior_estimation:
+                  enabled: true
+
+              # Expense breakdown metrics – 사업 economics 분석용 주요 비용 항목
+              - metric_id: "MET-Personnel_expenses"
+                name: "Personnel Expenses (Total)"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Advertising_marketing_expenses"
+                name: "Advertising and Marketing Expenses"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Royalty_expenses"
+                name: "Royalty Expenses"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Logistics_fulfillment_expenses"
+                name: "Logistics and Fulfillment Expenses"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Depreciation_and_amortization"
+                name: "Depreciation and Amortization"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-CapEx"
+                name: "Capital Expenditures (CapEx)"
+                category: "profitability"
+                default_quality_profile: "decision_balanced"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                  - "Credit_Rating_Reports"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Platform_commission_fees"
+                name: "Platform and Transaction Commission Fees"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                  - "Commercial_Market_Research"
+                prior_estimation:
+                  enabled: true
+
+              # Financing and tax expenses – 영업외 비용 (OPEX와 구분)
+              - metric_id: "MET-Interest_expenses"
+                name: "Interest Expenses"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                  - "Credit_Rating_Reports"
+                prior_estimation:
+                  enabled: true
+
+              - metric_id: "MET-Income_tax_expense"
+                name: "Income Tax Expense"
+                category: "profitability"
+                default_quality_profile: "reporting_strict"
+                direct_evidence_sources:
+                  - "KR_DART_filings"
+                  - "Brokerage_Research"
+                prior_estimation:
+                  enabled: true
+
+            metric_sets:
+              structure_core_economics:
+                - "MET-TAM"
+                - "MET-SAM"
+                - "MET-SOM"
+                - "MET-N_customers"
+                - "MET-Top3_revenue_share"
+                - "MET-Top5_revenue_share"
+                - "MET-Top10_revenue_share"
+                - "MET-HHI_revenue"
+                - "MET-Revenue"
+                - "MET-COGS"
+                - "MET-OPEX"
+                - "MET-Personnel_expenses"
+                - "MET-Advertising_marketing_expenses"
+                - "MET-Royalty_expenses"
+                - "MET-Logistics_fulfillment_expenses"
+                - "MET-Depreciation_and_amortization"
+                - "MET-Platform_commission_fees"
+                - "MET-Gross_margin"
+                - "MET-Operating_margin"
+                - "MET-Net_margin"
+
+              opportunity_additional:
+                - "MET-ARPU"
+                - "MET-LTV"
+                - "MET-CAC"
+                - "MET-Payback_period"
+
+              monitoring_core:
+                - "MET-Revenue"
+                - "MET-N_customers"
+                - "MET-Churn_rate"
+                - "MET-CAC"
+                - "MET-LTV"
+                - "MET-Gross_margin"
+                - "MET-Operating_margin"
+                - "MET-Net_margin"
 
         strategy_engine:
           description: "Goal/Pattern/Reality/Value를 바탕으로 전략/포트폴리오 후보 탐색/평가 엔진"
@@ -659,10 +1254,13 @@ umis_v9:
             modes:
               - id: "reporting_strict"
                 description: "공식/Evidence 중심, Prior 최소"
+                quality_profile_ref: "reporting_strict"
               - id: "decision_balanced"
                 description: "Evidence 우선, 필요 시 Prior 허용"
+                quality_profile_ref: "decision_balanced"
               - id: "exploration_friendly"
                 description: "기회 탐색용, Prior/패턴 활용 허용"
+                quality_profile_ref: "exploration_friendly"
           api:
             - name: "resolve_policy"
               description: "Role/용도에 따라 적용할 Policy 결정"
@@ -734,18 +1332,21 @@ umis_v9:
   canonical_workflows:
     - id: "structure_analysis"
       role_id: "structure_analyst"
-      description: "특정 시장/도메인의 구조/메커니즘 이해"
+      description: "특정 시장/도메인의 구조/메커니즘 및 핵심 economics 이해"
       steps:
         - call: "world_engine.snapshot"
           with:
             as_of: "latest"
-            scope: { market: "TBD" }
+            scope:
+              domain_id: "@input.domain_id"
+              region: "@input.region"
+              segment: "@input.segment"
         - call: "pattern_engine.match_patterns"
           with:
             graph_slice_ref: "@prev.graph_slice_ref"
         - call: "value_engine.evaluate_metrics"
           with:
-            metric_requests: "core_structure_metrics"   # TAM/SAM/SOM, 주요 actor별 share 등
+            metric_requests: "@metric_sets.structure_core_economics"
             policy_ref: "reporting_strict"
 
     - id: "opportunity_discovery"
@@ -755,13 +1356,18 @@ umis_v9:
         - call: "world_engine.snapshot"
           with:
             as_of: "latest"
-            scope: { market: "TBD" }
+            scope:
+              domain_id: "@input.domain_id"
+              region: "@input.region"
+              segment: "@input.segment"
         - call: "pattern_engine.discover_gaps"
           with:
             graph_slice_ref: "@prev.graph_slice_ref"
         - call: "value_engine.evaluate_metrics"
           with:
-            metric_requests: "rough_size_metrics"
+            metric_requests:
+              - "@metric_sets.structure_core_economics"
+              - "@metric_sets.opportunity_additional"
             policy_ref: "exploration_friendly"
 
     - id: "strategy_design"
@@ -770,7 +1376,7 @@ umis_v9:
       steps:
         - call: "strategy_engine.search_strategies"
           with:
-            goal_id: "TBD"
+            goal_id: "@input.goal_id"
             constraints: {}
         - call: "strategy_engine.evaluate_portfolio"
           with:
@@ -786,5 +1392,5 @@ umis_v9:
             outcome_ids: "recent_outcomes"
         - call: "value_engine.evaluate_metrics"
           with:
-            metric_requests: "monitored_metrics"
+            metric_requests: "@metric_sets.monitoring_core"
             policy_ref: "reporting_strict"

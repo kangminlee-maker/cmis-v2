@@ -1,0 +1,20 @@
+---
+umis_v9_validation:
+  description: "UMIS v9 YAML/도메인 설정 검증 가이드 (도구/체크리스트 요약)"
+
+  tools:
+    yamllint:
+      description: "구문/띄어쓰기/들여쓰기 검증"
+      config: "기본 + 탭 금지 + trailing spaces 금지"
+    python_safe_load:
+      description: "파이썬 yaml.safe_load를 이용한 파싱 테스트"
+
+  checks:
+    - id: "no_trailing_spaces"
+      description: "모든 .yaml 파일에서 라인 끝 공백 금지"
+    - id: "indent_spaces_only"
+      description: "탭 사용 금지, space 2/4 규칙 유지"
+    - id: "required_sections_core"
+      description: "umis_v9.yaml 내 meta/ontology/planes/ids_and_lineage/policies/canonical_workflows 존재 여부"
+    - id: "domain_registry_consistency"
+      description: "domain_registry.yaml의 domain_id/config_file 경로가 실제 파일과 일치하는지 확인"

@@ -1,0 +1,56 @@
+---
+umis_v9_domain:
+  meta:
+    domain_id: "Adult_Language_Education_KR"
+    description: "한국 성인 대상 어학교육 시장 POC 도메인 설정"
+    status: "poc"
+    region: "KR"
+    linked_core_umis_file: "umis_v9.yaml"
+    linked_core_version: "9.0.0-alpha"
+
+  traits:
+    domain_traits:
+      Adult_Language_Education_KR:
+        institution_type:
+          value_type: "enum"
+          allowed_values: ["offline_academy","online_platform","university_center","corporate_training_provider","tutor_matching_platform","other"]
+        course_focus:
+          value_type: "enum"
+          allowed_values: ["test_prep","conversation","business","academic","mixed","other"]
+        learner_segment:
+          value_type: "enum"
+          allowed_values: ["university_student","office_worker","job_seeker","other"]
+        class_structure:
+          value_type: "enum"
+          allowed_values: ["one_on_one","small_group","large_group","self_paced"]
+        corporate_share_ratio:
+          value_type: "ratio"
+
+  data_sources:
+    description: "Adult_Language_Education_KR 도메인에 특화된 추가 데이터 소스 정의"
+    sources:
+      - id: "KOSIS_education_language"
+        type: "http_api"
+        description: "한국 통계청 KOSIS 교육/사교육/어학 관련 통계 (성인 중심 뷰에 활용)"
+        capabilities:
+          provides:
+            - "num_language_institutes_by_region"
+            - "adult_learners_by_age_and_region"
+            - "spend_on_language_education_by_age_group"
+        access:
+          base_url: "https://kosis.kr/openapi/..."
+          auth: "env:KOSIS_API_KEY"
+        mapping:
+          to_evidence_schema: "edu_language_stats_v1"
+
+      - id: "KR_AdultLanguage_Reports_Web"
+        type: "web_search"
+        description: "국내 성인 어학교육 시장 리포트/기사/블로그 등 웹 기반 Evidence"
+        capabilities:
+          provides:
+            - "adult_language_market_reports"
+            - "price_points_examples"
+            - "competitor_case_studies"
+        cost_profile:
+          latency: "medium"
+          monetary_cost: "per_call"

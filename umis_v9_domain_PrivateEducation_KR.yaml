@@ -1,0 +1,15 @@
+---
+umis_v9_domain:
+  meta:
+    domain_id: "Private_Education_KR"
+    description: "한국 사교육 도메인 설정 (예시/템플릿)"
+    status: "template"
+    region: "KR"
+    linked_core_umis_file: "umis_v9.yaml"
+    linked_core_version: "9.0.0-alpha"
+
+  traits:
+    domain_traits:
+      Private_Education_KR:
+        after_school_ratio:
+          value_type: "ratio"

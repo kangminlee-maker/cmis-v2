@@ -1,0 +1,17 @@
+---
+umis_v9_domain:
+  meta:
+    domain_id: "B2B_SaaS"
+    description: "B2B SaaS 도메인 설정 (예시/템플릿)"
+    status: "template"
+    linked_core_umis_file: "umis_v9.yaml"
+    linked_core_version: "9.0.0-alpha"
+
+  traits:
+    domain_traits:
+      B2B_SaaS:
+        churn_pattern:
+          value_type: "enum"
+          allowed_values: ["land_and_expand","project_based","seasonal","other"]
+        contract_length_months:
+          value_type: "numeric"
