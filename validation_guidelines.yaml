@@ -18,3 +18,4 @@ umis_v9_validation:
       description: "umis_v9.yaml 내 meta/ontology/planes/ids_and_lineage/policies/canonical_workflows 존재 여부"
     - id: "domain_registry_consistency"
       description: "domain_registry.yaml의 domain_id/config_file 경로가 실제 파일과 일치하는지 확인"
+

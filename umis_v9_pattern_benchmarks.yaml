@@ -40,3 +40,4 @@ umis_v9_pattern_benchmarks:
       metric_ranges:
         - metric_id: "MET-Royalty_expenses"
           note: "가맹점 매출 대비 로열티 비율, 도메인별 벤치마크 값은 후속 작업에서 채움."
+

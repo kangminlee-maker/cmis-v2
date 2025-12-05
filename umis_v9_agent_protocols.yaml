@@ -175,3 +175,4 @@ umis_v9_agent_protocols:
 
       fail_action:
         - "관련 Phase(예: PH07_market_sizing, PH06_value_chain_mapping) 재검토 및 재수행."
+

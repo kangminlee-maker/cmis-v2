@@ -82,3 +82,4 @@ class InMemoryGraph:
 
   def nodes_by_type(self, node_type: str) -> List[Node]:
     return [n for n in self.nodes.values() if n.type == node_type]
+

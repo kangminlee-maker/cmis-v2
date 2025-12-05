@@ -4283,3 +4283,4 @@ ls umis_v9_validation_gates.yaml     # 없으면 생성 필요
 5. ☑️ umis_v9_process_phases.yaml 작성 시작
 
 **목표**: 1주 후 Priority 1 완성, Sprint 3 시작
+

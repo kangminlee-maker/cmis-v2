@@ -15,3 +15,4 @@ umis_v9_domain:
           allowed_values: ["land_and_expand","project_based","seasonal","other"]
         contract_length_months:
           value_type: "numeric"
+

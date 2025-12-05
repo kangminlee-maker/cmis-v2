@@ -16,3 +16,4 @@ umis_v9_domain_registry:
       config_file: "umis_v9_domain_PrivateEducation_KR.yaml"
       status: "template"
       region: "KR"
+

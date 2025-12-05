@@ -206,3 +206,4 @@ umis_v9_validation_gates:
       fail_action:
         - "불통과 항목에 대해 원인 분석 및 보완 작업 수행"
         - "필요 시 관련 Phase 재실행 (PH06/PH07/PH08/PH12 등)"
+

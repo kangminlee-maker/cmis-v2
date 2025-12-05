@@ -54,3 +54,4 @@ umis_v9_domain:
         cost_profile:
           latency: "medium"
           monetary_cost: "per_call"
+

@@ -13,3 +13,4 @@ umis_v9_domain:
       Private_Education_KR:
         after_school_ratio:
           value_type: "ratio"
+
