@@ -1,0 +1,174 @@
+---
+umis_v9_reality_seed:
+  meta:
+    domain_id: "Adult_Language_Education_KR"
+    description: "한국 성인 어학교육 시장 구조 POC용 Reality Graph 시드"
+    as_of: "2025-01-01"
+
+  actors:
+    # 수요 측
+    - actor_id: "ACT-AdultLearners_SelfPaid"
+      kind: "customer_segment"
+      name: "성인 개인 학습자 (자비 부담)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        learner_segment: "office_worker"
+      metadata:
+        approx_population: 3000000
+
+    - actor_id: "ACT-CorporateClients"
+      kind: "customer_segment"
+      name: "기업 고객 (직원 어학 교육 수요)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        learner_segment: "office_worker"
+      metadata:
+        approx_company_count: 20000
+
+    # 공급 측 – Top-N 플레이어 유형별 대표 Actor
+    - actor_id: "ACT-OfflineAcademy_Top1_3"
+      kind: "company"
+      name: "상위 오프라인 어학원 그룹 (Top 1-3)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "offline_academy"
+        delivery_channel: "offline"
+      metadata:
+        approx_annual_revenue_krw: 250000000000
+
+    - actor_id: "ACT-OnlinePlatform_Top1_3"
+      kind: "company"
+      name: "상위 온라인 어학 플랫폼 (Top 1-3)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "online_platform"
+        delivery_channel: "online"
+      metadata:
+        approx_annual_revenue_krw: 180000000000
+
+    - actor_id: "ACT-UniversityCenters_Aggregated"
+      kind: "company"
+      name: "대학 부설 어학원/평생교육원 (집합)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "university_center"
+        delivery_channel: "offline"
+      metadata:
+        approx_annual_revenue_krw: 60000000000
+
+    - actor_id: "ACT-CorporateTrainingProviders"
+      kind: "company"
+      name: "기업 대상 어학 교육 제공 업체"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "corporate_training_provider"
+        delivery_channel: "hybrid"
+      metadata:
+        approx_annual_revenue_krw: 50000000000
+
+    - actor_id: "ACT-ContentCreators_Publishers"
+      kind: "company"
+      name: "콘텐츠 제작사 / 출판사"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "other"
+      metadata:
+        role: "교재/온라인 콘텐츠 공급"
+
+    - actor_id: "ACT-PaymentPlatforms"
+      kind: "partner"
+      name: "결제 플랫폼/앱마켓 (PG, 앱스토어 등)"
+      traits:
+        domain_id: "Adult_Language_Education_KR"
+        institution_type: "other"
+      metadata:
+        examples: ["PG사", "앱스토어", "간편결제"]
+
+  money_flows:
+    # 개인 학습자 → 오프라인 학원
+    - money_flow_id: "MFL-Learners_to_OfflineAcademy"
+      payer_id: "ACT-AdultLearners_SelfPaid"
+      payee_id: "ACT-OfflineAcademy_Top1_3"
+      quantity:
+        amount: 150000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "monthly"
+      traits:
+        revenue_model: "subscription"
+
+    # 개인 학습자 → 온라인 플랫폼 (인앱 결제 포함)
+    - money_flow_id: "MFL-Learners_to_OnlinePlatform"
+      payer_id: "ACT-AdultLearners_SelfPaid"
+      payee_id: "ACT-OnlinePlatform_Top1_3"
+      quantity:
+        amount: 100000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "monthly"
+      traits:
+        revenue_model: "subscription"
+
+    # 기업 고객 → 기업 교육 제공업체
+    - money_flow_id: "MFL-Corporates_to_TrainingProviders"
+      payer_id: "ACT-CorporateClients"
+      payee_id: "ACT-CorporateTrainingProviders"
+      quantity:
+        amount: 40000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "yearly"
+      traits:
+        revenue_model: "subscription"
+
+    # 공급자 → 콘텐츠 제작사/출판사 (로열티/콘텐츠 비용)
+    - money_flow_id: "MFL-Providers_to_ContentCreators"
+      payer_id: "ACT-OfflineAcademy_Top1_3"
+      payee_id: "ACT-ContentCreators_Publishers"
+      quantity:
+        amount: 15000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "yearly"
+      traits:
+        revenue_model: "royalty"
+
+    - money_flow_id: "MFL-OnlinePlatform_to_ContentCreators"
+      payer_id: "ACT-OnlinePlatform_Top1_3"
+      payee_id: "ACT-ContentCreators_Publishers"
+      quantity:
+        amount: 12000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "yearly"
+      traits:
+        revenue_model: "royalty"
+
+    # 공급자 → 결제/플랫폼 수수료
+    - money_flow_id: "MFL-Providers_to_PaymentPlatforms"
+      payer_id: "ACT-OnlinePlatform_Top1_3"
+      payee_id: "ACT-PaymentPlatforms"
+      quantity:
+        amount: 8000000000
+        currency: "KRW"
+        per: "year"
+      recurrence: "yearly"
+      traits:
+        revenue_model: "usage_based"
+
+  states:
+    - state_id: "STA-AdultLang_KR_Structure_2025"
+      target_type: "market_segment"
+      target_id: "Adult_Language_Education_KR"
+      as_of: "2025-01-01"
+      properties:
+        market_structure_notes: "오프라인 학원 위주의 전통 시장 + 온라인 플랫폼 성장 중, 기업 교육/대학 부설이 후방 구조 형성"
+        concentration_pattern: "Offline Top3 + Online Top3 합산 점유율 약 55~65% 수준 가정"
+        fragmentation_notes: "나머지는 중소학원/롱테일 튜터/소규모 플랫폼으로 분산"
+        key_cost_drivers:
+          - "Offline: 임대료/시설비 + 인건비 + 마케팅비 + 교재/콘텐츠 비용"
+          - "Online: 플랫폼 개발/운영(IT 인프라) + 콘텐츠 제작비 + 마케팅비 + 플랫폼 수수료"
+        entry_strategy_clues:
+          - "온라인 중심, 특정 니치(직장인 야간/주말, 시험전문, 기업 B2B 등)에 집중"
+          - "콘텐츠/데이터 기반 차별화 (적응형 커리큘럼, 진단/추천)"
+          - "기업 교육 B2B 계약을 통한 안정적 수익 확보"

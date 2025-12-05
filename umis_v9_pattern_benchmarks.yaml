@@ -1,0 +1,42 @@
+---
+umis_v9_pattern_benchmarks:
+  meta:
+    description: "패턴별 전형적인 구조/Metric 범위를 담는 벤치마크 스켈레톤 (v7 Benchmarks 요약용)"
+    linked_to:
+      - "umis_v9.yaml#planes.substrate_plane.graphs.pattern_graph"
+      - "umis_v9.yaml#planes.substrate_plane.graphs.value_graph"
+      - "umis_v9.yaml#value_engine.metrics_spec.metrics"
+
+  pattern_benchmarks:
+    - pattern_id: "PAT-subscription_model"
+      name: "구독형 BM 벤치마크"
+      context_archetypes:
+        - "mature_digital_subscription"
+      metric_ranges:
+        - metric_id: "MET-Churn_rate"
+          typical_range: "0.01-0.08"
+          note: "성숙 SaaS/콘텐츠 구독 기준 월간 이탈률 범위 예시."
+        - metric_id: "MET-Gross_margin"
+          typical_range: "0.60-0.85"
+        - metric_id: "MET-LTV"
+          note: "LTV는 ARPU/Churn 구조로 파생되므로, 절대값보다 구조적 관계를 우선 본다."
+
+    - pattern_id: "PAT-platform_business_model"
+      name: "플랫폼 BM 벤치마크"
+      context_archetypes:
+        - "two_sided_marketplace"
+      metric_ranges:
+        - metric_id: "MET-Platform_commission_fees"
+          typical_range: "0.05-0.30"
+          note: "거래액 대비 플랫폼 수수료율. 산업별로 상이하므로 참고용."
+        - metric_id: "MET-Top3_revenue_share"
+          typical_range: "0.50-0.90"
+          note: "승자독식 구조가 강한 플랫폼에서 상위 3개사의 매출 집중도."
+
+    - pattern_id: "PAT-franchise_model"
+      name: "프랜차이즈 BM 벤치마크"
+      context_archetypes:
+        - "retail_food_service"
+      metric_ranges:
+        - metric_id: "MET-Royalty_expenses"
+          note: "가맹점 매출 대비 로열티 비율, 도메인별 벤치마크 값은 후속 작업에서 채움."

@@ -1,0 +1,63 @@
+---
+umis_v9_value_chain_templates:
+  meta:
+    description: "R-Graph 기반 가치사슬 분석 템플릿 스켈레톤 (BM/도메인 공통 구조 정의)"
+    linked_to:
+      - "umis_v9.yaml#planes.substrate_plane.graphs.reality_graph"
+      - "umis_v9.yaml#value_engine.metrics_spec.metric_sets.structure_core_economics"
+
+  templates:
+    - id: "offline_academy_value_chain"
+      name: "오프라인 학원 BM 가치사슬 템플릿"
+      domain_hints:
+        - "Adult_Language_Education_KR"
+      description: "전통 오프라인 학원의 주요 단계와 돈/비용 흐름을 정리하는 템플릿."
+      stages:
+        - id: "content_production"
+          label: "콘텐츠 제작/교재 개발"
+          actor_kinds:
+            - "publisher"
+            - "content_creator"
+          typical_money_flows:
+            - "학원 → 출판사 (교재 구매/로열티)"
+          key_metrics:
+            - "MET-Royalty_expenses"
+        - id: "marketing_acquisition"
+          label: "마케팅/수강생 모집"
+          key_metrics:
+            - "MET-Advertising_marketing_expenses"
+            - "MET-CAC"
+        - id: "delivery_operations"
+          label: "수업 제공/운영"
+          key_metrics:
+            - "MET-Personnel_expenses"
+            - "MET-COGS"
+        - id: "overheads"
+          label: "임대료/고정비"
+          key_metrics:
+            - "MET-OPEX"
+
+    - id: "online_platform_value_chain"
+      name: "온라인 플랫폼 BM 가치사슬 템플릿"
+      domain_hints:
+        - "Adult_Language_Education_KR"
+        - "B2B_SaaS"
+      description: "플랫폼 중심 BM에서 공급자-플랫폼-수요자 사이의 가치/수수료 흐름 템플릿."
+      stages:
+        - id: "supply_onboarding"
+          label: "공급자 온보딩"
+          actor_kinds:
+            - "content_provider"
+            - "tutor"
+          key_metrics:
+            - "MET-N_customers"
+        - id: "transaction_processing"
+          label: "거래 처리/결제"
+          key_metrics:
+            - "MET-Platform_commission_fees"
+            - "MET-Revenue"
+        - id: "support_infrastructure"
+          label: "플랫폼 인프라/지원"
+          key_metrics:
+            - "MET-OPEX"
+            - "MET-Depreciation_and_amortization"

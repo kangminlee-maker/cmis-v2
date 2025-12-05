@@ -1,0 +1,323 @@
+---
+umis_v9_session_summary:
+  meta:
+    created_at: "2025-12-05T14:21:00+09:00"
+    author: "assistant"
+    description: "UMIS v9 설계·POC 진행 세션 요약 (컨텍스트 유지용)"
+    repo_path: "/Users/kangmin/v9_dev"
+    latest_commit:
+      hash: "9bffe83"
+      message: "Define UMIS v9 core schema and domain configs."
+    main_poc_question: "한국 성인 어학교육 시장 구조를 알고 싶어. Top-N 플레이어 구조 + 돈의 흐름에 따른 전후방 가치사슬도 함께 확인해줘. 진입 전략 후보 2–3개도 확인해보자."
+
+  core_architecture:
+    philosophy:
+      doc: "umis_v9_philosophy_concept.md"
+      key_points:
+        - "Reality / Pattern / Value / Decision 네 개의 그래프로 세계를 표현한다."
+        - "Model-first, Number-second: 구조/모델이 먼저, 숫자는 그 결과다."
+        - "Evidence-first, Prior-last: 가능하면 증거와 구조/공식 우선, LLM Prior는 최후 수단."
+        - "Trait 기반 Ontology로 SaaS 같은 모델을 고정 enum이 아니라 Trait 조합으로 표현한다."
+        - "On-demand Reality: 질문 시점에 Evidence를 모아 R-Graph를 채운다."
+    planes:
+      interaction_plane:
+        summary: "CLI / Notebook / Web App / API 등 사람이 UMIS와 상호작용하는 레이어."
+      role_plane:
+        summary: "Structure Analyst, Opportunity Designer, Strategy Architect, Numerical Modeler, Reality Monitor 등 Role 정의. Role은 Persona+Workflow일 뿐, 엔진이 아니다."
+      substrate_plane:
+        summary: "Reality/Pattern/Value/Decision Graph와 Evidence/Outcome/Value/Memory Store가 위치하는 데이터/그래프 레이어."
+      cognition_plane:
+        summary: "evidence_engine, world_engine, pattern_engine, value_engine (Metric Resolver), strategy_engine, learning_engine, policy_engine 등 추론·계산·학습 엔진 레이어."
+    graphs:
+      reality_graph:
+        node_types: ["actor", "event", "resource", "money_flow", "contract", "state"]
+        key_edges:
+          - "actor_participates_in_event"
+          - "event_transfers_resource"
+          - "event_triggers_money_flow"
+          - "actor_pays_actor (via money_flow)"
+          - "actor_has_contract_with_actor (via contract)"
+          - "actor_competes_with_actor (경쟁 강도, scope)"
+          - "actor_offers_resource"
+          - "actor_serves_actor"
+      pattern_graph:
+        summary: "Pattern / Pattern Family / Context Archetype 노드로 반복되는 비즈니스 패턴을 표현. 향후 전략 프레임워크/벤치마크와 연결 예정."
+      value_graph:
+        summary: "metric / value_record / parameter 노드와 formula / empirical_relation / depends_on_parameter edge로 Metric 사이의 관계를 표현."
+      decision_graph:
+        summary: "goal / hypothesis / strategy / scenario / action 노드로 목표와 전략·시나리오를 표현."
+    engines:
+      evidence_engine:
+        role: "data_sources 정의에 따라 외부/내부 Evidence를 수집해 EvidenceBundle로 정규화. fetch_for_metrics / fetch_for_reality_slice API 제공."
+      world_engine:
+        role: "Evidence를 R-Graph로 투영하고 snapshot(as_of, scope) API로 reality_graph 서브그래프를 제공."
+      pattern_engine:
+        role: "R-Graph와 Pattern Graph를 기반으로 패턴 매칭(match_patterns)과 갭 탐지(discover_gaps)를 수행."
+      value_engine:
+        role: "Metric Resolver를 통해 Direct Evidence → Derived → Prior → Fusion 순서로 ValueRecord를 계산. simulate_scenario도 제공."
+        metric_resolver_stages: ["direct_evidence", "derived", "prior_estimation", "fusion_validation"]
+      strategy_engine:
+        role: "Goal/제약을 입력받아 전략 후보(search_strategies)와 포트폴리오 평가(evaluate_portfolio) 수행."
+      learning_engine:
+        role: "Outcome vs 예상 값 비교로 Pattern/Metric Prior를 업데이트."
+      policy_engine:
+        role: "reporting_strict / decision_balanced / exploration_friendly 모드별 정책과 quality_profile를 관리."
+
+  core_files:
+    umis_v9_yaml:
+      path: "umis_v9.yaml"
+      status: "draft_in_progress"
+      highlights:
+        - "ontology.primitives에 actor/event/resource/money_flow/contract/state/trait/quantity 정의."
+        - "traits.core_traits와 domain_traits 스키마 정의 (실제 도메인 trait는 별도 도메인 YAML 파일로 분리)."
+        - "substrate_plane.graphs.*로 R/P/V/D 그래프 구조 정의."
+        - "substrate_plane.stores에 evidence_store / outcome_store / memory_store / value_store 스키마 정의."
+        - "substrate_plane.data_sources에 KOSIS_population, KR_DART_filings, KR_Gov_Stats_Generic, Global_Official_Org_Stats, Commercial_Market_Research, Consulting_Firm_Reports, Brokerage_Research, Credit_Rating_Reports, Academic_Papers, Industry_Media_and_Conferences 등 범용 소스 정의."
+        - "cognition_plane.engines 아래 evidence_engine/world_engine/pattern_engine/value_engine/strategy_engine/learning_engine/policy_engine 정의."
+        - "value_engine.metrics_spec에 코어 Metric 세트와 metric_sets(structure_core_economics, opportunity_additional, monitoring_core) 정의."
+        - "ids_and_lineage.id_prefixes / lineage_schema 정의."
+        - "policies.quality_profiles에 reporting_strict / decision_balanced / exploration_friendly 프로파일 정의."
+        - "canonical_workflows에 structure_analysis / opportunity_discovery / strategy_design / reality_monitoring 워크플로 선언."
+
+    domain_configs:
+      registry:
+        path: "domain_registry.yaml"
+        description: "도메인 ID와 도메인 YAML 파일 경로를 매핑하는 레지스트리."
+        domains:
+          - domain_id: "Adult_Language_Education_KR"
+            config_file: "umis_v9_domain_AdultLanguage_KR.yaml"
+            status: "poc"
+            region: "KR"
+          - domain_id: "B2B_SaaS"
+            config_file: "umis_v9_domain_B2B_SaaS.yaml"
+            status: "template"
+          - domain_id: "Private_Education_KR"
+            config_file: "umis_v9_domain_PrivateEducation_KR.yaml"
+            status: "template"
+            region: "KR"
+      Adult_Language_Education_KR:
+        path: "umis_v9_domain_AdultLanguage_KR.yaml"
+        traits:
+          institution_type: ["offline_academy", "online_platform", "university_center", "corporate_training_provider", "tutor_matching_platform", "other"]
+          course_focus: ["test_prep", "conversation", "business", "academic", "mixed", "other"]
+          learner_segment: ["university_student", "office_worker", "job_seeker", "other"]
+          class_structure: ["one_on_one", "small_group", "large_group", "self_paced"]
+          corporate_share_ratio: "ratio"
+        data_sources:
+          - "KOSIS_education_language"
+          - "KR_AdultLanguage_Reports_Web"
+      B2B_SaaS:
+        path: "umis_v9_domain_B2B_SaaS.yaml"
+        traits:
+          churn_pattern: ["land_and_expand", "project_based", "seasonal", "other"]
+          contract_length_months: "numeric"
+      Private_Education_KR:
+        path: "umis_v9_domain_PrivateEducation_KR.yaml"
+        traits:
+          after_school_ratio: "ratio"
+
+    seeds:
+      Adult_Language_Education_KR_reality:
+        path: "seeds/Adult_Language_Education_KR_reality_seed.yaml"
+        purpose: "Adult_Language_Education_KR 도메인 R-Graph POC용 reality seed. 질문 1개를 끝까지 풀기 위한 최소 구조 데이터."
+        structure:
+          meta:
+            domain_id: "Adult_Language_Education_KR"
+            as_of: "2025-01-01"
+          actors_examples:
+            - id: "ACT-AdultLearners_SelfPaid"
+              type: "customer_segment"
+              description: "성인 개인 학습자 (자비 부담)"
+            - id: "ACT-CorporateClients"
+              type: "customer_segment"
+              description: "직원 어학 교육 수요를 가진 기업 고객"
+            - id: "ACT-OfflineAcademy_Top1_3"
+              type: "company"
+              description: "상위 오프라인 어학원 그룹 (Top 1–3 집합)"
+            - id: "ACT-OnlinePlatform_Top1_3"
+              type: "company"
+              description: "상위 온라인 어학 플랫폼 (Top 1–3 집합)"
+            - id: "ACT-ContentCreators_Publishers"
+            - id: "ACT-PaymentPlatforms"
+          money_flows_summary:
+            - "성인 개인 학습자 → 오프라인 학원 (월 구독형 수강료, 연간 1500억 수준 가정)"
+            - "성인 개인 학습자 → 온라인 플랫폼 (인앱/구독 결제, 연간 1000억 수준 가정)"
+            - "기업 고객 → 기업 교육 제공사 (연간 400억 수준)"
+            - "공급자 → 콘텐츠 제작사/출판사 (로열티)"
+            - "온라인 플랫폼 → 결제/앱마켓 (수수료)"
+          states_summary:
+            - "시장 구조 노트: 오프라인 학원 위주의 전통 시장 + 온라인 플랫폼 성장 중, 기업 교육/대학 부설이 후방 구조 형성."
+            - "집중도 가정: Offline Top3 + Online Top3 합산 점유율 약 55–65%."
+            - "롱테일 구조: 나머지는 중소학원/튜터/소규모 플랫폼으로 분산."
+            - "핵심 비용 드라이버: 오프라인은 임대료/시설비 + 인건비 + 마케팅비, 온라인은 플랫폼 운영/콘텐츠 제작비 + 마케팅비 + 플랫폼 수수료."
+            - "진입 전략 힌트: 온라인 중심 니치, 콘텐츠/데이터 기반 차별화, B2B 기업 교육 계약 등."
+
+    poc_code:
+      graph:
+        path: "umis_v9_core/graph.py"
+        summary: "InMemoryGraph (Node/Edge 기반) 구현. upsert_node, add_edge, neighbors, incident_edges, nodes_by_type 제공. R-Graph POC에 사용."
+      world_engine_poc:
+        path: "umis_v9_core/world_engine_poc.py"
+        summary: "Reality seed YAML을 읽어 InMemoryGraph로 변환하는 POC world_engine.snapshot 구현. 현재 Adult_Language_Education_KR 도메인만 지원."
+        api:
+          - name: "load_reality_seed(path)"
+          - name: "snapshot(domain_id, region, segment, as_of)"
+      example_structure_analysis:
+        path: "examples_structure_analysis_poc.py"
+        summary: "snapshot()을 호출해 Actors / Money Flows / States를 콘솔에 출력하는 최소 structure_analysis 데모. 아직 Metric 계산/Report 생성은 미포함."
+
+    validation_guidelines:
+      path: "validation_guidelines.yaml"
+      summary: "YAML 구문/스타일 검증 및 최소 체크리스트 정리."
+      tools:
+        - "yamllint: 탭 금지, trailing spaces 금지"
+        - "python yaml.safe_load: 파싱 테스트 (현재 환경에 python 명령어는 없어서 수동/별도 환경 필요)"
+      checks:
+        - id: "no_trailing_spaces"
+        - id: "indent_spaces_only"
+        - id: "required_sections_core"
+        - id: "domain_registry_consistency"
+
+  metrics_and_workflows:
+    core_metrics:
+      source: "umis_v9.yaml / value_engine.metrics_spec.metrics"
+      groups:
+        market_size:
+          - "MET-TAM"
+          - "MET-SAM (resolution_protocol에 Top-down/Bottom-up/Proxy/Competitor Revenue 4-Method 수렴 규칙 명시)"
+          - "MET-SOM"
+          - "MET-N_customers"
+          - "MET-target_segment_share"
+          - "MET-reachable_share"
+          - "MET-Top3_revenue_share"
+          - "MET-Top5_revenue_share"
+          - "MET-Top10_revenue_share"
+          - "MET-HHI_revenue"
+        unit_economics:
+          - "MET-Avg_price_per_unit"
+          - "MET-ARPU"
+          - "MET-CAC"
+        growth_profitability:
+          - "MET-Churn_rate"
+          - "MET-LTV"
+          - "MET-Payback_period"
+          - "MET-Revenue"
+          - "MET-COGS"
+          - "MET-OPEX (Notes에 OPEX 포함/제외 범위 명시: 인건비/시설/IT/마케팅 포함, 이자/세금/CapEx 제외)"
+          - "MET-Gross_profit"
+          - "MET-Operating_income"
+          - "MET-Net_income"
+          - "MET-FCF"
+          - "MET-Gross_margin"
+          - "MET-Operating_margin"
+          - "MET-Net_margin"
+          - "MET-FCF_margin"
+        expense_breakdown:
+          - "MET-Personnel_expenses"
+          - "MET-Advertising_marketing_expenses"
+          - "MET-Royalty_expenses"
+          - "MET-Logistics_fulfillment_expenses"
+          - "MET-Depreciation_and_amortization"
+          - "MET-Platform_commission_fees"
+          - "MET-CapEx"
+          - "MET-Interest_expenses"
+          - "MET-Income_tax_expense"
+    metric_sets:
+      structure_core_economics: "시장 구조/집중도 + actor-level economics 이해를 위한 공통 Metric 세트. structure_analysis에서 사용."
+      opportunity_additional: "기회 발굴 시 추가로 보는 ARPU/LTV/CAC/Payback 등. opportunity_discovery에서 structure_core_economics에 더해 사용."
+      monitoring_core: "reality_monitoring에서 추적하는 핵심 성과 Metric 세트."
+    canonical_workflows:
+      structure_analysis:
+        id: "structure_analysis"
+        role_id: "structure_analyst"
+        description: "특정 시장/도메인의 구조/메커니즘 및 핵심 economics 이해."
+        steps_high_level:
+          - "world_engine.snapshot(as_of=latest, scope={domain_id, region, segment}) 호출"
+          - "pattern_engine.match_patterns(graph_slice) 호출"
+          - "value_engine.evaluate_metrics(metric_requests=@metric_sets.structure_core_economics, policy_ref=reporting_strict) 호출"
+        notes: "향후 umis_v9_process_phases.yaml에서 14 Phase 수준으로 세분화 예정 (v7의 Phase 1–14 구조 참고)."
+      opportunity_discovery:
+        id: "opportunity_discovery"
+        role_id: "opportunity_designer"
+        description: "패턴/구조 기반 기회 발굴 및 Rough sizing."
+        steps_high_level:
+          - "world_engine.snapshot(as_of=latest, scope={domain_id, region, segment}) 호출"
+          - "pattern_engine.discover_gaps(graph_slice) 호출"
+          - "value_engine.evaluate_metrics(metric_requests=[@metric_sets.structure_core_economics, @metric_sets.opportunity_additional], policy_ref=exploration_friendly) 호출"
+      strategy_design:
+        id: "strategy_design"
+        role_id: "strategy_architect"
+        description: "Goal에 맞는 전략/시나리오 설계 및 평가."
+        steps_high_level:
+          - "strategy_engine.search_strategies(goal_id=@input.goal_id, constraints={})"
+          - "strategy_engine.evaluate_portfolio(strategy_ids=@prev.strategy_ids, policy_ref=decision_balanced)"
+      reality_monitoring:
+        id: "reality_monitoring"
+        role_id: "reality_monitor"
+        description: "예상 vs 실제 결과 비교 및 시스템 학습."
+        steps_high_level:
+          - "learning_engine.update_from_outcomes(outcome_ids=recent_outcomes)"
+          - "value_engine.evaluate_metrics(metric_requests=@metric_sets.monitoring_core, policy_ref=reporting_strict)"
+
+  v7_v8_integration_insights:
+    from_v8:
+      already_absorbed:
+        - "4-Plane 아키텍처 (interaction/agent/data/compute_governance → v9 planes)."
+        - "Value Engine + metrics_spec + quality_requirements(min_literal_ratio, max_spread_ratio, allow_prior)."
+        - "source_tier 개념 및 Evidence 우선 순위."
+        - "Estimator 4-Stage → v9 Metric Resolver로 일반화."
+      not_ported_by_design:
+        - "v8 전용 ID 네임스페이스(SRC/EST/VAL/ASM 등)는 v9 ids_and_lineage로 재정의."
+        - "v8 agent_plane 세부 구조와 runtime 설정은 v9 Role Plane + Engines/Policies로 대체."
+    from_v7:
+      key_assets:
+        - "Market Reality Report 구조 (9개 파일: Work Log, Data Request, Value Chain, Market Size, Competition, Validation 등)."
+        - "Observer extended_frameworks: Value Chain / Market Concentration / Transaction Characteristics / Platform Power / Information Transparency / Regulatory Landscape / Technology Adoption / Community Dynamics 등 관찰 차원."
+        - "Value Chain Benchmarks: 50개 산업별 가치사슬/비용/마진/기회."
+        - "Strategic Frameworks: 포터 5 Forces, SWOT, TAM-SAM-SOM, BCG, Blue Ocean 등 30개 전략 프레임워크."
+        - "14 Phase 프로젝트 구조 + 3명 검증 게이트 + 데이터 품질 기준."
+      how_v9_has_already_used:
+        - "SAM 4-Method Convergence를 MET-SAM.resolution_protocol로 흡수."
+        - "CR3/HHI 등 집중도 관련 개념을 MET-TopN_revenue_share / MET-HHI_revenue Metric으로 반영."
+        - "Value Chain/비용 구조 관점을 Metrics (expense breakdown, margin metrics)와 R-Graph money_flow 구조에 반영."
+      potential_future_files:
+        process_phases: "umis_v9_process_phases.yaml – canonical_workflows를 Phase 단위로 세분화하는 계층."
+        agent_protocols: "umis_v9_agent_protocols.yaml – data_collection_request, estimation_request, calculation_request, validation_gate_request 패턴 정의."
+        validation_gates: "umis_v9_validation_gates.yaml – MECE/Four-method/DataReliability/Summation/Three-Validator Gate 정의."
+        strategic_frameworks: "frameworks/umis_v9_strategic_frameworks.yaml – v7 전략 프레임워크 이식 + Pattern/StrategyEngine 연동."
+        value_chain_templates: "frameworks/umis_v9_value_chain_templates.yaml – BM별 가치사슬 분석 템플릿."
+        pattern_benchmarks: "benchmarks/umis_v9_pattern_benchmarks.yaml – Pattern별 비용/마진/경쟁 구조 벤치마크."
+        bm_classification: "frameworks/umis_v9_bm_classification.yaml – 3-Axis(BM) 분류 프레임워크."
+        data_quality_schema: "schemas/umis_v9_data_quality.yaml – 신뢰도 점수 및 Source/Estimation/Assumption Registry 스키마."
+        id_management_schema: "schemas/umis_v9_id_management.yaml – ID 생성 규칙과 Registry 규칙, lineage 상세."
+        output_formats_schema: "schemas/umis_v9_output_formats.yaml – Market Reality Report / Opportunity Card 등 산출물 템플릿."
+
+  current_poc_state:
+    domain: "Adult_Language_Education_KR"
+    question: "한국 성인 어학교육 시장 구조 + Top-N 플레이어 구조 + 돈의 흐름에 따른 전후방 가치사슬 + 진입 전략 후보 2–3개."
+    implemented:
+      - "Reality seed YAML로 Adult Language 도메인의 기본 구조(주요 Actor, MoneyFlow, State) 정의."
+      - "InMemoryGraph 기반 world_engine_poc.snapshot 구현 (현재는 seed만 읽음)."
+      - "structure_analysis POC 스크립트에서 Actors/MoneyFlows/States를 출력해 구조를 눈으로 확인.">
+    not_implemented_yet:
+      - "EvidenceEngine 실제 구현 (KOSIS/DART/WebSearch 연동)."
+      - "ValueEngine/Metric Resolver 실제 구현 및 Metric 평가."
+      - "PatternEngine/StrategyEngine 실제 구현."
+      - "Phase 단위 WorkflowExecutor, AgentCollaborationHub, ValidationGateEngine 등 Gap 리포트 예시 코드."
+      - "Market Reality Report / Opportunity Card 자동 생성(Output Format 스키마 기반)."
+
+  recommended_next_steps:
+    short_term:
+      - "v7 Market Reality Report Adult Language 사례를 v9 구조로 재현하기 위해, 최소 버전의 umis_v9_process_phases.yaml (structure_analysis용 7–8 Phase) 초안 작성."
+      - "umis_v9_agent_protocols.yaml 최소 버전: data_collection_request, estimation_request 패턴만이라도 정의하고 Role Plane에 참조 추가."
+      - "umis_v9_validation_gates.yaml 최소 버전: four_method_convergence, data_reliability_validation, three_validator_gate만 먼저 정의."
+      - "세계/Metric/Pattern/Strategy 엔진 구현 전에, 현재 POC world_engine_poc와 Phase/Protocol/Gate 층의 설계를 느슨하게라도 연결하는 그림을 잡기."
+    mid_term:
+      - "EvidenceEngine v0 구현: Adult Language 도메인에서 KOSIS_education_language와 KR_AdultLanguage_Reports_Web를 최소 1–2개 Metric/TAM 계산에만 사용해보는 실험."
+      - "ValueEngine Metric Resolver v0 구현: MET-TAM, MET-N_customers, MET-ARPU, MET-Revenue 정도를 direct/derived/prior(벤치마크)까지 포함해 평가."
+      - "Strategic Framework 라이브러리(v7) 중 2–3개(Porter 5 Forces, TAM-SAM-SOM, Blue Ocean)를 선택해 frameworks/umis_v9_strategic_frameworks.yaml로 이식 및 Pattern/StrategyEngine 연동 설계."
+    open_questions:
+      - "14 Phase 전체를 항상 요구할지, POC 수준에서는 축소 버전을 둘지에 대한 결정."
+      - "검증 게이트를 얼마나 강제할지 (blocking vs warning-only) 정책."
+      - "v7 벤치마크 50개를 그대로 이식할지, 우선 패턴/도메인별로 부분 이식할지 범위 결정."
+      - "Agent를 실제 별도 서비스로 쪼갤지, 내부 모듈 레벨에서만 유지할지 (현재 권장: 내부 모듈)."

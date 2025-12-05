@@ -212,6 +212,7 @@ umis_v9:
     # ---------------- Role Plane (Agent) ----------------
     role_plane:
       description: "사람 역할/앱 관점 – Agent = Persona + Workflow + View"
+      collaboration_protocols_ref: "umis_v9_agent_protocols.yaml"
       roles:
         - id: "structure_analyst"
           label: "Structure Analyst (Observer 2.0)"
@@ -786,6 +787,29 @@ umis_v9:
                   enabled: true
                   notes:
                     - "Use pattern-based benchmarks when direct/derived evidence is weak"
+                resolution_protocol:
+                  description: "TAM 추정을 위한 기본 규칙 (Top-down / Proxy 중심, 필요 시 Bottom-up 보완)."
+                  methods:
+                    - id: "top_down"
+                      description: "글로벌/국가/산업 레벨 데이터를 시작점으로 하여 대상 TAM으로 축소."
+                      required_inputs:
+                        - "global_or_regional_market_data"
+                        - "industry_or_segment_ratios"
+                      validation:
+                        definition_check:
+                          description: "공식 통계/리포트 상 정의가 우리가 사용하는 시장 정의와 일치하는지 확인."
+                        logical_boundary_test:
+                          description: "인구/지출 상하한을 사용해 TAM 값의 논리적 범위를 검토."
+                    - id: "proxy"
+                      description: "유사 시장/국가/시점 데이터를 기준으로 보정해 TAM을 추정."
+                      adjustment_factors:
+                        - "GDP_ratio"
+                        - "digital_maturity"
+                        - "cultural_factor"
+                    - id: "bottom_up_sanity_check"
+                      description: "가능한 경우 주요 세그먼트의 Bottom-up 값을 통해 Top-down/Proxy 결과의 규모 감각을 검증."
+                  notes:
+                    - "직접 Evidence가 약할 경우, Top-down + Proxy 조합을 사용하되 논리적 상/하한을 반드시 점검한다."
 
               - metric_id: "MET-SAM"
                 name: "Serviceable Available Market"
@@ -801,15 +825,51 @@ umis_v9:
                   target_convergence: "±30% 이내 수렴"
                   methods:
                     - id: "top_down"
-                      description: "TAM에서 시작해 정의/경계를 좁혀가는 Top-down 방식"
+                      description: "TAM에서 시작해 정의/경계를 좁혀가는 Top-down 방식."
+                      required_inputs:
+                        - "MET-TAM (또는 동급 시장 규모)"
+                        - "정의가 명확한 target_segment_share"
+                      validation:
+                        definition_check:
+                          description: "사용하는 TAM 수치와 target_segment 정의가 SAM 대상 시장과 일치하는지 검증."
+                        logical_boundary_test:
+                          description: "Top-down SAM이 TAM을 초과하지 않고, 인접 세그먼트 대비 과도하지 않은지 확인."
                     - id: "bottom_up"
-                      description: "구성 요소(단위 수 × 빈도 × 가격 × 기간)를 쌓아 올리는 Bottom-up 방식"
+                      description: "구성 요소(단위 수 × 빈도 × 가격 × 기간)를 쌓아 올리는 Bottom-up 방식."
                       universal_formula: "units * frequency * price * period"
+                      required_inputs:
+                        - "addressable_units (예: 잠재 고객 수, 설치 가능 지점 수)"
+                        - "usage_or_purchase_frequency"
+                        - "average_price_or_spend"
+                      validation:
+                        coverage_check:
+                          description: "Bottom-up에 포함된 단위/채널이 SAM 정의에서 중요한 부분을 충분히 커버하는지 확인."
                     - id: "proxy_validation"
-                      description: "유사 시장/국가/시점과 비교하는 Proxy 기반 검증"
+                      description: "유사 시장/국가/시점과 비교하는 Proxy 기반 검증."
+                      required_inputs:
+                        - "proxy_market_size_or_SAM"
+                        - "조정 계수 (GDP, 인구, 디지털 성숙도 등)"
+                      validation:
+                        reasonableness_check:
+                          description: "Proxy 기반 결과가 Top-down/Bottom-up 추정과 큰 차이가 나는 경우, 원인(정의 차이, 데이터 연도 등)을 설명할 수 있어야 한다."
                     - id: "competitor_revenue_expansion"
-                      description: "상위 기업(Top-N) 경쟁 매출에서 SAM을 역산"
+                      description: "상위 기업(Top-N) 경쟁 매출에서 SAM을 역산."
+                      required_inputs:
+                        - "top_N_competitor_revenues"
+                        - "competitive_revenue_fraction_per_company"
+                        - "Top_N_share_of_market"
+                      validation:
+                        extraction_hierarchy:
+                          description: "사업보고서/IR 등 문서화된 세그먼트 매출을 우선 사용하고, 간접 지표/합리적 추정은 근거를 명시."
                       reference_note: "reference_deprecated/umis.yaml:3718-3827 SAM 계산 방법 참고"
+                  priority_order:
+                    - "bottom_up"
+                    - "competitor_revenue_expansion"
+                    - "top_down"
+                    - "proxy_validation"
+                  notes:
+                    - "4가지 방법이 모두 가능하다면 Bottom-up과 Competitor Revenue를 우선으로 보고 Top-down/Proxy는 보조 검증으로 사용한다."
+                    - "최종 SAM 값은 수렴 범위(±30%) 내에서 중앙값 또는 가중 평균으로 선택하고, 사용된 방법과 가정을 lineage에 기록한다."
 
               - metric_id: "MET-SOM"
                 name: "Serviceable Obtainable Market"
@@ -874,6 +934,28 @@ umis_v9:
                   - "Global_Official_Org_Stats"
                 prior_estimation:
                   enabled: true
+                resolution_protocol:
+                  description: "고객 수(N_customers) 추정을 위한 규칙 (모집단 × 침투율 구조)."
+                  methods:
+                    - id: "demographic_base"
+                      description: "인구/사업체 수 등 모집단 데이터를 기반으로 대상 잠재 고객 풀을 산출."
+                      required_inputs:
+                        - "population_or_firm_counts"
+                        - "age_or_size_distribution (필요시)"
+                    - id: "penetration_rate"
+                      description: "대상 모집단 × 침투율로 고객 수를 추정."
+                      required_inputs:
+                        - "target_population"
+                        - "estimated_penetration_rate"
+                      validation:
+                        logical_bounds:
+                          description: "침투율이 0–100% 범위인지, 유사 시장 대비 과도하지 않은지 확인."
+                  pass_criteria:
+                    - "최종 N_customers가 관련 모집단을 초과하지 않음"
+                  links:
+                    related_metrics:
+                      - "MET-TAM"
+                      - "MET-SAM"
 
               - metric_id: "MET-target_segment_share"
                 name: "Target Segment Share of TAM"
@@ -1255,12 +1337,15 @@ umis_v9:
               - id: "reporting_strict"
                 description: "공식/Evidence 중심, Prior 최소"
                 quality_profile_ref: "reporting_strict"
+                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
               - id: "decision_balanced"
                 description: "Evidence 우선, 필요 시 Prior 허용"
                 quality_profile_ref: "decision_balanced"
+                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
               - id: "exploration_friendly"
                 description: "기회 탐색용, Prior/패턴 활용 허용"
                 quality_profile_ref: "exploration_friendly"
+                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
           api:
             - name: "resolve_policy"
               description: "Role/용도에 따라 적용할 Policy 결정"
@@ -1333,6 +1418,7 @@ umis_v9:
     - id: "structure_analysis"
       role_id: "structure_analyst"
       description: "특정 시장/도메인의 구조/메커니즘 및 핵심 economics 이해"
+      process_phases_ref: "umis_v9_process_phases.yaml#structure_analysis"
       steps:
         - call: "world_engine.snapshot"
           with:

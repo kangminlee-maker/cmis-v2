@@ -1,0 +1,287 @@
+---
+umis_v9_process_phases:
+  meta:
+    description: "canonical_workflows의 상세 Phase 분해 (v7 Adult Language 사례 기반 최소 버전)"
+    linked_to: "umis_v9.yaml#canonical_workflows"
+
+  workflows:
+    structure_analysis:
+      workflow_id: "structure_analysis"
+      role_id: "structure_analyst"
+      total_phases: 14
+      estimated_duration: "3-5 days"
+      notes:
+        - "v7 Market Reality Report 14 Phase 구조에서 핵심 Phase만 우선 반영."
+        - "추후 경쟁/검증/리포트 Phase를 세분화하여 14 Phase로 확장 예정."
+
+      phases:
+        - phase_id: "PH01_market_definition"
+          sequence: 1
+          name: "시장 정의 및 경계 설정"
+          owner: "structure_analyst"
+          duration: "1-2 hours"
+
+          inputs:
+            - type: "user_query"
+              content: "시장/도메인 범위 질문"
+
+          activities:
+            - "Needs 전수 분류 (A-D 카테고리)"
+            - "시장 경계 정의 (포함/제외)"
+            - "거래 주체별 분류 (B2C/B2B/B2G)"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-needs_classification"
+              format: "structured_yaml"
+              content:
+                - "Needs 분류 체계"
+                - "시장 포함/제외 범위"
+
+          validation:
+            type: "self_check"
+            criteria:
+              - "Needs가 MECE인가?"
+              - "거래 관찰 가능한가?"
+              - "시장 경계가 명확한가?"
+
+          success_criteria:
+            - "모든 Needs가 A-D 중 하나에 할당"
+            - "포함/제외 범위 명시"
+
+        - phase_id: "PH02_domain_classification"
+          sequence: 2
+          name: "도메인 MECE 분류"
+          owner: "structure_analyst"
+          duration: "1 hour"
+
+          depends_on:
+            - "PH01_market_definition"
+
+          inputs:
+            - type: "artifact"
+              id: "ART-needs_classification"
+
+          activities:
+            - "도메인 축 정의 (언어, 제품 카테고리 등)"
+            - "도메인별 MECE 분류"
+            - "도메인별 추정 점유율"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-domain_classification"
+              format: "structured_yaml"
+
+          validation:
+            type: "mece_check"
+            criteria:
+              - "Mutually Exclusive"
+              - "Collectively Exhaustive (100%)"
+
+        - phase_id: "PH03_bm_framework"
+          sequence: 3
+          name: "비즈니스 모델 분류 프레임워크"
+          owner: "structure_analyst"
+          duration: "1.5 hours"
+
+          inputs:
+            - type: "framework_library"
+              id: "bm_classification_framework"
+
+          activities:
+            - "BM 분류 축 정의 (Delivery/Interaction/Transaction)"
+            - "BM 매트릭스 작성"
+            - "BM 그룹핑"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-bm_framework"
+
+          validation:
+            type: "framework_check"
+            criteria:
+              - "MECE 프레임워크인가?"
+              - "관찰 가능한 거래 구조인가?"
+
+        - phase_id: "PH04_bm_enumeration"
+          sequence: 4
+          name: "BM 전수조사"
+          owner: "structure_analyst"
+
+          activities:
+            - "모든 BM 상세 정의"
+            - "Edge Cases 검토"
+            - "BM별 특성 Summary"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-bm_complete_list"
+
+          validation:
+            type: "exhaustiveness_check"
+            criteria:
+              - "누락 BM 없는가?"
+              - "Edge Cases 처리했는가?"
+
+        - phase_id: "PH05_player_identification"
+          sequence: 5
+          name: "주요 플레이어 식별 및 데이터 수집"
+          owner: "structure_analyst"
+          collaborators:
+            - role: "reality_monitor"
+              responsibility: "데이터 수집 및 신뢰도 평가"
+
+          activities:
+            - "BM별 Top 플레이어 목록 작성"
+            - "데이터 소스 후보 식별"
+            - "데이터 수집 요청 발행"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-player_list"
+            - type: "request"
+              id: "REQ-reality_data_collection"
+              target_role: "reality_monitor"
+              template: "data_collection_request"
+
+          validation:
+            type: "completeness_check"
+
+        - phase_id: "PH06_value_chain_mapping"
+          sequence: 6
+          name: "가치사슬 구조 맵핑"
+          owner: "structure_analyst"
+
+          inputs:
+            - type: "artifact"
+              id: "ART-player_list"
+            - type: "framework"
+              id: "value_chain_template"
+
+          activities:
+            - "BM별 돈의 흐름 추적 (누가→누구→얼마)"
+            - "가치사슬 단계 식별"
+            - "핵심 비용/마진 구조 관찰/추정"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-value_chain_map"
+            - type: "estimation_requests"
+              ids: ["EST-margin_rates"]
+
+          validation:
+            type: "flow_check"
+            criteria:
+              - "모든 돈의 흐름이 추적되는가?"
+              - "합계가 100%인가?"
+
+        - phase_id: "PH07_market_sizing"
+          sequence: 7
+          name: "시장규모 추정 (Multi-method)"
+          owner: "numerical_modeler"
+          collaborators:
+            - role: "structure_analyst"
+              responsibility: "구조/가치사슬 컨텍스트 제공"
+            - role: "reality_monitor"
+              responsibility: "확정 데이터 제공 및 품질 검증"
+
+          activities:
+            - "Method 1: Top-down"
+            - "Method 2: Bottom-up (Top 플레이어 합산)"
+            - "Method 3: Fermi 분해"
+            - "Method 4: 유사 시장 비교"
+            - "4-Method Convergence (±30% 수렴)"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-market_size_estimate"
+            - type: "assumptions"
+              ids:
+                - "ASM-total_market"
+                - "ASM-bm_shares"
+
+          validation:
+            type: "convergence_check"
+            criteria:
+              - "4가지 방법이 합리적 범위 내 수렴"
+              - "±30% 이내"
+
+        - phase_id: "PH08_competition_analysis"
+          sequence: 8
+          name: "경쟁구조 분석"
+          owner: "structure_analyst"
+
+          activities:
+            - "경쟁강도 (CR3, HHI)"
+            - "교섭력 구조"
+            - "거래 구조"
+            - "시장집중도"
+
+          outputs:
+            - type: "artifact"
+              id: "ART-competition_analysis"
+
+        - phase_id: "PH12_mece_validation"
+          sequence: 12
+          name: "MECE 검증"
+          owner: "structure_analyst"
+
+          activities:
+            - "모든 분류 MECE 재검증"
+            - "합산 검증 (BM별 = 도메인별 = 전체)"
+
+          validation:
+            type: "comprehensive_mece"
+            all_artifacts:
+              - "ART-needs_classification"
+              - "ART-domain_classification"
+              - "ART-bm_complete_list"
+
+        - phase_id: "PH13_validation_gate"
+          sequence: 13
+          name: "3명 검증 게이트"
+          validators:
+            - role: "numerical_modeler"
+              checklist:
+                - "calculation_logic"
+                - "convergence"
+            - role: "reality_monitor"
+              checklist:
+                - "data_reliability"
+                - "traceability"
+            - role: "structure_analyst"
+              checklist:
+                - "goal_alignment"
+                - "umis_principles"
+                - "overall_quality"
+
+          pass_criteria:
+            - "모든 검증자 통과"
+
+          fail_action:
+            - "해당 Phase 또는 이전 Phase 재수행"
+
+        - phase_id: "PH14_report_generation"
+          sequence: 14
+          name: "Market Reality Report 작성"
+          owner: "structure_analyst"
+
+          inputs:
+            - all_artifacts: true
+
+          activities:
+            - "Executive Summary 작성"
+            - "섹션별 통합"
+            - "추적성 완성 (SRC-/EST-/ASM- ID)"
+
+          outputs:
+            - type: "final_report"
+              id: "RPT-market_reality"
+              format: "markdown"
+              template: "market_reality_report_template"
+
+    opportunity_discovery:
+      workflow_id: "opportunity_discovery"
+      role_id: "opportunity_designer"
+      notes:
+        - "향후 v7 Explorer 7-Phase 구조를 참고해 세분화 예정."

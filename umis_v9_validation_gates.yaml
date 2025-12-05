@@ -1,0 +1,208 @@
+---
+umis_v9_validation_gates:
+  meta:
+    description: "품질 보증을 위한 최소 검증 게이트 정의 (MECE / Four-Method / Data Reliability / 3자 게이트)"
+    linked_to:
+      - "umis_v9.yaml#policies.quality_profiles"
+      - "umis_v9.yaml#planes.cognition_plane.engines.policy_engine"
+      - "umis_v9_process_phases.yaml#workflows.structure_analysis"
+
+  gate_types:
+
+    # ========================================
+    # Gate Type 1: MECE 검증
+    # ========================================
+    mece_validation:
+      gate_type: "mece_validation"
+      trigger: "분류 작업 완료 시 (Needs, Domain, BM 등)"
+      default_validator_role: "structure_analyst"
+
+      checks:
+        mutually_exclusive:
+          description: "모든 항목이 상호 배타적인가?"
+          method: "교집합 확인"
+          criteria:
+            - "각 항목이 하나의 카테고리에만 속함"
+            - "중복 없음"
+
+        collectively_exhaustive:
+          description: "모든 경우를 빠짐없이 포함하는가?"
+          method: "합집합 확인"
+          criteria:
+            - "합계 100%"
+            - "'기타' 카테고리로 나머지 커버"
+
+      pass_criteria:
+        - "ME check: pass"
+        - "CE check: pass"
+
+      fail_action:
+        - "분류 재수행"
+        - "누락 항목 추가"
+
+    # ========================================
+    # Gate Type 2: Four-Method Convergence (시장규모)
+    # ========================================
+    four_method_convergence:
+      gate_type: "quantitative_validation"
+      trigger: "시장 규모 추정 완료 (예: PH07_market_sizing)"
+      default_validator_role: "numerical_modeler"
+      metric_id: "MET-SAM"
+
+      methods:
+        - id: "top_down"
+          name: "Top-down"
+          weight: 0.2
+        - id: "bottom_up"
+          name: "Bottom-up"
+          weight: 0.4
+        - id: "fermi"
+          name: "Fermi"
+          weight: 0.3
+        - id: "analog_benchmark"
+          name: "Analog/Benchmark"
+          weight: 0.1
+
+      convergence_check:
+        formula: "가중 평균 기준 수렴 범위 계산"
+        acceptable_range: "±30%"
+        criteria:
+          - "각 방법 추정치가 가중 평균 대비 ±50% 이내"
+          - "최종 SAM 범위가 중앙값 대비 ±30% 이내"
+
+      pass_criteria:
+        - "Convergence within ±30%"
+
+      fail_action:
+        - "outlier method 재검토"
+        - "가정 재확인"
+        - "재계산"
+
+    # ========================================
+    # Gate Type 3: 데이터 신뢰성 검증
+    # ========================================
+    data_reliability_validation:
+      gate_type: "data_quality"
+      trigger: "데이터 수집 Phase 완료 (예: PH05_player_identification 이후)"
+      default_validator_role: "reality_monitor"
+
+      checks:
+        source_coverage:
+          description: "모든 데이터에 evidence_id 또는 source_id가 부여되었는가?"
+          criteria:
+            - "ID 없는 데이터 0%"
+
+        reliability_distribution:
+          description: "신뢰도 분포가 적절한가?"
+          target:
+            - ">=80% 신뢰도: >=50% (이상적)"
+            - ">=70% 신뢰도: >=70% (최소)"
+          acceptable: "평균 신뢰도 >=70%"
+
+        traceability:
+          description: "모든 출처가 추적 가능한가?"
+          criteria:
+            - "URL/문서명 등 접근 경로 명시"
+            - "재현 가능"
+
+      pass_criteria:
+        - "모든 데이터 ID 보유 (evidence_id/source_id)"
+        - "평균 신뢰도 >=70%"
+        - "추적 가능"
+
+      fail_action:
+        - "신뢰도 낮은 데이터 재수집"
+        - "ID 미부여 데이터 Registry 추가"
+
+    # ========================================
+    # Gate Type 4: 합산 검증 (Summation)
+    # ========================================
+    summation_validation:
+      gate_type: "arithmetic_check"
+      trigger: "MECE 검증 이후 합산 관계 확인 (예: PH12_mece_validation)"
+      default_validator_role: "numerical_modeler"
+
+      checks:
+        bm_summation:
+          description: "BM별 합 = 전체?"
+          formula: "Σ(BM 시장 규모) = 전체 시장 규모"
+          tolerance: "±5%"
+
+        domain_summation:
+          description: "도메인별 합 = 전체?"
+          formula: "Σ(도메인 시장 규모) = 전체 시장 규모"
+          tolerance: "±5%"
+
+      pass_criteria:
+        - "모든 합산 결과가 tolerance 내"
+
+      fail_action:
+        - "불일치 원인 파악"
+        - "재계산"
+
+    # ========================================
+    # Gate Type 5: 최종 3자 검증 (Structure 보고서)
+    # ========================================
+    three_validator_gate:
+      gate_type: "comprehensive_validation"
+      trigger: "structure_analysis 최종 직전 (예: PH13_validation_gate)"
+      validator_roles:
+        - "numerical_modeler"
+        - "reality_monitor"
+        - "structure_analyst"
+
+      validation_matrix:
+
+        numerical_modeler_checklist:
+          role: "numerical_modeler"
+          responsibility: "정량 타당성"
+          items:
+            - id: "calc_logic"
+              item: "계산 논리 타당성"
+              check: "공식이 맞는가? 4-Method 수렴 여부는?"
+              pass_criteria: "논리 오류 없음"
+            - id: "convergence"
+              item: "수렴 검증"
+              check: "SAM/TAM 추정이 ±30% 범위 내인가?"
+              pass_criteria: "범위 내"
+            - id: "summation"
+              item: "합산 검증"
+              check: "BM별 = 도메인별 = 전체가 ±5% 이내 일치하는가?"
+              pass_criteria: "±5% 일치"
+
+        reality_monitor_checklist:
+          role: "reality_monitor"
+          responsibility: "데이터 신뢰성"
+          items:
+            - id: "source_quality"
+              item: "출처 품질"
+              check: "evidence_id/source_id와 신뢰도 메타데이터가 모두 있는가? 평균 신뢰도 >=70%인가?"
+              pass_criteria: "기준 충족"
+            - id: "traceability"
+              item: "추적성"
+              check: "모든 주장에 lineage.from_evidence_ids 또는 lineage.from_value_ids가 연결되어 있는가?"
+              pass_criteria: "100% 추적 가능"
+
+        structure_analyst_checklist:
+          role: "structure_analyst"
+          responsibility: "구조/논리 건전성"
+          items:
+            - id: "goal_alignment"
+              item: "목표 정렬"
+              check: "보고서 결론이 초기 분석 목적과 일치하는가?"
+              pass_criteria: "목표와 일관"
+            - id: "umis_principles"
+              item: "UMIS 원칙 준수"
+              check: "Evidence-first, Model-first 원칙을 충실히 따랐는가?"
+              pass_criteria: "원칙 위배 없음"
+            - id: "overall_quality"
+              item: "종합 품질"
+              check: "논리적 비약/누락 없이 독립적인 검토자가 이해 가능한가?"
+              pass_criteria: "A/B급 이상 품질"
+
+      pass_criteria:
+        - "모든 체크리스트 항목이 해당 Role에서 'pass' 상태"
+
+      fail_action:
+        - "불통과 항목에 대해 원인 분석 및 보완 작업 수행"
+        - "필요 시 관련 Phase 재실행 (PH06/PH07/PH08/PH12 등)"

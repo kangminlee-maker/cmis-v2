@@ -1,0 +1,177 @@
+---
+umis_v9_agent_protocols:
+  meta:
+    description: "Role Plane Agent 간 협업 프로토콜 (structure_analysis / opportunity_discovery 최소 버전)"
+    linked_to:
+      - "umis_v9.yaml#planes.role_plane"
+      - "umis_v9.yaml#canonical_workflows"
+      - "umis_v9_process_phases.yaml#workflows"
+
+  collaboration_patterns:
+
+    # ========================================
+    # Pattern 1: 데이터 수집 요청 (Structure → Reality)
+    # ========================================
+    data_collection_request:
+      pattern_id: "data_collection_request"
+      from_role: "structure_analyst"
+      to_role: "reality_monitor"
+
+      triggers:
+        - workflow_id: "structure_analysis"
+          phase_id: "PH05_player_identification"
+          description: "BM별 Top 플레이어 식별 후, 추가 정량 데이터 및 출처 검증이 필요할 때."
+
+      request_template:
+        format: "markdown"
+        required_sections:
+          - section: "요청 개요"
+            fields:
+              - "요청자"
+              - "요청일"
+              - "프로젝트명"
+              - "우선순위 (HIGH/MEDIUM/LOW)"
+
+          - section: "데이터 수집 우선순위"
+            subsections:
+              - "1순위: 확정 데이터 (신뢰도 ≥80%)"
+              - "2순위: 신뢰할 수 있는 추정 데이터"
+              - "3순위: 보조 데이터"
+
+          - section: "수집 대상 항목"
+            format: "table"
+            columns: ["항목", "출처 후보", "신뢰도 목표", "비고"]
+
+          - section: "데이터 품질 기준"
+            reliability_matrix:
+              - range: "90-100"
+                description: "공식 공시/정부 통계"
+                examples: "DART, 통계청 등"
+                source_tier_hint: "official"
+                quality_profile_hint: "reporting_strict"
+              - range: "80-89"
+                description: "업계/기관 리포트"
+                examples: "증권사, 연구기관"
+                source_tier_hint: "commercial"
+                quality_profile_hint: "decision_balanced"
+              - range: "70-79"
+                description: "주요 언론 보도"
+                examples: "IR 발표, 기사"
+                source_tier_hint: "other"
+                quality_profile_hint: "decision_balanced"
+
+          - section: "산출물 형식"
+            required_files:
+              - "source_registry (예: source_registry.yaml)"
+              - "data_summary (예: data_summary.md)"
+
+      response_expectations:
+        expected_artifacts:
+          - id: "ART-source_registry_update"
+            description: "요청된 항목에 대한 데이터 출처/신뢰도 정리."
+            kind: "evidence_store_update"
+            store_ref: "umis_v9.yaml#substrate_plane.stores.evidence_store"
+            id_prefix: "EVD-"
+          - id: "ART-data_collection_summary"
+            description: "수집된 데이터와 갭, 추가 제안 요약."
+            kind: "project_artifact"
+            id_prefix: "ART-"
+        sla_hint: "구조 분석 스프린트 내 0.5–1일 이내 1차 응답."
+
+    # ========================================
+    # Pattern 2: 구조 → 정량 지원 요청 (Structure → Numerical)
+    # ========================================
+    structure_to_numerical_support:
+      pattern_id: "structure_to_numerical_support"
+      from_role: "structure_analyst"
+      to_role: "numerical_modeler"
+
+      triggers:
+        - workflow_id: "structure_analysis"
+          phase_id: "PH06_value_chain_mapping"
+          description: "가치사슬 단계별 규모/마진 등 정량 데이터가 필요할 때."
+
+      request_payload:
+        format: "structured_yaml"
+        required_fields:
+          - "market_segment"    # 대상 시장/세그먼트 식별자
+          - "value_chain_stage" # 예: upstream/midstream/downstream
+          - "metric_ids"        # 예: [MET-Revenue, MET-Gross_margin]
+          - "time_horizon"      # 분석 기준 연도/기간
+          - "assumption_notes"  # 이미 알고 있는 가정/제약
+
+      response_expectations:
+        expected_artifacts:
+          - id: "ART-market_size_estimate"
+            description: "요청 구간에 대한 시장 규모/마진 등 핵심 Metric 추정치."
+            kind: "project_artifact"
+            id_prefix: "ART-"
+            links:
+              metric_ids: "@request.metric_ids"
+              metric_set_hint: "structure_core_economics"
+        notes:
+          - "가능한 경우 value_engine.evaluate_metrics를 사용해 직접 Metric Resolver를 호출."
+          - "직접 계산이 아닌 추정이 포함될 경우, Assumption/Lineage를 명시."
+
+    # ========================================
+    # Pattern 3: 기회 Rough sizing 요청 (Opportunity → Numerical)
+    # ========================================
+    opportunity_sizing_request:
+      pattern_id: "opportunity_sizing_request"
+      from_role: "opportunity_designer"
+      to_role: "numerical_modeler"
+
+      triggers:
+        - workflow_id: "opportunity_discovery"
+          description: "패턴/사례 기반으로 도출된 기회 후보에 대해 Rough sizing이 필요할 때."
+
+      request_payload:
+        format: "structured_yaml"
+        required_fields:
+          - "opportunity_id"
+          - "related_patterns"       # pattern_ids (예: PAT-subscription_model)
+          - "target_segment_context" # domain_id, region, segment
+          - "target_metrics"         # 예: [MET-SAM, MET-ARPU, MET-LTV]
+          - "time_horizon"
+
+      response_expectations:
+        expected_artifacts:
+          - id: "ART-opportunity_sizing"
+            description: "각 기회별 주요 Metric Rough estimate와 오차 범위."
+            kind: "project_artifact"
+            id_prefix: "ART-"
+            links:
+              metric_ids: "@request.target_metrics"
+              quality_profile_ref: "exploration_friendly"
+        quality_profile_hint: "exploration_friendly"
+
+    # ========================================
+    # Pattern 4: 구조 분석 결과 검증 요청 (Structure → Peers)
+    # ========================================
+    structure_validation_request:
+      pattern_id: "structure_validation_request"
+      from_role: "structure_analyst"
+      to_roles:
+        - "numerical_modeler"
+        - "reality_monitor"
+
+      triggers:
+        - workflow_id: "structure_analysis"
+          phase_id: "PH13_validation_gate"
+          description: "Market Reality Report 최종 이전, 3명 검증 게이트 실행 시점."
+
+      checklists:
+        numerical_modeler:
+          items:
+            - "계산 논리가 일관적인가?"
+            - "SAM/TAM 추정이 4-Method Convergence를 만족하는가?"
+        reality_monitor:
+          items:
+            - "핵심 숫자들의 출처가 명시되었는가? (lineage.from_evidence_ids, lineage.from_value_ids)"
+            - "데이터 신뢰도 수준이 정책 기준 이상인가?"
+
+      pass_criteria:
+        - "모든 검증자가 자신에게 할당된 체크리스트를 통과로 표시."
+
+      fail_action:
+        - "관련 Phase(예: PH07_market_sizing, PH06_value_chain_mapping) 재검토 및 재수행."

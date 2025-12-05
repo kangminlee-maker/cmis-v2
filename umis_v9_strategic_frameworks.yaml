@@ -1,0 +1,80 @@
+---
+umis_v9_strategic_frameworks:
+  meta:
+    description: "UMIS v9에서 Strategy/Pattern/Decision Graph를 잇는 전략 프레임워크 스켈레톤 정의"
+    linked_to:
+      - "umis_v9.yaml#planes.substrate_plane.graphs.pattern_graph"
+      - "umis_v9.yaml#planes.substrate_plane.graphs.decision_graph"
+      - "umis_v9.yaml#planes.cognition_plane.engines.strategy_engine"
+
+  frameworks:
+    - id: "porter_5_forces"
+      name: "Porter's Five Forces (Extended)"
+      category: "competition_structure"
+      description: "전통 5 Forces + 플랫폼/생태계/커뮤니티 힘을 포함한 확장 버전."
+      node_type: "goal"
+      typical_use_cases:
+        - "시장 진입/확장 타당성 평가"
+        - "경쟁 강도 및 수익성 구조 이해"
+      pattern_links:
+        related_patterns:
+          - "PAT-market_concentration"
+          - "PAT-platform_power"
+          - "PAT-information_transparency"
+      decision_links:
+        suggests_goal_metrics:
+          - "MET-HHI_revenue"
+          - "MET-Top3_revenue_share"
+          - "MET-Operating_margin"
+
+    - id: "tam_sam_som"
+      name: "TAM / SAM / SOM 프레임워크"
+      category: "market_sizing"
+      description: "시장 경계를 정의하고 TAM→SAM→SOM으로 좁혀가는 계층적 시장 규모 프레임워크."
+      node_type: "goal"
+      typical_use_cases:
+        - "시장 진입 여부 결정"
+        - "우선 타겟 세그먼트 선정"
+      metric_links:
+        core_metrics:
+          - "MET-TAM"
+          - "MET-SAM"
+          - "MET-SOM"
+          - "MET-N_customers"
+      notes:
+        - "v9 value_engine.metrics_spec.metrics에 정의된 MET-*들과 직접 매핑."
+
+    - id: "seven_powers"
+      name: "7 Powers (Sustainable Advantage)"
+      category: "moat_assessment"
+      description: "시간에 따라 강화되는 방어력(Scale/Network/Switching/Brand/Resource/Process/Counter-Positioning)을 평가하는 프레임워크."
+      node_type: "hypothesis"
+      typical_use_cases:
+        - "신규/기존 BM의 장기 방어력 평가"
+        - "기회 포트폴리오 우선순위 조정"
+      pattern_links:
+        related_patterns:
+          - "PAT-scale_dynamics"
+          - "PAT-network_effects"
+          - "PAT-switching_costs"
+          - "PAT-brand_dynamics"
+      metric_links:
+        indicative_metrics:
+          - "MET-Gross_margin"
+          - "MET-Operating_margin"
+          - "MET-LTV"
+          - "MET-CAC"
+
+    - id: "blue_ocean_canvas"
+      name: "Blue Ocean Strategy Canvas"
+      category: "positioning"
+      description: "Eliminate-Reduce-Raise-Create 그리드를 통해 가치 요소를 재구성하는 전략 프레임워크."
+      node_type: "strategy"
+      typical_use_cases:
+        - "성숙 시장에서 비경쟁적 공간 창출"
+      pattern_links:
+        related_patterns:
+          - "PAT-value_innovation"
+      decision_links:
+        goal_alignment_hints:
+          - "시장 점유율보다 이익/방어력 개선에 초점을 둘 때 적합."

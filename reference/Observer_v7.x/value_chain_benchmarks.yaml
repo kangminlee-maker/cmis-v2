@@ -1,0 +1,1062 @@
+# ========================================
+# UMIS Value Chain Benchmarks
+# Observer RAG Collection
+# ========================================
+#
+# 작성일: 2025-11-03
+# Agent: Observer (Albert)
+# 총 항목: 50개
+# 품질 등급: A+ 목표
+#
+# ========================================
+
+_meta:
+  version: "7.1.0"
+  created: "2025-11-03"
+  agent: "observer"
+  collection: "value_chain_benchmarks"
+  total_benchmarks: 50
+  last_updated: "2025-11-03"
+
+  categories:
+    - "제조업"
+    - "유통/소매"
+    - "서비스업"
+    - "IT/소프트웨어"
+    - "플랫폼"
+
+# ========================================
+# 1. 제조업 가치사슬 (10개)
+# ========================================
+
+manufacturing_value_chains:
+
+  - benchmark_id: "VCH_MFG_001"
+    industry: "스마트폰 제조"
+    company_example: "Apple iPhone"
+    year: 2023
+
+    value_chain_stages:
+      design:
+        activities:
+          - "하드웨어 설계"
+          - "소프트웨어 개발"
+          - "UI/UX 디자인"
+        cost_share: "15%"
+        margin: "N/A"
+        location: "미국 (본사)"
+
+      component_sourcing:
+        activities:
+          - "반도체 (TSMC)"
+          - "디스플레이 (Samsung)"
+          - "카메라, 배터리 등"
+        cost_share: "45%"
+        margin: "10-20%"
+        location: "한국, 대만, 일본"
+
+      assembly:
+        activities:
+          - "부품 조립"
+          - "품질 검사"
+        cost_share: "5%"
+        margin: "2-3%"
+        location: "중국 (Foxconn)"
+        labor_cost: "$3-5 per unit"
+
+      logistics:
+        activities:
+          - "글로벌 배송"
+          - "재고 관리"
+        cost_share: "3%"
+        margin: "5%"
+
+      distribution:
+        activities:
+          - "Apple Store"
+          - "통신사"
+          - "온라인"
+        cost_share: "7%"
+        margin: "10-15%"
+
+      marketing_sales:
+        activities:
+          - "광고"
+          - "프로모션"
+        cost_share: "10%"
+        margin: "N/A"
+
+    total_cost_breakdown:
+      bom_cost: "45% (부품)"
+      manufacturing: "5% (조립)"
+      other_costs: "35% (R&D, 마케팅, 물류)"
+      profit_margin: "15%"
+
+    pricing_example:
+      cost: "$400"
+      retail_price: "$999"
+      gross_margin: "60%"
+
+    inefficiencies_identified:
+      - point: "중국 조립 의존"
+        risk: "지정학적 리스크"
+        alternative: "인도, 베트남 생산 확대"
+
+      - point: "부품 공급망 복잡"
+        risk: "공급 차질"
+        solution: "다변화"
+
+    disruption_opportunities:
+      - "수직 통합 (자체 반도체)"
+      - "자동화 (로봇 조립)"
+      - "3D 프린팅"
+
+  - benchmark_id: "VCH_MFG_002"
+    industry: "전기차 제조"
+    company_example: "Tesla Model 3"
+    year: 2023
+
+    value_chain_stages:
+      battery_production:
+        cost_share: "35%"
+        location: "미국, 중국"
+        key_supplier: "CATL, LG Energy Solution"
+
+      powertrain:
+        cost_share: "20%"
+        location: "미국 (자체)"
+
+      assembly:
+        cost_share: "15%"
+        location: "미국, 중국, 독일"
+
+      software:
+        cost_share: "10%"
+        location: "미국"
+        note: "자율주행, OTA 업데이트"
+
+      sales_distribution:
+        cost_share: "5%"
+        note: "D2C 모델"
+
+    total_cost: "$28,000"
+    selling_price: "$40,000"
+    gross_margin: "30%"
+
+    vs_traditional_auto:
+      traditional_distribution: "15-20% 마진"
+      tesla_d2c: "5% (딜러 제거)"
+      saving: "10-15%"
+
+  - benchmark_id: "VCH_MFG_003"
+    industry: "의류 제조 (Fast Fashion)"
+    company_example: "Zara"
+
+    value_chain_stages:
+      design: "2주 사이클"
+      sourcing: "Near-shoring (유럽 인근)"
+      manufacturing: "50% 자체, 50% 외주"
+      logistics: "중앙 집중 배송"
+      retail: "직영 매장"
+
+    time_to_market: "2-4주 (업계 최단)"
+    vs_traditional: "6-9개월"
+
+    competitive_advantage: "빠른 반응, 재고 최소화"
+
+  - benchmark_id: "VCH_MFG_004"
+    industry: "식품 제조"
+
+    value_chain_stages:
+      raw_materials: "30-40% cost"
+      processing: "15-20%"
+      packaging: "10-15%"
+      distribution: "15-20%"
+      retail: "20-30%"
+
+    gross_margin: "30-45%"
+
+  - benchmark_id: "VCH_MFG_005"
+    industry: "반도체 제조"
+
+    value_chain_stages:
+      design: "Fabless 또는 자체"
+      wafer_fab: "가장 비용 높음 ($20B Fab)"
+      packaging: "후공정"
+      testing: "품질 검증"
+
+    cost_structure:
+      capex: "매우 높음"
+      depreciation: "매출의 20-30%"
+      gross_margin: "40-60%"
+
+# ========================================
+# 2. 유통/소매 (12개)
+# ========================================
+
+retail_value_chains:
+
+  - benchmark_id: "VCH_RET_001"
+    industry: "전자상거래"
+    company_example: "Coupang"
+    business_model: "1P (Inventory Model)"
+    year: 2023
+
+    value_chain_stages:
+      sourcing:
+        activities:
+          - "제조사/도매상 구매"
+        cost: "60-70% of retail"
+        margin: "N/A"
+
+      warehousing:
+        activities:
+          - "풀필먼트 센터 운영"
+          - "재고 관리"
+        cost_share: "5-7%"
+        facilities: "100+ 센터"
+
+      last_mile_delivery:
+        activities:
+          - "Rocket Delivery (당일/새벽)"
+        cost_share: "8-12%"
+        speed: "24시간 이내"
+
+      customer_service:
+        cost_share: "2-3%"
+
+      marketing:
+        cost_share: "3-5%"
+
+    unit_economics:
+      avg_order_value: "30,000원"
+      gross_margin: "15-20%"
+      delivery_cost: "3,000-4,000원"
+      contribution_margin: "10-12%"
+
+    breakeven_point:
+      monthly_orders_per_customer: "> 2.5회"
+      justification: "충성 고객 확보로 배송비 상쇄"
+
+    inefficiencies:
+      - "배송비 과다"
+      - "반품률 높음 (의류 30%)"
+
+    optimization_strategies:
+      - "자동화 물류 (로봇)"
+      - "예측 재고 배치"
+      - "구독 모델 (Rocket Wow)"
+
+  - benchmark_id: "VCH_RET_002"
+    industry: "마켓플레이스"
+    company_example: "Naver Shopping"
+    business_model: "3P (Marketplace)"
+
+    value_chain_stages:
+      platform:
+        revenue_model: "판매 수수료"
+        commission: "2-8%"
+        cost: "서버, 인력"
+
+      traffic_acquisition:
+        source: "검색, 광고"
+        cost_per_click: "100-500원"
+
+      payment:
+        revenue: "PG 수수료"
+        rate: "2-3%"
+
+      logistics_support:
+        model: "연동 (스마트스토어)"
+        cost_share: "판매자 부담"
+
+    unit_economics:
+      gmv: "20조원/년"
+      take_rate: "5%"
+      revenue: "1조원"
+      operating_margin: "15-20%"
+
+      vs_inventory_model:
+      advantage: "재고 리스크 없음"
+      disadvantage: "품질 통제 어려움"
+
+  - benchmark_id: "VCH_RET_003"
+    industry: "오프라인 소매 (백화점)"
+
+    value_chain_stages:
+      sourcing: "브랜드 입점"
+      inventory: "위탁 또는 매입"
+      display: "매장 운영"
+      sales: "판매"
+
+    revenue_model:
+      commission: "20-40% (위탁)"
+      margin: "30-50% (매입)"
+
+    cost_structure:
+      rent: "매출의 15-20%"
+      labor: "매출의 10-15%"
+      marketing: "5-8%"
+
+  - benchmark_id: "VCH_RET_004"
+    industry: "편의점"
+    company_example: "세븐일레븐"
+
+    value_chain_stages:
+      sourcing: "본부 공급"
+      inventory: "소량 다품목"
+      sales: "24시간"
+
+    unit_economics:
+      gross_margin: "25-30%"
+      operating_margin: "2-4%"
+
+    franchisee_economics:
+      investment: "1-2억원"
+      monthly_sales: "3,000-5,000만원"
+      net_profit: "월 300-500만원"
+
+  - benchmark_id: "VCH_RET_005"
+    industry: "신선식품 배송"
+    company_example: "마켓컬리"
+
+    value_chain_stages:
+      sourcing: "농가/산지 직거래"
+      cold_chain: "냉장 물류"
+      fulfillment: "새벽 배송"
+
+    cost_structure:
+      sourcing: "50-60%"
+      logistics: "20-25%"
+      packaging: "5-8%"
+      marketing: "10-12%"
+
+    gross_margin: "25-35%"
+
+    challenges:
+      - "물류 비용 높음"
+      - "신선도 유지"
+      - "반품률"
+
+  - benchmark_id: "VCH_RET_006"
+    industry: "명품 유통"
+
+    value_chain_stages:
+      brand: "제조"
+      wholesale: "도매 (있는 경우)"
+      retail: "백화점 또는 직영"
+
+    margin_structure:
+      brand_margin: "70-80%"
+      wholesale: "10-15%"
+      retail: "30-50%"
+
+    total_markup: "400-800%"
+
+  - benchmark_id: "VCH_RET_007"
+    industry: "가구 유통"
+    company_example: "IKEA"
+
+    value_chain_model: "수직 통합"
+
+    stages:
+      design: "자체"
+      sourcing: "글로벌"
+      manufacturing: "외주 (저비용 국가)"
+      logistics: "Flat-pack 효율"
+      retail: "대형 직영 매장"
+
+    cost_advantages:
+      - "Flat-pack 물류 비용 -40%"
+      - "셀프 조립"
+      - "대량 구매"
+
+    gross_margin: "45-50%"
+
+# ========================================
+# 3. 서비스업 (10개)
+# ========================================
+
+service_value_chains:
+
+  - benchmark_id: "VCH_SVC_001"
+    industry: "음악 스트리밍"
+    company_example: "Spotify"
+    year: 2023
+
+    value_chain_stages:
+      content_licensing:
+        cost_share: "70%"
+        recipients:
+          - "음반사: 55%"
+          - "저작권사: 15%"
+        note: "매출의 70%를 저작권자에게 지급"
+
+      platform_operation:
+        cost_share: "15%"
+        includes:
+          - "서버/CDN"
+          - "R&D (추천 알고리즘)"
+          - "인력"
+
+      marketing_sales:
+        cost_share: "10%"
+
+      profit:
+        margin: "5%"
+        note: "낮은 마진"
+
+    revenue_sources:
+      premium_subscription:
+        share: "90%"
+        arpu: "$5/month"
+        subscribers: "220M"
+
+      advertising:
+        share: "10%"
+        model: "무료 사용자 광고"
+
+    unit_economics:
+      revenue_per_user: "$5/month"
+      content_cost: "$3.50/month (70%)"
+      gross_profit: "$1.50/month"
+      operating_cost: "$1.25/month"
+      net_profit: "$0.25/month"
+
+    challenges:
+      - "콘텐츠 비용 고정 (70%)"
+      - "가격 인상 어려움"
+      - "경쟁 심화"
+
+    optimization_strategies:
+      - "Podcast 자체 제작 (마진 높음)"
+      - "Family Plan (ARPU 증가)"
+      - "Hi-Fi Tier (프리미엄)"
+
+  - benchmark_id: "VCH_SVC_002"
+    industry: "비디오 스트리밍 (OTT)"
+    company_example: "Netflix"
+
+    value_chain_stages:
+      content_licensing: "50-60%"
+      original_content: "15-20%"
+      platform: "10-15%"
+      marketing: "10-15%"
+
+    revenue: "구독료"
+    gross_margin: "40%"
+
+  - benchmark_id: "VCH_SVC_003"
+    industry: "클라우드 스토리지"
+    company_example: "Dropbox"
+
+    value_chain_stages:
+      infrastructure: "서버, 스토리지"
+      platform: "소프트웨어"
+      support: "고객 지원"
+
+    cost_structure:
+      infrastructure: "30-40%"
+      r_and_d: "20-25%"
+      sales_marketing: "25-30%"
+
+    gross_margin: "70-75%"
+
+  - benchmark_id: "VCH_SVC_004"
+    industry: "교육 플랫폼"
+
+    value_chain_stages:
+      content_creation: "강사 수수료 70-80%"
+      platform: "10-15%"
+      marketing: "10-15%"
+
+    take_rate: "20-30%"
+
+  - benchmark_id: "VCH_SVC_005"
+    industry: "숙박 공유 (Airbnb)"
+
+    value_chain:
+      host: "제공자"
+      platform: "중개"
+      guest: "이용자"
+
+    economics:
+      host_payout: "85-90%"
+      platform_fee: "10-15%"
+
+    cost_structure:
+      platform_operations: "40%"
+      marketing: "30%"
+      support: "15%"
+      profit: "15%"
+
+  - benchmark_id: "VCH_SVC_006"
+    industry: "차량 공유 (Uber)"
+
+    value_chain:
+      driver: "80-85% (운전자)"
+      platform: "15-20% (수수료)"
+
+    driver_economics:
+      gross_earning: "$25/hour"
+      expenses: "$10/hour (연료, 차량)"
+      net: "$15/hour"
+      uber_take: "$5/hour"
+
+  - benchmark_id: "VCH_SVC_007"
+    industry: "컨설팅"
+
+    value_chain_stages:
+      sales: "제안서, 영업"
+      delivery: "프로젝트 수행"
+      knowledge: "방법론, IP"
+
+    economics:
+      hourly_rate: "$200-500 (컨설턴트)"
+      utilization: "60-70%"
+      margin: "20-30%"
+
+  - benchmark_id: "VCH_SVC_008"
+    industry: "헬스케어 (병원)"
+
+    value_chain_stages:
+      medical_staff: "인력 비용 40-50%"
+      facilities: "시설, 장비 20-25%"
+      supplies: "의료 소모품 10-15%"
+      admin: "행정 10-15%"
+
+    margin: "5-15%"
+
+  - benchmark_id: "VCH_SVC_009"
+    industry: "호텔"
+
+    cost_structure:
+      labor: "30-35%"
+      property: "20-25% (임대/감가)"
+      operations: "20-25%"
+      marketing: "8-12%"
+
+    gross_margin: "60-70%"
+    operating_margin: "15-25%"
+
+  - benchmark_id: "VCH_SVC_010"
+    industry: "피트니스 센터"
+
+    value_chain_stages:
+      facilities: "장비, 임대"
+      trainers: "인력"
+      memberships: "구독 매출"
+
+    economics:
+      monthly_membership: "5-10만원"
+      utilization: "70% (피크 시간)"
+      gross_margin: "50-60%"
+
+# ========================================
+# 4. IT/소프트웨어 (10개)
+# ========================================
+
+it_value_chains:
+
+  - benchmark_id: "VCH_IT_001"
+    industry: "SaaS (B2B)"
+    company_example: "Salesforce"
+
+    value_chain_stages:
+      product_development:
+        cost_share: "30%"
+        activities:
+          - "R&D"
+          - "엔지니어링"
+
+      cloud_infrastructure:
+        cost_share: "15%"
+        providers: "AWS, Google Cloud"
+
+      sales_marketing:
+        cost_share: "45%"
+        note: "B2B SaaS는 S&M 비중 높음"
+        breakdown:
+          - "Sales Team: 30%"
+          - "Marketing: 15%"
+
+      customer_success:
+        cost_share: "5%"
+        activities:
+          - "온보딩"
+          - "Support"
+
+      profit:
+        margin: "5-10%"
+
+    unit_economics:
+      acv: "$50,000/year (기업 고객)"
+      cac: "$15,000"
+      ltv: "$150,000 (3년)"
+      ltv_cac_ratio: 10.0
+      payback_period: "4개월"
+
+    gross_margin: "75-85% (소프트웨어 특성)"
+
+  - benchmark_id: "VCH_IT_002"
+    industry: "Enterprise Software (On-premise)"
+
+    value_chain_stages:
+      development: "30-35%"
+      sales: "35-40%"
+      implementation: "10-15%"
+      support: "10-15%"
+
+    revenue_model:
+      license: "1회"
+      maintenance: "연 20% of license"
+
+    gross_margin: "85-90%"
+
+  - benchmark_id: "VCH_IT_003"
+    industry: "Mobile App (게임)"
+
+    value_chain_stages:
+      development: "30-40%"
+      user_acquisition: "40-50%"
+      platform_fee: "30% (App Store, Google Play)"
+      operations: "5-10%"
+
+    revenue_model:
+      in_app_purchase: "주 수익원"
+      advertising: "부가 수익"
+
+    unit_economics:
+      arpu: "$2-5/month"
+      cac: "$3-8"
+      ltv: "$20-50"
+
+  - benchmark_id: "VCH_IT_004"
+    industry: "SaaS (SMB)"
+
+    cost_structure:
+      cogs: "15-25%"
+      r_and_d: "20-30%"
+      sales_marketing: "30-40%"
+      g_and_a: "10-15%"
+
+    gross_margin: "75-85%"
+    operating_margin: "5-15%"
+
+  - benchmark_id: "VCH_IT_005"
+    industry: "SaaS (Enterprise)"
+
+    cost_structure:
+      cogs: "10-20%"
+      r_and_d: "15-25%"
+      sales_marketing: "40-50%"
+      g_and_a: "10-15%"
+
+    note: "Enterprise는 S&M 비중 더 높음"
+
+  - benchmark_id: "VCH_IT_006"
+    industry: "Marketplace Platform"
+
+    value_chain:
+      supply_side: "판매자 유치"
+      demand_side: "구매자 유치"
+      matching: "플랫폼 알고리즘"
+      transaction: "결제 처리"
+
+    economics:
+      take_rate: "10-20%"
+      gross_margin: "80-90%"
+
+  - benchmark_id: "VCH_IT_007"
+    industry: "Cybersecurity SaaS"
+
+    cost_structure:
+      r_and_d: "35-45% (기술 집약)"
+      sales: "25-35%"
+      cogs: "15-20%"
+
+    gross_margin: "75-80%"
+
+  - benchmark_id: "VCH_IT_008"
+    industry: "Data Analytics SaaS"
+
+    value_chain_stages:
+      data_infrastructure: "클라우드"
+      analytics_engine: "AI/ML"
+      visualization: "대시보드"
+
+    cost_structure:
+      infrastructure: "25-30%"
+      r_and_d: "30-35%"
+      sales: "25-30%"
+
+    gross_margin: "70-75%"
+
+# ========================================
+# 5. 플랫폼 (8개)
+# ========================================
+
+platform_value_chains:
+
+  - benchmark_id: "VCH_PLT_001"
+    industry: "배달 플랫폼"
+    company_example: "배달의민족"
+
+    value_chain_stages:
+      restaurant_acquisition:
+        cost: "영업팀, 수수료 협상"
+
+      rider_management:
+        cost_share: "40-50%"
+        model: "배달비 + 인센티브"
+
+      platform_operation:
+        cost_share: "15%"
+        includes: "서버, 앱, CS"
+
+      marketing:
+        cost_share: "10%"
+
+    revenue_model:
+      commission: "8-12% (음식점)"
+      delivery_fee: "3,000-4,000원 (고객)"
+      advertising: "검색 광고"
+
+    unit_economics:
+      order_value: "20,000원"
+      commission: "2,000원 (10%)"
+      delivery_fee: "3,000원"
+      total_revenue: "5,000원"
+
+      rider_cost: "3,500원"
+      platform_cost: "1,000원"
+      contribution_margin: "500원"
+
+    profitability:
+      break_even: "월 2회 이상/사용자"
+      current_frequency: "월 3-4회"
+      status: "수익성 확보"
+
+  - benchmark_id: "VCH_PLT_002"
+    industry: "전자상거래 플랫폼"
+    company_example: "Amazon Marketplace"
+
+    value_chain:
+      seller: "제품 공급"
+      platform: "매칭 + 결제"
+      buyer: "구매"
+
+    economics:
+      referral_fee: "8-15%"
+      fulfillment_fee: "별도 (FBA 사용 시)"
+
+    platform_costs:
+      technology: "30%"
+      marketing: "25%"
+      operations: "20%"
+      support: "10%"
+      profit: "15%"
+
+  - benchmark_id: "VCH_PLT_003"
+    industry: "소셜미디어 플랫폼"
+    company_example: "Facebook/Instagram"
+
+    value_chain:
+      users: "콘텐츠 생성"
+      platform: "네트워크 제공"
+      advertisers: "광고 구매"
+
+    revenue_model: "광고 (98%)"
+
+    cost_structure:
+      infrastructure: "15-20%"
+      r_and_d: "20-25%"
+      sales_marketing: "20-25%"
+      operations: "15-20%"
+
+    gross_margin: "80-85%"
+    operating_margin: "35-40%"
+
+  - benchmark_id: "VCH_PLT_004"
+    industry: "결제 플랫폼"
+    company_example: "Stripe"
+
+    value_chain:
+      merchants: "판매자"
+      platform: "결제 처리"
+      customers: "구매자"
+
+    economics:
+      transaction_fee: "2.9% + $0.30"
+
+    cost_structure:
+      payment_processing: "1.5-2%"
+      platform: "0.5-0.7%"
+      fraud_prevention: "0.2-0.3%"
+      profit: "0.5-0.7%"
+
+  - benchmark_id: "VCH_PLT_005"
+    industry: "프리랜서 플랫폼"
+    company_example: "Upwork, Fiverr"
+
+    value_chain:
+      freelancers: "서비스 제공"
+      platform: "매칭"
+      clients: "서비스 구매"
+
+    economics:
+      service_fee: "20% (freelancer)"
+      buyer_fee: "5% (client)"
+      total_take: "25%"
+
+    gross_margin: "85-90%"
+
+  - benchmark_id: "VCH_PLT_006"
+    industry: "숙박 플랫폼"
+    company_example: "Booking.com"
+
+    value_chain:
+      hotels: "재고 제공"
+      platform: "예약 중개"
+      travelers: "예약"
+
+    economics:
+      commission: "15-25%"
+
+    gross_margin: "90-95%"
+    operating_margin: "30-40%"
+
+  - benchmark_id: "VCH_PLT_007"
+    industry: "음식 배달 플랫폼"
+    company_example: "DoorDash"
+
+    value_chain:
+      restaurant: "음식 제공"
+      platform: "주문 중개"
+      driver: "배달"
+      customer: "소비"
+
+    economics:
+      restaurant_commission: "20-30%"
+      delivery_fee: "고객 $3-5"
+      driver_pay: "$3-4"
+      platform_margin: "$1-2"
+
+  - benchmark_id: "VCH_PLT_008"
+    industry: "앱스토어 플랫폼"
+    company_example: "Apple App Store"
+
+    value_chain:
+      developers: "앱 제작"
+      platform: "유통"
+      users: "다운로드"
+
+    economics:
+      commission: "30% (일반)"
+      small_developer: "15% (연 $1M 이하)"
+
+    gross_margin: "90%+"
+    operating_margin: "매우 높음"
+
+# ========================================
+# 추가 벤치마크 (12개)
+# ========================================
+
+# === 제조업 추가 (3개) ===
+
+additional_manufacturing:
+
+  - benchmark_id: "VCH_MFG_006"
+    industry: "화장품 제조"
+    company_example: "아모레퍼시픽"
+
+    value_chain_stages:
+      r_and_d: "5-10%"
+      raw_materials: "10-20%"
+      manufacturing: "5-10%"
+      packaging: "10-15%"
+      marketing: "30-40%"
+      distribution: "20-25%"
+
+    gross_margin: "70-80%"
+
+    note: "마케팅 비중 매우 높음 (브랜드 중심)"
+
+  - benchmark_id: "VCH_MFG_007"
+    industry: "가전제품"
+    company_example: "삼성전자 (TV, 가전)"
+
+    value_chain_stages:
+      components: "50-60%"
+      assembly: "5-10%"
+      distribution: "15-20%"
+      marketing: "10-15%"
+
+    gross_margin: "30-40%"
+
+  - benchmark_id: "VCH_MFG_008"
+    industry: "음료 제조"
+
+    value_chain_stages:
+      ingredients: "20-30%"
+      packaging: "15-20%"
+      production: "10-15%"
+      distribution: "20-25%"
+      marketing: "15-20%"
+
+    gross_margin: "40-50%"
+
+# === 유통/소매 추가 (2개) ===
+
+additional_retail:
+
+  - benchmark_id: "VCH_RET_008"
+    industry: "약국 (드럭스토어)"
+    company_example: "올리브영"
+
+    value_chain_stages:
+      sourcing: "브랜드 입점"
+      inventory: "매입"
+      retail: "판매"
+
+    revenue_model:
+      product_margin: "30-40%"
+      private_label: "50-60%"
+
+    gross_margin: "35-45%"
+
+  - benchmark_id: "VCH_RET_009"
+    industry: "서점/문구"
+
+    value_chain_stages:
+      publishing: "도서 제작"
+      distribution: "도매"
+      retail: "서점"
+
+    margin_structure:
+      publisher: "정가의 60%"
+      distributor: "10%"
+      bookstore: "30%"
+
+# === 서비스 추가 (3개) ===
+
+additional_services:
+
+  - benchmark_id: "VCH_SVC_011"
+    industry: "온라인 교육"
+    company_example: "Coursera, Udemy"
+
+    value_chain:
+      instructors: "강사 (수익의 50-70%)"
+      platform: "중개 (30-50%)"
+
+    platform_costs:
+      technology: "35%"
+      marketing: "40%"
+      support: "15%"
+      profit: "10%"
+
+  - benchmark_id: "VCH_SVC_012"
+    industry: "O2O 서비스 (청소, 수리)"
+    company_example: "숨고"
+
+    value_chain:
+      service_provider: "서비스 제공"
+      platform: "매칭"
+      customer: "이용"
+
+    economics:
+      provider_payout: "80-85%"
+      platform_fee: "15-20%"
+
+  - benchmark_id: "VCH_SVC_013"
+    industry: "클라우드 게임"
+    company_example: "GeForce Now, Xbox Cloud"
+
+    value_chain_stages:
+      infrastructure: "서버 (GPU)"
+      licensing: "게임 라이선스"
+      platform: "스트리밍 기술"
+
+    cost_structure:
+      infrastructure: "40-50%"
+      licensing: "20-30%"
+      r_and_d: "15-20%"
+
+# === IT 추가 (2개) ===
+
+additional_it:
+
+  - benchmark_id: "VCH_IT_009"
+    industry: "API-as-a-Service"
+    company_example: "Twilio, SendGrid"
+
+    value_chain_stages:
+      infrastructure: "통신망, 서버"
+      platform: "API"
+      support: "개발자 지원"
+
+    cost_structure:
+      infrastructure: "40-50%"
+      r_and_d: "20-25%"
+      sales: "15-20%"
+
+    gross_margin: "50-60%"
+
+  - benchmark_id: "VCH_IT_010"
+    industry: "Low-Code Platform"
+    company_example: "Airtable, Notion"
+
+    cost_structure:
+      infrastructure: "15-20%"
+      r_and_d: "35-40%"
+      sales_marketing: "30-35%"
+
+    gross_margin: "80-85%"
+
+    note: "높은 마진 (소프트웨어 특성)"
+
+# === 플랫폼 추가 (2개) ===
+
+additional_platforms:
+
+  - benchmark_id: "VCH_PLT_009"
+    industry: "부동산 플랫폼"
+    company_example: "직방, 다방"
+
+    value_chain:
+      landlords: "매물 제공"
+      platform: "정보 중개"
+      renters: "검색"
+
+    revenue_model:
+      - "광고 (부동산 중개사)"
+      - "프리미엄 리스팅"
+      - "중개 수수료"
+
+    gross_margin: "80-90%"
+
+  - benchmark_id: "VCH_PLT_010"
+    industry: "중고거래 플랫폼"
+    company_example: "당근마켓"
+
+    value_chain:
+      sellers: "개인 판매자"
+      platform: "지역 기반 매칭"
+      buyers: "구매자"
+
+    revenue_model:
+      - "광고 (로컬 비즈니스)"
+      - "프리미엄 기능"
+      - "수수료 (일부)"
+
+    economics:
+      transaction_fee: "0% (대부분 무료)"
+      revenue: "광고 중심"
+
+    gross_margin: "90%+"
+
+# ========================================
+# END
+# ========================================
+
