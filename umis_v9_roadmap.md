@@ -128,6 +128,38 @@ UMIS v9를 실제로 구현하려면 **한 번에 전체를 만드는 방식이 
 
 ---
 
+## Phase 1.5 – Project Context Layer 기반 (Sprint 2.5, 2025-12-05 추가)
+
+### Sprint 2.5: Project Context Layer 스키마 및 PH00 Phase
+
+**목표**
+
+- Brownfield/Greenfield 모두 지원하기 위한 Project Context Layer 설계 및 최소 구현
+
+**작업**
+
+- `umis_v9.yaml` 확장
+  - project_context_store 스키마 추가
+  - capability_traits 정의 (9개 핵심 Trait)
+  - Engine API에 project_context_id 인자 추가
+  - Decision Graph goal 노드에 project_context_id 필드 추가
+- `umis_v9_process_phases.yaml` 확장
+  - PH00_project_context_setup Phase 정의
+  - structure_analysis_for_project 워크플로우 추가
+- Project Context 입력 예시 3가지 작성
+  - Greenfield 스타트업
+  - Brownfield 오프라인 학원
+  - Hybrid 글로벌 플랫폼
+- PH00 실행 템플릿/가이드 작성
+
+**실사용 / 피드백**
+
+- 실제 회사 2–3개에 대해 Project Context 수동 작성
+- PH00 Phase 시뮬레이션 (실제 데이터 없이 가상)
+- capability_traits 매핑 난이도 확인
+
+---
+
 ## Phase 2 – Reality + Value 최소 루프 (Sprint 3–5)
 
 ### Sprint 3: EvidenceEngine v0 + WorldEngine v0 + R-Graph v0
@@ -136,6 +168,7 @@ UMIS v9를 실제로 구현하려면 **한 번에 전체를 만드는 방식이 
 
 - POC 도메인에 대해 **외부 데이터 1–2개**를 Evidence로 가져와  
   **R-Graph에 자동 반영하는 최소 파이프라인**을 구현합니다.
+- **내부 데이터 수집 지원 추가** (Project Context용)
 
 **작업**
 
@@ -305,6 +338,58 @@ UMIS v9를 실제로 구현하려면 **한 번에 전체를 만드는 방식이 
 - 피드백:
   - OPP 카드에 반드시 있어야 하는 필드/불필요한 필드
   - 기회 랭킹 기준 조정 필요성
+
+---
+
+## Phase 3.5 – Project Context + Brownfield 지원 (Sprint 7.5, 2025-12-05 추가)
+
+### Sprint 7.5: Project Context Layer v0 + PH00 Phase 구현
+
+**목표**
+
+- Brownfield/Greenfield 모두를 지원하기 위한 Project Context Layer 구현
+- PH00 Phase (프로젝트 컨텍스트 설정) 최소 버전 구현
+- structure_analysis_for_project 워크플로우 동작 검증
+
+**작업**
+
+- Project Context 스키마 구현
+  - `project_context_store` (umis_v9.yaml에 이미 정의됨)
+  - focal_actor_id, baseline_state, assets_profile, constraints_profile, preference_profile
+- PH00 Phase 실행기 구현
+  - 조직 현황 폼/템플릿
+  - 내부 데이터 → Evidence Store 파이프라인
+  - Capability → Trait 매핑 헬퍼
+  - focal_actor R-Graph 구성
+  - Project Context 객체 생성
+- PatternEngine 확장
+  - structure_fit_score (기존) + execution_fit_score (신규) 계산
+  - capability_traits 매칭 로직
+- ValueEngine 확장
+  - project-level Metric 정의 (MET-SOM_for_project, MET-Base_Revenue_for_project 등)
+  - project_context_id 인자 처리
+
+**실사용 / 피드백**
+
+- 실제 시나리오 3가지로 테스트:
+  - Greenfield: EdTech 스타트업 (examples/project_context_examples.yaml#example_1)
+  - Brownfield: 오프라인 학원 체인 (examples/project_context_examples.yaml#example_2)
+  - Hybrid: 글로벌 플랫폼 한국 진입 (examples/project_context_examples.yaml#example_3)
+- 스프린트 마지막에:
+  - 같은 시장(Adult Language KR)에 대해
+    - Greenfield 분석 vs Brownfield 분석 결과를 비교
+    - "실행 가능한 기회"가 어떻게 달라지는지 확인
+- 피드백:
+  - Project Context 입력이 너무 복잡한지
+  - capability_traits 매핑이 직관적인지
+  - execution_fit_score 계산이 합리적인지
+
+**성공 기준**
+
+- PH00 Phase를 실행하여 PRJ-* 생성 가능
+- structure_analysis_for_project 워크플로우 end-to-end 실행
+- PatternEngine이 structure_fit + execution_fit 이중 점수 반환
+- 같은 시장에 대해 조직별로 다른 기회 우선순위 제시
 
 ---
 
@@ -499,3 +584,39 @@ UMIS v9를 실제로 구현하려면 **한 번에 전체를 만드는 방식이 
   - 설명력
   - 작업 시간/노동 강도  
   를 평가하면, v9 설계가 제대로 목적에 수렴하고 있는지 잘 보일 것입니다.
+---
+
+## Phase 1.5 보충: Project Context Layer 통합 (2025-12-05 추가)
+
+### 목표
+
+Brownfield/Greenfield 모두 지원하기 위한 Project Context Layer를 Phase 1-2와 Phase 3 사이에 끼워넣습니다.
+
+### Sprint 2.5: Project Context Layer 기반 구축
+
+**작업**:
+- umis_v9.yaml 확장 완료 ✅
+  - project_context_store 스키마
+  - capability_traits (9개 Trait)
+  - Engine API project_context_id 인자
+- umis_v9_process_phases.yaml PH00 추가 ✅
+- Project Context 입력 예시 3가지 ✅
+- PH00 실행 템플릿 작성
+- WorldEngine.ingest_project_context() 구현
+
+**실사용**:
+- 실제 회사 2-3개 Project Context 작성
+- Greenfield/Brownfield 시나리오 각 1개씩 테스트
+
+### Sprint 6-7 확장: execution_fit_score 구현
+
+**Phase 3 Sprint 6-7에 추가**:
+- PatternEngine:
+  - structure_fit_score (기존)
+  - execution_fit_score (신규, capability_traits 매칭)
+- ValueEngine:
+  - project-level Metric 구현
+    - MET-SOM_for_project
+    - MET-Base_Revenue_for_project
+    - MET-Delta_Revenue_for_project
+

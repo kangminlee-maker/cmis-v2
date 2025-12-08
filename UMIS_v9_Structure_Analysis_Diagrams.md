@@ -45,6 +45,7 @@ graph TB
         VLS[Value Store<br/>VAL-*]
         MEM[Memory Store<br/>MEM-*, ART-*]
         OUT[Outcome Store<br/>OUT-*]
+        PCS[Project Context Store<br/>PRJ-*]
     end
 
     IP --> RP
@@ -76,7 +77,53 @@ graph TB
 
 ---
 
-## 2. 전체 워크플로우 순서도 (14 Phases)
+## 2. Greenfield vs Brownfield 워크플로우 분기
+
+```mermaid
+flowchart TD
+    START([사용자 질문])
+    
+    MODE_CHECK{조직 컨텍스트<br/>필요?}
+    
+    subgraph GREENFIELD[Greenfield: 시장 전체 분석]
+        GF_START[structure_analysis]
+        GF_PHASES[Phase 1-14<br/>시장 구조/규모/경쟁]
+        GF_OUTPUT[Market Reality Report<br/>시장 관점]
+    end
+    
+    subgraph BROWNFIELD[Brownfield: 조직 통합 분석]
+        BF_START[structure_analysis_for_project]
+        PH00[Phase 0: Project Context Setup<br/>조직 현황/역량/제약]
+        BF_PHASES[Phase 1-14<br/>시장 + 조직 통합 분석]
+        BF_OUTPUT[Market Reality Report<br/>+ Position/Opportunity<br/>조직 관점]
+    end
+    
+    START --> MODE_CHECK
+    
+    MODE_CHECK -->|"시장만 알면 됨"| GF_START
+    MODE_CHECK -->|"우리 관점 필요"| BF_START
+    
+    GF_START --> GF_PHASES
+    GF_PHASES --> GF_OUTPUT
+    
+    BF_START --> PH00
+    PH00 --> BF_PHASES
+    BF_PHASES --> BF_OUTPUT
+    
+    GF_OUTPUT --> END_GF([완료])
+    BF_OUTPUT --> END_BF([완료])
+
+    style GREENFIELD fill:#e1f5ff
+    style BROWNFIELD fill:#fff4e1
+    style PH00 fill:#ffeb3b,stroke:#f57c00,stroke-width:2px
+    style MODE_CHECK fill:#e8f5e9
+```
+
+---
+
+## 3. 전체 워크플로우 순서도 (Greenfield: 14 Phases)
+
+**Note**: Greenfield = 시장 전체 분석, project_context_id 불필요
 
 ```mermaid
 flowchart TD
@@ -298,6 +345,145 @@ flowchart TD
     style STAGE3 fill:#f1f8e9
     style STAGE4 fill:#fce4ec
     style VALUE_RECORD fill:#c8e6c9
+```
+
+---
+
+## 3-1. 전체 워크플로우 순서도 (Brownfield: 15 Phases)
+
+**Note**: Brownfield = 조직 통합 분석, **PH00** + PH01-PH14
+
+```mermaid
+flowchart TD
+    START([사용자 질문:<br/>우리 회사가 이 시장에...])
+    
+    PH00[Phase 0: Project Context Setup<br/>조직 현황/역량/제약]
+    PH00_1[내부 데이터 수집<br/>EVD-internal-*]
+    PH00_2[focal_actor R-Graph<br/>ACT-CLIENT-*]
+    PH00_3[Project Context 생성<br/>PRJ-*]
+    
+    PH01[Phase 1: 시장 정의<br/>+ focal_actor 위치]
+    PH02[Phase 2: 도메인 분류<br/>+ 현재 도메인 믹스]
+    PH03[Phase 3-4: BM 분류<br/>+ 현재 BM 패턴]
+    
+    PH05[Phase 5: 플레이어 식별<br/>+ 경쟁사 대비 포지션]
+    
+    PH06[Phase 6: 가치사슬<br/>+ 우리 현재 구조]
+    
+    PH07[Phase 7: 시장규모<br/>+ SOM_for_project]
+    PH07_1[Market-level Metric:<br/>TAM/SAM]
+    PH07_2[Project-level Metric:<br/>SOM/Baseline/Delta]
+    
+    PH08[Phase 8-11: 경쟁구조<br/>+ 우리 경쟁력]
+    
+    PH12[Phase 12: MECE 검증]
+    MECE_PASS{PASS?}
+    
+    PH13[Phase 13: 3자 검증]
+    GATE_PASS{PASS?}
+    
+    PH14[Phase 14: 리포트<br/>+ Position/Opportunity]
+    
+    END([Market Reality Report<br/>+ Organization Perspective])
+
+    START --> PH00
+    
+    PH00 --> PH00_1
+    PH00_1 --> PH00_2
+    PH00_2 --> PH00_3
+    
+    PH00_3 --> PH01
+    PH01 --> PH02
+    PH02 --> PH03
+    PH03 --> PH05
+    
+    PH05 --> PH06
+    PH06 --> PH07
+    
+    PH07 --> PH07_1
+    PH07 --> PH07_2
+    PH07_1 --> PH08
+    PH07_2 --> PH08
+    
+    PH08 --> PH12
+    PH12 --> MECE_PASS
+    MECE_PASS -->|Yes| PH13
+    MECE_PASS -->|No| PH03
+    
+    PH13 --> GATE_PASS
+    GATE_PASS -->|Yes| PH14
+    GATE_PASS -->|No| PH07
+    
+    PH14 --> END
+
+    style START fill:#fff4e1
+    style END fill:#c8e6c9
+    style PH00 fill:#ffeb3b,stroke:#f57c00,stroke-width:3px
+    style PH00_1 fill:#fff9c4
+    style PH00_2 fill:#fff9c4
+    style PH00_3 fill:#fff9c4
+    style PH07 fill:#ffe0b2
+    style PH13 fill:#ffccbc
+```
+
+---
+
+## 4. Phase 0: Project Context Setup (Brownfield 전용)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    participant User as 사용자/조직
+    participant SA as Structure Analyst
+    participant RM as Reality Monitor
+    participant EE as Evidence Engine
+    participant INT_DATA as 내부 데이터
+    participant ES as Evidence Store
+    participant WE as World Engine
+    participant RG as R-Graph
+    participant PCS as Project Context Store
+
+    User->>SA: "우리 회사가 이 시장에 진입하려면?"
+    
+    Note over SA: PH00 Phase 시작
+    SA->>User: 조직 현황 폼/인터뷰
+    User-->>SA: 매출/역량/제약/목표 제공
+    
+    Note over SA,RM: 내부 데이터 수집
+    SA->>RM: data_collection_request (internal)
+    RM->>EE: fetch_internal_data()
+    
+    EE->>INT_DATA: ERP 매출 데이터
+    INT_DATA-->>EE: 800억원 (2024)
+    
+    EE->>INT_DATA: CRM 고객 데이터
+    INT_DATA-->>EE: 45,000명
+    
+    EE->>INT_DATA: 재무제표
+    INT_DATA-->>EE: 마진 구조
+    
+    Note over EE,ES: Evidence 정규화
+    EE->>ES: EVD-internal-001 (재무제표)
+    EE->>ES: EVD-internal-002 (CRM)
+    EE-->>RM: EvidenceBundle (내부)
+    RM-->>SA: 내부 데이터 수집 완료
+    
+    Note over SA,WE: focal_actor R-Graph 구성
+    SA->>WE: ingest_project_context()
+    WE->>RG: Actor 노드 생성 (ACT-CLIENT-*)
+    WE->>RG: MoneyFlow/State 추가
+    WE-->>SA: focal_actor 구성 완료
+    
+    Note over SA: Capability → Trait 매핑
+    SA->>SA: "120개 지점" → capability_traits
+    
+    Note over SA,PCS: Project Context 생성
+    SA->>PCS: PRJ-* 저장
+    PCS-->>SA: project_context_id 반환
+    
+    Note over SA: PH00 완료 → PH01-PH14 진행
+    SA-->>User: project_context_id + 분석 시작
 ```
 
 ---
@@ -738,23 +924,49 @@ graph TB
 flowchart TD
     START[사용자 질문]
     
-    EVD1[Evidence 수집<br/>EVD-001: YBM 817억<br/>source: DART<br/>reliability: 95%]
+    EVD1["Evidence 수집
+    EVD-001: YBM 817억
+    source: DART
+    reliability: 95%"]
     
-    EVD2[Evidence 수집<br/>EVD-002: 링글 100억<br/>source: 언론<br/>reliability: 85%]
+    EVD2["Evidence 수집
+    EVD-002: 링글 100억
+    source: 언론
+    reliability: 85%"]
     
-    RG_ACT[R-Graph Actor 생성<br/>ACT-YBM_Net<br/>metadata.revenue: 817억<br/>lineage.from_evidence: EVD-001]
+    RG_ACT["R-Graph Actor 생성
+    ACT-YBM_Net
+    metadata.revenue: 817억
+    lineage.from_evidence: EVD-001"]
     
-    VE_CALC[Value Engine 계산<br/>Bottom-up Method<br/>R-Graph Actor 집계]
+    VE_CALC["Value Engine 계산
+    Bottom-up Method
+    R-Graph Actor 집계"]
     
-    VAL_SAM[ValueRecord 생성<br/>VAL-SAM<br/>point_estimate: 10,000억<br/>quality.literal_ratio: 0.75]
+    VAL_SAM["ValueRecord 생성
+    VAL-SAM
+    point_estimate: 10,000억
+    quality.literal_ratio: 0.75"]
     
-    LINEAGE[Lineage 자동 기록<br/>from_evidence_ids:<br/>- EVD-001<br/>- EVD-002<br/>- EVD-003<br/>from_value_ids: []<br/>engine_ids:<br/>- value_engine<br/>- evidence_engine]
+    LINEAGE["Lineage 자동 기록
+    from_evidence_ids:
+    - EVD-001, EVD-002, EVD-003
+    from_value_ids: []
+    engine_ids:
+    - value_engine
+    - evidence_engine"]
     
-    ART[Artifact 생성<br/>ART-market_size_estimate<br/>references: VAL-SAM]
+    ART["Artifact 생성
+    ART-market_size_estimate
+    references: VAL-SAM"]
     
-    REPORT[리포트 섹션<br/>시장 규모: 1조원<br/>근거: EVD-001,002,003]
+    REPORT["리포트 섹션
+    시장 규모: 1조원
+    근거: EVD-001,002,003"]
     
-    USER_VIEW[사용자가 보는 내용:<br/>'YBM넷 817억(DART)을 포함한<br/>Top10 합산 기반 추정']
+    USER_VIEW["사용자가 보는 내용:
+    YBM넷 817억(DART)을 포함한
+    Top10 합산 기반 추정"]
     
     START --> EVD1
     START --> EVD2
@@ -780,7 +992,34 @@ flowchart TD
 
 ---
 
+## 11. 문서 업데이트 요약
+
+**2025-12-05 최신 업데이트**:
+- ✅ Substrate Plane에 Project Context Store (PRJ-*) 추가
+- ✅ Greenfield vs Brownfield 워크플로우 분기 다이어그램 추가
+- ✅ Brownfield 15-Phase 순서도 추가 (PH00 포함)
+- ✅ Phase 0: Project Context Setup 상세 시퀀스 다이어그램 추가
+
+**다이어그램 목록**:
+1. 전체 아키텍처 (4 Planes + Project Context Store)
+2. Greenfield vs Brownfield 분기
+3. Greenfield 워크플로우 (14 Phases)
+4. Brownfield 워크플로우 (15 Phases, PH00 포함)
+5. Phase 0: Project Context Setup (신규)
+6. Phase 5: 플레이어 식별
+7. Phase 7: 시장규모 추정 (4-Stage Metric Resolver)
+8. 데이터 흐름도
+9. Phase 13: 3자 검증 게이트
+10. Value Engine 내부 구조
+11. 협업 프로토콜
+12. 전체 시스템 통합
+13. Lineage 추적 흐름
+
+**총 13개 다이어그램** (Greenfield + Brownfield 완전 커버)
+
+---
+
 **작성일**: 2025-12-05  
-**버전**: v1.0  
+**버전**: v2.0 (Project Context Layer 통합)
 **노트**: 이 다이어그램들은 Mermaid 형식으로 작성되어 GitHub/Markdown 렌더러에서 자동으로 시각화됩니다.
 

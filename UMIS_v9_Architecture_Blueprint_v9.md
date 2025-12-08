@@ -35,7 +35,7 @@ UMIS v9는 전체 시스템을 네 개의 Plane으로 나눈다.
 
 - **Substrate Plane**: 데이터를 어떻게 표현할지 정의하는 레이어
   - 현실/패턴/값/결정을 네 가지 그래프로 표현한다.
-  - Evidence(근거), Outcome(실적), Value(계산 결과), Memory(학습/메모리) 저장소도 이 레이어에 포함된다.
+  - Evidence(근거), Outcome(실적), Value(계산 결과), Memory(학습/메모리), **Project Context(프로젝트별 사용자 상황)** 저장소도 이 레이어에 포함된다.
 
 - **Cognition Plane**: 실제로 생각하고, 계산하고, 학습하는 엔진 레이어
   - Evidence Engine, World Engine, Pattern Engine, Value Engine, Strategy Engine, Learning Engine, Policy Engine 등으로 구성된다.
@@ -87,12 +87,12 @@ UMIS v9는 전체 시스템을 네 개의 Plane으로 나눈다.
 주요 섹션:
 
 - **`umis_v9.meta`**: 버전, 설명, 레퍼런스 문서
-- **`ontology`**: actor/event/resource/money_flow/contract/state/trait/quantity 등의 공통 Primitive 정의
+- **`ontology`**: actor/event/resource/money_flow/contract/state/trait/quantity 등의 공통 Primitive 정의, **capability_traits** (조직 역량 Trait 체계)
 - **`planes`**:
   - `interaction_plane`: CLI, Notebook, Web App, API 인터페이스 정의
   - `role_plane`: Role ID/설명/주요 엔진/기본 policy 모드
   - `substrate_plane.graphs`: R/P/V/D 그래프 구조
-  - `substrate_plane.stores`: Evidence/Outcome/Memory/Value 저장소 스키마
+  - `substrate_plane.stores`: Evidence/Outcome/Memory/Value/**Project Context** 저장소 스키마
   - `substrate_plane.data_sources`: KOSIS, DART 등 외부 데이터 소스 정의
   - `cognition_plane.engines`: evidence/world/pattern/value/strategy/learning/policy 엔진 인터페이스 정의
 - **`ids_and_lineage`**: 각 객체 ID Prefix, lineage 공통 스키마
@@ -104,8 +104,9 @@ UMIS v9는 전체 시스템을 네 개의 Plane으로 나눈다.
 ### 2.2 프로세스/에이전트/검증 스펙
 
 - **`umis_v9_process_phases.yaml`**
-  - `canonical_workflows.structure_analysis`를 **14개 Phase**로 세분화한 파일
-  - 예: `PH01_market_definition`(시장 정의), `PH02_domain_classification`, `PH05_player_identification`, `PH07_market_sizing`, `PH13_validation_gate`, `PH14_report_generation` 등
+  - `canonical_workflows.structure_analysis`를 **14개 Phase**로 세분화한 파일 (Greenfield)
+  - `structure_analysis_for_project`를 **15개 Phase**로 확장 (Brownfield: **PH00** + PH01-PH14)
+  - 예: `PH00_project_context_setup`(프로젝트 컨텍스트 설정, Brownfield 전용), `PH01_market_definition`(시장 정의), `PH02_domain_classification`, `PH05_player_identification`, `PH07_market_sizing`, `PH13_validation_gate`, `PH14_report_generation` 등
   - 각 Phase는 다음 정보를 가진다.
     - `owner` Role, 예상 `duration`
     - `inputs` / `activities` / `outputs`
@@ -273,9 +274,10 @@ UMIS v9는 전체 시스템을 네 개의 Plane으로 나눈다.
 
 - **아직 미구현(설계만 존재)**
   - Evidence Engine 실제 구현 및 외부 데이터 소스 연동
-  - 정식 Pattern Engine (pattern_graph + value_chain_templates + 전략 프레임워크 연동)
-  - 정식 Value Engine (Metric Resolver 전체 Stage 및 모든 Metric 구현)
+  - 정식 Pattern Engine (pattern_graph + value_chain_templates + 전략 프레임워크 연동, **execution_fit_score** 계산)
+  - 정식 Value Engine (Metric Resolver 전체 Stage 및 모든 Metric 구현, **project-level Metric** 지원)
   - Strategy Engine / Learning Engine / Policy Engine의 런타임 수준 구현
+  - **Project Context Layer** (PH00 Phase, focal_actor R-Graph 구성, Brownfield/Greenfield 워크플로우 분기)
 
 ### 4.2 Adult Language POC에서 실제로 할 수 있는 일
 
@@ -292,14 +294,78 @@ UMIS v9는 전체 시스템을 네 개의 Plane으로 나눈다.
 
 - **Evidence Engine v0**
   - KOSIS/DART/Web Evidence를 실제로 연동해 Reality/Value를 seed 기반이 아니라 외부 데이터로 채우기
+  - **내부 데이터 연동** (ERP/CRM/재무 시스템 → Evidence Store → Project Context)
 
 - **Pattern/Value/Strategy 엔진 정식 구현**
   - Pattern Engine: `pattern_graph`, `umis_v9_strategic_frameworks.yaml`, `umis_v9_value_chain_templates.yaml`, `umis_v9_pattern_benchmarks.yaml`와 긴밀히 연동
+    - **structure_fit_score + execution_fit_score** 이중 평가 구현
   - Value Engine: MET-TAM/SAM/SOM/N_customers/Revenue/Unit Economics 전반을 4-Stage Metric Resolver로 평가
+    - **market-level + project-level Metric** 분리 계산
   - Strategy Engine: Goal/Pattern/Reality/Value를 이용해 전략 후보 생성 및 포트폴리오 평가
+    - **Project Context 제약/선호 자동 반영**
+
+- **Project Context Layer 구현** (신규)
+  - PH00 Phase 실행기 (조직 현황 구조화 → focal_actor R-Graph 구성)
+  - Greenfield/Brownfield/Hybrid 워크플로우 분기 로직
+  - Capability-Pattern 매칭 엔진
+  - Project-aware Metric 계산 (Baseline/Scenario/Delta)
 
 - **End-to-end Workflow 실행기**
   - `umis_v9_process_phases.yaml`를 실제로 실행하는 Workflow Executor
   - `umis_v9_agent_protocols.yaml`/`umis_v9_validation_gates.yaml`에 따라 자동으로 협업/검증을 orchestrate
+  - **structure_analysis_for_project** / **opportunity_discovery_for_project** 워크플로우 구현
+
+---
+
+## 6. Project Context Layer (2025-12-05 추가)
+
+### 6.1 핵심 개념
+
+v9는 시장 분석뿐 아니라 **"특정 조직의 관점에서"** 기회/전략을 평가할 수 있도록 Project Context Layer를 제공한다.
+
+**주요 구성 요소**:
+- **project_context_store**: 프로젝트별 사용자/조직 상황 저장소 (PRJ- prefix)
+- **focal_actor**: R-Graph의 Actor 중 분석 주체 조직
+- **capability_traits**: 조직 역량을 Trait 기반으로 표현 (Ontology lock-in 방지)
+- **mode**: greenfield / brownfield / hybrid 구분
+
+### 6.2 Greenfield vs Brownfield
+
+**Greenfield (기존 워크플로우)**:
+- 입력: domain_id, region만 필요
+- 출력: 시장 전체 구조 분석
+- 예: "한국 성인 어학교육 시장은 어떻게 생겼는가?"
+
+**Brownfield (확장 워크플로우)**:
+- 입력: domain_id, region + **project_context_id**
+- 출력: 시장 구조 + **focal_actor 위치/기회/실행 가능성**
+- 예: "우리 오프라인 학원 체인이 이 시장에서 디지털 전환하려면?"
+
+### 6.3 PatternEngine 이중 평가
+
+**structure_fit_score**:
+- 시장 구조에 이 패턴이 얼마나 적합한가? (기존)
+
+**execution_fit_score**:
+- 이 조직이 이 패턴을 실행할 수 있는가? (신규)
+- Project Context의 capability_traits, constraints 기반
+
+### 6.4 ValueEngine Project-level Metric
+
+**market-level Metric**:
+- MET-TAM, MET-SAM (시장 전체)
+
+**project-level Metric**:
+- MET-SOM_for_project (이 조직이 가져갈 수 있는 파이)
+- MET-Base_Revenue_for_project (현재)
+- MET-Scenario_Revenue_for_project (전략 실행 시)
+- MET-Delta_Revenue_for_project (증분)
+
+**참조 문서**:
+- `umis_v9_project_context_layer_design.md`: 상세 설계
+- `UMIS_v9_Project_Context_Philosophy_Alignment.md`: 철학 정합성 분석
+- `examples/project_context_examples.yaml`: 입력 예시 3가지
+
+---
 
 이 블루프린트는 현재 v9 POC의 "살아있는 설계도" 역할을 하며, 스펙과 구현이 확장될 때마다 함께 유지보수되는 것을 전제로 한다.

@@ -8,11 +8,13 @@ umis_v9_process_phases:
     structure_analysis:
       workflow_id: "structure_analysis"
       role_id: "structure_analyst"
+      mode: "greenfield"
       total_phases: 14
       estimated_duration: "3-5 days"
       notes:
         - "v7 Market Reality Report 14 Phase 구조에서 핵심 Phase만 우선 반영."
         - "추후 경쟁/검증/리포트 Phase를 세분화하여 14 Phase로 확장 예정."
+        - "Greenfield: 시장 전체 분석, project_context_id 불필요"
 
       phases:
         - phase_id: "PH01_market_definition"
@@ -283,6 +285,153 @@ umis_v9_process_phases:
     opportunity_discovery:
       workflow_id: "opportunity_discovery"
       role_id: "opportunity_designer"
+      mode: "greenfield"
       notes:
         - "향후 v7 Explorer 7-Phase 구조를 참고해 세분화 예정."
+
+    structure_analysis_for_project:
+      workflow_id: "structure_analysis_for_project"
+      role_id: "structure_analyst"
+      mode: "brownfield"
+      total_phases: 15
+      estimated_duration: "4-6 days"
+      notes:
+        - "structure_analysis의 Brownfield 버전"
+        - "PH00에서 Project Context 설정 후, PH01-PH14 재사용"
+        - "시장 구조 + 사용자 현재 위치 + 실행 가능 기회까지 분석"
+      
+      input_requirements:
+        required:
+          - "domain_id"
+          - "region"
+          - "focal_actor_info (조직 현황)"
+        optional:
+          - "internal_data_sources (ERP/CRM/재무)"
+          - "existing_project_context_id (업데이트 시)"
+
+      phases:
+        - phase_id: "PH00_project_context_setup"
+          sequence: 0
+          name: "프로젝트 컨텍스트 설정"
+          owner: "structure_analyst"
+          duration: "2-4 hours"
+          new_in_brownfield: true
+
+          inputs:
+            - type: "user_input"
+              content: "조직/프로젝트 현황 인터뷰 또는 구조화된 폼"
+              required_fields:
+                - "조직 기본 정보 (이름, 업종, 규모)"
+                - "현재 사업 현황 (매출, 고객, 채널)"
+                - "보유 역량/자산 (기술, 브랜드, 조직, 데이터)"
+                - "제약 조건 (예산, 타임라인, 규제)"
+                - "선호 사항 (성장 vs 수익, 리스크 성향)"
+                - "프로젝트 목적 (진입/확장/pivot/이해)"
+            
+            - type: "internal_data"
+              content: "내부 시스템 데이터 (선택적)"
+              examples:
+                - "ERP 매출/원가 데이터"
+                - "CRM 고객 데이터"
+                - "재무제표"
+                - "조직도/인력 현황"
+            
+            - type: "existing_project_context"
+              content: "이전 버전 Project Context (업데이트 시)"
+              required: false
+
+          activities:
+            - activity_id: "ACT-001"
+              name: "조직 현황 구조화"
+              description: "인터뷰/폼 입력을 baseline_state/assets/constraints로 변환"
+              tools:
+                - "구조화 템플릿"
+                - "capability_traits 매핑 가이드"
+            
+            - activity_id: "ACT-002"
+              name: "내부 데이터 수집"
+              description: "Reality Monitor와 협업하여 내부 Evidence 수집"
+              collaboration:
+                protocol: "data_collection_request"
+                to_role: "reality_monitor"
+                request_type: "internal_data"
+              
+            - activity_id: "ACT-003"
+              name: "Evidence 정규화 및 저장"
+              description: "내부 데이터를 Evidence Store에 저장"
+              engine: "evidence_engine"
+              output:
+                evidence_ids: "EVD-internal-*"
+                source_tier: "curated_internal"
+            
+            - activity_id: "ACT-004"
+              name: "focal_actor R-Graph 구성"
+              description: "World Engine으로 조직을 Actor 노드로 생성"
+              engine: "world_engine"
+              api_call: "ingest_evidence"
+              output:
+                actor_id: "ACT-CLIENT-*"
+                related_nodes: "MoneyFlow, State, Contract 등"
+            
+            - activity_id: "ACT-005"
+              name: "baseline Metric 계산"
+              description: "현재 상태 핵심 Metric 계산"
+              engine: "value_engine"
+              api_call: "evaluate_metrics"
+              metrics:
+                - "MET-Revenue (current)"
+                - "MET-N_customers (current)"
+                - "MET-Gross_margin (current)"
+                - "MET-Operating_margin (current)"
+            
+            - activity_id: "ACT-006"
+              name: "Project Context 객체 생성"
+              description: "모든 정보를 project_context_store에 저장"
+              output:
+                project_context_id: "PRJ-*"
+
+          outputs:
+            - type: "project_context"
+              id: "PRJ-*"
+              store_ref: "substrate_plane.stores.project_context_store"
+            
+            - type: "r_graph_extension"
+              content: "focal_actor Actor 노드 및 관련 서브그래프"
+              node_ids: ["ACT-CLIENT-*", "MFL-*", "STA-*"]
+            
+            - type: "baseline_metrics"
+              content: "현재 상태 핵심 Metric ValueRecord"
+              value_ids: ["VAL-baseline-*"]
+            
+            - type: "artifact"
+              id: "ART-project_context_summary"
+              format: "markdown"
+              content: "프로젝트 컨텍스트 요약 (1-2페이지)"
+
+          validation:
+            type: "completeness_check"
+            criteria:
+              - "focal_actor_id가 R-Graph에 존재하는가?"
+              - "baseline_state의 핵심 Metric이 계산되었는가?"
+              - "hard_constraints에 Evidence 연결 확인"
+              - "capability_traits가 Trait 스키마를 따르는가?"
+
+          success_criteria:
+            - "project_context_id 생성 완료"
+            - "focal_actor R-Graph 구성 완료"
+            - "baseline Metric 3개 이상 계산"
+
+          fail_action:
+            - "필수 정보 부족 시 사용자 재확인"
+            - "내부 데이터 접근 불가 시 수동 입력 대체"
+
+        - phase_id: "PH01-PH14_reuse"
+          sequence: "1-14"
+          name: "기존 structure_analysis Phase 재사용"
+          notes:
+            - "PH01~PH14는 기존 structure_analysis와 동일"
+            - "차이점: 모든 Engine 호출 시 project_context_id 전달"
+            - "PatternEngine: structure_fit + execution_fit 모두 계산"
+            - "ValueEngine: market-level + project-level Metric 모두 계산"
+            - "최종 리포트: 시장 구조 + focal_actor 포지션/기회 포함"
 

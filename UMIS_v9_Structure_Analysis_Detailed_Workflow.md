@@ -1,12 +1,16 @@
 # UMIS v9: Structure Analysis 워크플로우 상세 작동 과정
 
-**문서 목적**: v7.x Market Reality Report와 동일한 결과물을 v9에서 생성하는 14-Phase 워크플로우의 엔진/그래프 레벨 상세 작동 설명
+**문서 목적**: v7.x Market Reality Report와 동일한 결과물을 v9에서 생성하는 워크플로우의 엔진/그래프 레벨 상세 작동 설명
 
 **참조**:
 - v7.x 결과물: `reference/output/market_reality_report_v7.x/Market_Reality_Report_Final.md`
-- v9 워크플로우 정의: `umis_v9_process_phases.yaml#structure_analysis`
+- v9 워크플로우 정의: `umis_v9_process_phases.yaml`
 - v9 협업 프로토콜: `umis_v9_agent_protocols.yaml`
 - v9 검증 게이트: `umis_v9_validation_gates.yaml`
+
+**워크플로우 종류**:
+- **structure_analysis** (Greenfield): 시장 전체 분석, 14 Phases (PH01-PH14)
+- **structure_analysis_for_project** (Brownfield): 시장 + 조직 통합 분석, 15 Phases (**PH00** + PH01-PH14)
 
 ---
 
@@ -1376,4 +1380,229 @@ print(f"Validation status: {report.validation_status}")
 **작성일**: 2025-12-05
 **버전**: v1.0
 **상태**: 완료
+
+
+---
+
+## Phase 0 (PH00): Project Context Setup (Brownfield 전용, 2025-12-05 추가)
+
+### 목표
+사용자/조직의 현재 상태/자산/제약/선호를 구조화하여 Project Context로 생성
+
+### v9 실행 흐름
+
+#### 0.1 Role Plane: Structure Analyst + 사용자 인터뷰
+
+**입력 (구조화된 폼 또는 인터뷰)**:
+```yaml
+focal_actor_input:
+  organization_name: "XYZ어학원"
+  current_business:
+    revenue: "연 800억"
+    customers: 45000
+    channels: "오프라인 120개 지점, 온라인 미미"
+  
+  capabilities:
+    - "전국 지점 네트워크 120개"
+    - "강사 800명"
+    - "브랜드 Top 3"
+    - "디지털 인프라 약함"
+  
+  constraints:
+    - "디지털 투자 연 30억 이내"
+    - "오프라인 매출 90% 이상 유지"
+    - "3년 내 손익 방어"
+  
+  preferences:
+    - "현금흐름 안정 우선"
+    - "점진적 전환"
+  
+  goal:
+    - "디지털 확장하며 기존 사업 방어"
+```
+
+#### 0.2 Cognition Plane: Evidence Engine - 내부 데이터 수집
+
+**Structure Analyst → Reality Monitor 협업**:
+```yaml
+collaboration_protocol: "data_collection_request"
+request_type: "internal_data"
+target_data:
+  - "재무제표 (최근 3년)"
+  - "CRM 고객 데이터"
+  - "지점별 성과 데이터"
+```
+
+**Evidence Engine 동작**:
+```python
+evidence_bundle = evidence_engine.fetch_internal_data(
+    sources=[
+        {"type": "financial_statement", "path": "internal/fs_2024.xlsx"},
+        {"type": "crm_export", "path": "internal/crm_2024.csv"},
+        {"type": "branch_report", "path": "internal/branches_2024.json"}
+    ]
+)
+```
+
+**Evidence Store 저장**:
+```yaml
+- evidence_id: "EVD-internal-financial-statement-2024"
+  source_tier: "curated_internal"
+  content_ref: "재무제표 2024"
+  metadata:
+    revenue: 80000000000
+    gross_margin: 0.45
+  reliability: 95
+
+- evidence_id: "EVD-internal-crm-export-2024"
+  source_tier: "curated_internal"
+  content_ref: "CRM 데이터"
+  metadata:
+    total_customers: 45000
+  reliability: 90
+```
+
+#### 0.3 Cognition Plane: World Engine - focal_actor R-Graph 구성
+
+**World Engine.ingest_evidence() 호출**:
+```python
+world_engine.ingest_evidence(
+    evidence_ids=["EVD-internal-financial-statement-2024", ...]
+)
+```
+
+**R-Graph에 Actor 노드 생성**:
+```yaml
+actor_id: "ACT-CLIENT-OfflineAcademy-Chain-001"
+kind: "company"
+name: "XYZ어학원"
+traits:
+  domain_id: "Adult_Language_Education_KR"
+  institution_type: "offline_academy"
+  delivery_channel: "offline"
+  org_stage: "established"
+metadata:
+  revenue_2024: 80000000000
+  branch_count: 120
+  evidence_id: "EVD-internal-financial-statement-2024"
+```
+
+#### 0.4 Cognition Plane: Capability → Trait 매핑
+
+**Structure Analyst가 capability_traits로 변환**:
+
+입력:
+```
+"전국 지점 네트워크 120개"
+```
+
+변환:
+```yaml
+capability_id: "CAP-101"
+name: "전국 오프라인 네트워크"
+trait_set:
+  domain_expertise: "education"
+  maturity_level: "mature"
+  geographic_coverage: "national"
+  delivery_channel: "offline"
+  scale_tier: "enterprise"
+```
+
+#### 0.5 Substrate Plane: Project Context 객체 생성
+
+**project_context_store에 저장**:
+```yaml
+project_context_id: "PRJ-20251205-OfflineAcademy-Chain-001"
+version: 1
+focal_actor_id: "ACT-CLIENT-OfflineAcademy-Chain-001"
+mode: "brownfield"
+
+baseline_state:
+  current_revenue: 80000000000
+  current_customers: 45000
+  evidence_ids: ["EVD-internal-financial-statement-2024"]
+
+assets_profile:
+  capability_traits: [...]  # 상세는 examples/project_context_examples.yaml 참조
+
+constraints_profile:
+  hard_constraints: [...]
+
+preference_profile:
+  soft_preferences: [...]
+
+lineage:
+  from_evidence_ids: ["EVD-internal-financial-statement-2024", ...]
+  engine_ids: ["world_engine", "evidence_engine"]
+```
+
+#### 0.6 Validation
+
+**Policy Engine - completeness_check**:
+- ✅ focal_actor_id가 R-Graph에 존재
+- ✅ baseline_state 핵심 Metric 계산 가능
+- ✅ hard_constraints에 Evidence 연결
+- ✅ capability_traits가 Trait 스키마 준수
+
+**결과**: Phase 1으로 진행
+
+---
+
+## Phase 1-14: 기존 Phase 재사용 (project_context_id 전달)
+
+**Brownfield 모드 (structure_analysis_for_project)**:
+- PH01-PH14는 기존과 동일
+- **차이점**: 모든 Engine 호출 시 `project_context_id` 전달
+
+**예시 - Phase 7 시장규모 추정**:
+
+기존 (Greenfield):
+```python
+value_engine.evaluate_metrics(
+    graph=snapshot.graph,
+    metric_requests=[MetricRequest("MET-SAM", ...)],
+    policy_ref="decision_balanced"
+)
+```
+
+확장 (Brownfield):
+```python
+value_engine.evaluate_metrics(
+    graph=snapshot.graph,
+    metric_requests=[
+        MetricRequest("MET-SAM", ...),  # 시장 전체
+        MetricRequest("MET-SOM_for_project", ...)  # 이 조직 관점
+    ],
+    policy_ref="decision_balanced",
+    project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"  # 추가
+)
+```
+
+**PatternEngine 이중 평가**:
+```python
+pattern_matches = pattern_engine.match_patterns(
+    graph_slice_ref=snapshot.graph,
+    project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"
+)
+
+# 결과:
+[
+    PatternMatch(
+        pattern_id="PAT-online_subscription",
+        structure_fit_score=0.90,  # 시장 구조 적합
+        execution_fit_score=0.30,  # 조직 실행 어려움
+        combined_score=0.27
+    ),
+    PatternMatch(
+        pattern_id="PAT-offline_subscription_premium",
+        structure_fit_score=0.60,
+        execution_fit_score=0.95,  # 기존 자산 활용 가능
+        combined_score=0.57  # 최종 우선순위 더 높음
+    )
+]
+```
+
+**최종 리포트 차이**:
+- Greenfield: "시장 전체 TAM 1조원"
+- Brownfield: "시장 TAM 1조원, **우리 SOM 500억** (오프라인 자산 활용 시)"
 

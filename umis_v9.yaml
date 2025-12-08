@@ -157,6 +157,69 @@ umis_v9:
               type: "list"
               required: false
 
+      capability_traits:
+        description: "조직/프로젝트의 역량을 Trait 기반으로 표현 (Ontology lock-in 방지)"
+        note: "Capability를 고정 문자열이 아닌 Trait 조합으로 정의하여 유연성 확보"
+        keys:
+          technology_domain:
+            value_type: "enum"
+            allowed_values:
+              - "AI_ML"
+              - "NLP"
+              - "speech_synthesis"
+              - "computer_vision"
+              - "platform_tech"
+              - "data_engineering"
+              - "mobile_development"
+              - "web_development"
+              - "blockchain"
+              - "iot"
+              - "other"
+          
+          domain_expertise:
+            value_type: "enum"
+            allowed_values:
+              - "education"
+              - "healthcare"
+              - "finance"
+              - "logistics"
+              - "retail"
+              - "media"
+              - "government"
+              - "manufacturing"
+              - "real_estate"
+              - "other"
+          
+          maturity_level:
+            value_type: "enum"
+            allowed_values: ["concept","prototype","mvp","early","production_ready","mature","industry_leading"]
+          
+          scale_tier:
+            value_type: "enum"
+            allowed_values: ["poc","startup_scale","growth_stage","enterprise","hyperscale"]
+          
+          deployment_type:
+            value_type: "enum"
+            allowed_values: ["on_premise","cloud_native","hybrid","saas","managed_service"]
+          
+          content_type:
+            value_type: "enum"
+            allowed_values: ["curriculum","course_content","assessment","platform","tool","service","other"]
+          
+          language_coverage:
+            value_type: "list"
+            item_type: "string"
+            note: "지원 언어 목록 (예: ['korean','english','chinese'])"
+          
+          geographic_coverage:
+            value_type: "enum"
+            allowed_values: ["local","regional","national","international","global"]
+          
+          regulatory_compliance:
+            value_type: "list"
+            item_type: "string"
+            note: "준수 규제 목록 (예: ['GDPR','HIPAA','ISO27001'])"
+
     quantity_types:
       money:
         description: "금전 흐름에 사용되는 Quantity 타입"
@@ -415,6 +478,10 @@ umis_v9:
                 name:         { type: "string", required: true }
                 target_metrics:{ type: "list[metric_id]", required: true }
                 target_horizon:{ type: "time_quantity_ref", required: true }
+                project_context_id: { type: "project_context_id", required: false }
+              notes:
+                - "project_context_id 없으면 시장 전체 Goal (Greenfield 분석)"
+                - "project_context_id 있으면 특정 조직/프로젝트 Goal (Brownfield 분석)"
             hypothesis:
               fields:
                 hypothesis_id:{ type: "string", required: true }
@@ -506,6 +573,163 @@ umis_v9:
               context:      { type: "dict", required: true }
               payload_ref:  { type: "string", required: true }  # value_graph.node_types.value_record 참조
               stored_at:    { type: "datetime", required: true }
+
+        project_context_store:
+          description: "프로젝트별 사용자/조직 상황 컨텍스트 저장소 (Brownfield/Greenfield 모두 지원)"
+          id_prefix: "PRJ-"
+          linked_to:
+            - "umis_v9_project_context_layer_design.md"
+            - "UMIS_v9_Project_Context_Philosophy_Alignment.md"
+          schema:
+            fields:
+              project_context_id:
+                type: "string"
+                required: true
+                description: "PRJ- 프리픽스를 갖는 고유 ID"
+
+              version:
+                type: "int"
+                default: 1
+                description: "Project Context 버전 (Outcome 반영 시 증가)"
+
+              previous_version_id:
+                type: "project_context_id"
+                required: false
+                description: "이전 버전 ID (버전 관리 및 변경 추적)"
+
+              focal_actor_id:
+                type: "actor_id"
+                required: true
+                description: "R-Graph의 Actor ID (분석 주체 조직/사용자)"
+
+              mode:
+                type: "enum"
+                values: ["greenfield","brownfield","hybrid"]
+                required: true
+                description: |
+                  - greenfield: 기존 사업 없음, 백지에서 시작
+                  - brownfield: 기존 사업/자산/구조 존재
+                  - hybrid: 일부 인접 도메인에서만 사업 중
+
+              scope:
+                type: "dict"
+                required: true
+                description: "분석 대상 도메인/지역/세그먼트"
+                fields:
+                  domain_id:    { type: "string", required: true }
+                  region:       { type: "string", required: true }
+                  segment:      { type: "string", required: false }
+                  time_horizon: { type: "string", required: false }
+
+              baseline_state:
+                type: "dict"
+                required: true
+                description: "현재 사업 지표/상태 (Evidence 기반)"
+                fields:
+                  as_of:            { type: "date", required: true }
+                  current_revenue:  { type: "quantity_ref", required: false }
+                  current_customers:{ type: "number", required: false }
+                  channel_mix:      { type: "dict", required: false }
+                  margin_structure: { type: "dict", required: false }
+                  key_metrics:      { type: "list[value_id]", required: false }
+                  evidence_ids:     { type: "list[evidence_id]", required: false }
+
+              assets_profile:
+                type: "dict"
+                required: true
+                description: "가용 자산/역량 (Trait 기반 표현)"
+                fields:
+                  capability_traits:
+                    type: "list"
+                    description: "Trait 기반 역량 정의 (고정 문자열 ❌)"
+                    item_schema:
+                      capability_id: { type: "string", required: true }
+                      name:          { type: "string", required: true }
+                      trait_set:     { type: "dict", required: true }
+                      evidence_id:   { type: "evidence_id", required: false }
+
+                  channels:
+                    type: "list"
+                    item_schema:
+                      channel_id:   { type: "string" }
+                      channel_type: { type: "enum", values: ["online","offline","partner","hybrid"] }
+                      reach:        { type: "number", required: false }
+
+                  brand_assets:
+                    type: "dict"
+                    fields:
+                      brand_awareness_level: { type: "enum", values: ["none","low","medium","high","dominant"] }
+                      brand_domains:         { type: "list", required: false }
+
+                  organizational_assets:
+                    type: "dict"
+                    fields:
+                      team_size:       { type: "number", required: false }
+                      key_talent:      { type: "list", required: false }
+                      org_maturity:    { type: "enum", values: ["startup","scaleup","established","mature"] }
+
+                  data_assets:
+                    type: "dict"
+                    fields:
+                      customer_data_volume: { type: "number", required: false }
+                      proprietary_datasets: { type: "list", required: false }
+
+              constraints_profile:
+                type: "dict"
+                required: true
+                description: "제약 조건 (Evidence 기반, 위반 불가)"
+                fields:
+                  hard_constraints:
+                    type: "list"
+                    description: "위반 불가 제약 (StrategyEngine이 필터링)"
+                    item_schema:
+                      constraint_id:  { type: "string", required: true }
+                      type:           { type: "enum", values: ["financial","temporal","regulatory","organizational","technical"] }
+                      description:    { type: "string", required: true }
+                      threshold:      { type: "any", required: false }
+                      evidence_id:    { type: "evidence_id", required: false }
+
+              preference_profile:
+                type: "dict"
+                required: false
+                description: "선호 사항 (Prior 수준, 위반 시 점수 감점)"
+                fields:
+                  soft_preferences:
+                    type: "list"
+                    description: "선호/회피 사항 (StrategyEngine이 랭킹 조정)"
+                    item_schema:
+                      preference_id: { type: "string", required: true }
+                      dimension:     { type: "string", required: true }
+                      value:         { type: "any", required: true }
+                      weight:        { type: "float", default: 0.5 }
+
+              intent:
+                type: "dict"
+                required: true
+                description: "프로젝트 목적 및 의도"
+                fields:
+                  goal_type:
+                    type: "enum"
+                    values: ["market_entry","expansion","pivot","investment_evaluation","strategic_understanding"]
+                  primary_goal_ids: { type: "list[goal_id]", required: false }
+                  risk_tolerance:
+                    type: "enum"
+                    values: ["conservative","balanced","aggressive"]
+
+              related_goal_ids:
+                type: "list[goal_id]"
+                required: false
+                description: "이 Project Context와 연결된 Goal 목록"
+
+              metadata:
+                type: "dict"
+                extra_allowed: true
+                description: "프로젝트명, 담당자, 생성일 등 기타 메타데이터"
+
+              lineage:
+                type: "lineage_ref"
+                required: true
+                description: "Project Context 생성/업데이트 이력 추적"
 
       data_sources:
         description: "EvidenceEngine이 사용하는 외부/내부 데이터 소스 정의"
@@ -695,8 +919,20 @@ umis_v9:
               input:
                 as_of: "date"
                 scope: "dict"
+                project_context_id: "project_context_id (optional)"
               output:
                 graph_slice_ref: "reality_graph_subgraph"
+              notes:
+                - "project_context_id가 주어지면 focal_actor 및 주변 서브그래프를 우선 포함"
+                - "baseline_state 참조 Metric/State를 R-Graph에 반영"
+            
+            - name: "ingest_project_context"
+              description: "Project Context의 baseline/assets 정보를 R-Graph로 투영"
+              input:
+                project_context_id: "project_context_id"
+              output:
+                focal_actor_id: "actor_id"
+                updated_node_ids: "list[node_id]"
 
         pattern_engine:
           description: "R/P-Graph 위에서 패턴 인식/조합/갭 탐지를 수행하는 엔진"
@@ -711,14 +947,30 @@ umis_v9:
               description: "R-Graph에서 Trait/구조 기반 패턴 인스턴스 탐색"
               input:
                 graph_slice_ref: "reality_graph_subgraph"
+                project_context_id: "project_context_id (optional)"
               output:
                 pattern_match_set_ref: "pattern_match_set"
+              output_schema:
+                pattern_match:
+                  structure_fit_score: "float (0~1, R-Graph 구조 적합도)"
+                  execution_fit_score: "float (0~1, project_context 있을 때만, 실행 가능성)"
+                  combined_score: "float (structure_fit × execution_fit)"
+              notes:
+                - "project_context_id 없으면 structure_fit_score만 계산"
+                - "project_context_id 있으면 capability_traits 기반 execution_fit_score 추가"
+            
             - name: "discover_gaps"
               description: "적용 가능하지만 적용되지 않은 패턴/메커니즘 갭 탐지"
               input:
                 graph_slice_ref: "reality_graph_subgraph"
+                project_context_id: "project_context_id (optional)"
               output:
                 gap_candidates_ref: "gap_set"
+              output_schema:
+                gap_candidate:
+                  structure_fit_score: "float"
+                  execution_fit_score: "float (project_context 있을 때만)"
+                  feasibility: "enum [high,medium,low] (execution_fit 기반)"
 
         value_engine:
           description: "Metric Resolver를 중심으로 값을 계산·추론하는 핵심 엔진 (v8 Value Engine 진화)"  #  [oai_citation:7‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
@@ -735,19 +987,27 @@ umis_v9:
             - name: "evaluate_metrics"
               description: "Metric 목록과 컨텍스트/정책을 받아 ValueRecord 번들을 반환"
               input:
-                metric_requests: "list[MetricRequest]"   # metric_id + context
+                metric_requests: "list[MetricRequest]"
                 policy_ref: "policy_ref"
+                project_context_id: "project_context_id (optional)"
               output:
                 values: "list[value_record_ref]"
                 value_program_ref: "value_program_ref"
+              notes:
+                - "project_context_id 있으면 project-level Metric 계산 가능"
+                - "MET-SOM_for_project, MET-Base_Revenue_for_project 등"
+            
             - name: "simulate_scenario"
               description: "D-Graph의 Scenario에 대해 시뮬레이션 수행"
               input:
                 scenario_id: "scenario_id"
-                policy_ref:  "policy_ref"
+                policy_ref: "policy_ref"
+                project_context_id: "project_context_id (optional)"
               output:
                 values: "list[value_record_ref]"
                 value_program_ref: "value_program_ref"
+              notes:
+                - "project_context_id 있으면 Baseline vs Scenario vs Delta Metric 계산"
 
           metric_resolver:
             description: >
@@ -1304,15 +1564,25 @@ umis_v9:
               input:
                 goal_id: "goal_id"
                 constraints: "dict"
+                project_context_id: "project_context_id (optional)"
               output:
                 strategy_set_ref: "strategy_set"
+              notes:
+                - "project_context_id 있으면 constraints_profile.hard_constraints 자동 반영"
+                - "preference_profile 기반 전략 랭킹 조정"
+                - "execution_fit_score 낮은 전략 필터링/하위 랭킹"
+            
             - name: "evaluate_portfolio"
               description: "여러 Strategy를 포트폴리오로 묶어 평가"
               input:
                 strategy_ids: "list[strategy_id]"
-                policy_ref:   "policy_ref"
+                policy_ref: "policy_ref"
+                project_context_id: "project_context_id (optional)"
               output:
                 portfolio_eval_ref: "portfolio_evaluation"
+              notes:
+                - "project_context_id 있으면 자원(예산/인력) 경쟁 고려"
+                - "Cannibalization 리스크 평가"
 
         learning_engine:
           description: "Outcome과 예상 값을 비교해 Belief/Pattern/Value Graph 업데이트"
@@ -1320,15 +1590,29 @@ umis_v9:
             - "substrate_plane.stores.outcome_store"
             - "substrate_plane.graphs.value_graph"
             - "substrate_plane.graphs.pattern_graph"
+            - "substrate_plane.stores.project_context_store"
           outputs:
             - "updated_beliefs"
+            - "updated_project_contexts"
           api:
             - name: "update_from_outcomes"
               description: "실제 Outcome 기반 Metric/Pattern 분포/Belief 업데이트"
               input:
                 outcome_ids: "list[outcome_id]"
               output:
-                updated_entities: "dict"   # metric_ids, pattern_ids 등
+                updated_entities: "dict"
+            
+            - name: "update_project_context_from_outcome"
+              description: "실제 Outcome 기반 Project Context의 baseline/learned_patterns 업데이트"
+              input:
+                outcome_id: "outcome_id"
+                project_context_id: "project_context_id"
+              output:
+                updated_project_context_version: "project_context_ref"
+              notes:
+                - "baseline_state 업데이트 (실제 매출/고객 수/Churn 등)"
+                - "learned_patterns에 패턴별 실행 성과 기록"
+                - "새 버전 project_context 생성 (version += 1)"
 
         policy_engine:
           description: "Evidence-first, Prior-last, 리스크 허용도 등 정책 관리 및 다른 엔진에 제공"
@@ -1380,6 +1664,7 @@ umis_v9:
       action:     "ACTN-"
       artifact:   "ART-"
       memory:     "MEM-"
+      project:    "PRJ-"
 
     lineage_schema:
       description: "모든 주요 객체가 공유하는 lineage 스키마"
