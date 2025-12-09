@@ -342,12 +342,26 @@ github:
     - "PatternEngine (23개 Pattern)"
     - "StrategyEngine (Goal/Strategy)"
     - "LLM 실전 활용 (DART, Pattern)"
+    - "KOSIS 다양한 옵션 검증 (objL, itmId)"
     - "Project Context Layer"
   
   prerequisites:
     - "cmis.yaml patterns 섹션 확인"
     - "Pattern matching 알고리즘 설계"
     - "Strategy generation 프롬프트"
+    - "KOSIS 통계표 매핑 테이블"
+
+  kosis_verification_needed:
+    priority: "중간"
+    duration: "1주"
+    tasks:
+      - "3개 통계표 확장 (인구, 가구, 소득)"
+      - "objL1, objL2 파라미터 옵션 테스트"
+      - "itmId 항목 코드 매핑"
+      - "지역별 데이터 (전국, 시도별)"
+      - "시계열 데이터 (2020-2024)"
+      - "JavaScript JSON 파싱 안정성"
+    expected_tests: "15+ 추가"
 
 ---
 # 세션 완료: 2025-12-10 오후

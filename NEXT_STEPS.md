@@ -124,6 +124,14 @@
 - [ ] 10+ 기업 테스트
 - [ ] 회사명 매칭 개선 (하이브 케이스)
 
+**KOSIS**:
+- [ ] 다양한 통계표 검증 (인구, 가구, 소득 등)
+- [ ] objL1, objL2 파라미터 옵션 테스트
+- [ ] itmId 항목 코드 매핑 구축
+- [ ] 지역별 데이터 조회 (전국, 시도별)
+- [ ] 시계열 데이터 (startPrdDe, endPrdDe)
+- [ ] JavaScript JSON 파싱 안정성 검증
+
 **문서**:
 - [ ] API 사용 가이드
 - [ ] LLM 설정 가이드
@@ -134,6 +142,7 @@
 ### 중기 (2-3주)
 
 **Evidence**:
+- [ ] KOSIS 고도화 (통계표 매핑 확장)
 - [ ] 추가 Official Source (한국은행, 금융위)
 - [ ] Commercial Source (시장조사 리포트)
 - [ ] Rate limiting 실제 구현
@@ -159,7 +168,7 @@
 - [ ] evidence_engine.py 분리 (673 라인, v4)
 - [ ] datetime.utcnow() deprecation (value_engine.py)
 - [ ] DuckDuckGo 패키지 업데이트 (ddgs)
-- [ ] KOSIS objL 파라미터 매핑
+- [ ] **KOSIS 파라미터 매핑 확장** (objL, itmId 체계화)
 
 ---
 
