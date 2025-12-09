@@ -1,0 +1,196 @@
+# CMIS - Contextual Market Intelligence System
+# Cursor Rules for AI Agents
+
+# ========================================
+# 프로젝트 개요
+# ========================================
+# 브랜드: CMIS (Contextual Market Intelligence System)
+# 이전: UMIS v9 (2025-12-09 CMIS로 브랜드 변경)
+# 철학: Model-first, Evidence-first, Graph-of-Graphs, Contextual
+
+# ========================================
+# 파일 생성 위치 규칙
+# ========================================
+
+## 프로덕션 루트 (실행 필수 파일만)
+# - cmis.yaml (메인 스키마)
+# - cmis_core/ (Core 엔진 Python 코드)
+# - cmis_cli/ (CLI Python 코드)
+# - config/ (설정 YAML, domain_registry.yaml)
+# - seeds/ (Reality seed YAML)
+# - requirements.txt, README.md, env.example
+
+## dev/ (개발 관련 모든 파일)
+# dev/tests/ (pytest 테스트)
+#   - unit/ (단위 테스트)
+#   - integration/ (통합 테스트)
+#   - e2e/ (E2E 테스트)
+#
+# dev/scripts/
+#   - validation/ (시스템 검증 스크립트)
+#
+# dev/examples/ (사용 예시, Project Context 등)
+#
+# dev/v7_reference/ (v7 참조 자료)
+#
+# dev/docs/
+#   - architecture/ (아키텍처 설계)
+#   - analysis/ (분석 문서)
+#   - implementation/ (구현 가이드)
+#
+# dev/session_summary/ (개발 세션 이력)
+
+# ========================================
+# 파일 생성 규칙 (중요!)
+# ========================================
+
+# 1. Python 엔진/모듈 → cmis_core/
+# - world_engine.py, value_engine.py 등
+# - evidence/ 서브폴더 (DART, 웹검색 등)
+
+# 2. CLI 관련 → cmis_cli/
+
+# 3. 테스트 파일 → dev/tests/
+# - test_*.py → dev/tests/unit/ (단위)
+# - test_*_integration.py → dev/tests/integration/
+# - test_e2e_*.py → dev/tests/e2e/
+
+# 4. 설정 YAML → config/
+# - cmis_process_phases.yaml
+# - cmis_agent_protocols.yaml
+# - domain_registry.yaml
+
+# 5. 도메인 설정 → config/domains/
+# - cmis_domain_*.yaml
+
+# 6. Reality seed → seeds/
+# - {domain_id}_reality_seed.yaml
+
+# 7. 문서 → dev/docs/
+# - 아키텍처 설계 → dev/docs/architecture/
+# - 분석 문서 → dev/docs/analysis/
+# - 구현 가이드 → dev/docs/implementation/
+
+# 8. 예시/샘플 → dev/examples/
+
+# 9. 검증 스크립트 → dev/scripts/validation/
+
+# 10. 임시/실험 → dev/temp/
+
+# ========================================
+# 네이밍 컨벤션
+# ========================================
+
+# Python 파일:
+# - snake_case.py
+# - 엔진: {name}_engine.py
+# - 테스트: test_{module}.py
+
+# YAML 파일:
+# - cmis.yaml (메인)
+# - cmis_{category}.yaml (설정)
+# - cmis_domain_{name}.yaml (도메인)
+# - {domain_id}_reality_seed.yaml (seed)
+
+# 문서:
+# - 아키텍처: CMIS_* 또는 cmis_*
+# - 분석: CMIS_*_Analysis.md
+# - 가이드: *_Guide.md
+
+# ========================================
+# 코드 스타일 가이드
+# ========================================
+
+# 1. Legacy 표시 금지
+# ❌ "v1", "v2", "POC", "v7" 같은 버전 표시
+# ❌ "향후", "예정", "TODO" (코드에서)
+# ✅ 깔끔한 프로덕션 코드
+
+# 2. 주석
+# - Docstring: 필수 (모든 함수/클래스)
+# - Type hints: 필수
+# - from __future__ import annotations: 권장
+
+# 3. Import
+# - from cmis_core.types import ...
+# - from cmis_core.world_engine import WorldEngine
+
+# 4. YAML
+# - cmis: (루트 키)
+# - cmis_reality_seed: (seed)
+# - cmis_domain_registry: (registry)
+
+# ========================================
+# 금지 사항
+# ========================================
+
+# 1. 프로덕션 루트에 개발 파일 생성 금지
+# ❌ test_*.py (루트)
+# ❌ *_poc.py (루트)
+# ❌ example_*.py (루트)
+# ✅ dev/tests/, dev/examples/ 사용
+
+# 2. Legacy 브랜드 사용 금지
+# ❌ UMIS
+# ❌ umis_v9
+# ✅ CMIS
+# ✅ cmis
+
+# 3. 버전 표시 금지 (코드/주석)
+# ❌ "v1에서는...", "v2 예정..."
+# ✅ "현재 지원", "확장 가능"
+
+# ========================================
+# 철학 준수
+# ========================================
+
+# 1. Model-first, Number-second
+# - 숫자는 항상 모델(R-Graph)의 결과
+
+# 2. Evidence-first, Prior-last
+# - 직접 값 → 계산 → 추정 순서
+# - Evidence 스키마 준수
+
+# 3. Graph-of-Graphs
+# - Reality/Pattern/Value/Decision 4개 분리
+# - 5번째 그래프 추가 금지
+
+# 4. Trait 기반 Ontology
+# - 고정 enum 회피
+# - Trait 조합으로 유연하게
+
+# 5. Contextual
+# - Project Context 고려
+# - Greenfield/Brownfield 구분
+
+# ========================================
+# 예시
+# ========================================
+
+# ✅ 좋은 예:
+# - 새 엔진: cmis_core/evidence_engine.py
+# - 새 테스트: dev/tests/unit/test_evidence_engine.py
+# - 새 문서: dev/docs/architecture/Evidence_Engine_Design.md
+# - 새 도메인: seeds/Healthcare_KR_reality_seed.yaml
+# - 새 설정: config/cmis_domain_Healthcare_KR.yaml
+
+# ❌ 나쁜 예:
+# - test_new_feature.py (루트에 생성)
+# - my_experiment.py (루트에 생성)
+# - temp_analysis.md (루트에 생성)
+# - umis_something.py (legacy 브랜드)
+
+# ========================================
+# 참고 문서
+# ========================================
+# - README.md: 메인 가이드
+# - dev/STRUCTURE.md: 폴더 구조 상세
+# - dev/docs/architecture/cmis_philosophy_concept.md: 철학
+# - dev/docs/architecture/CMIS_Architecture_Blueprint.md: 아키텍처
+
+# ========================================
+# 버전 정보
+# ========================================
+# CMIS 버전: 9.0.0-alpha
+# 브랜드 변경: 2025-12-09 (UMIS v9 → CMIS)
+# 상태: Production Ready
