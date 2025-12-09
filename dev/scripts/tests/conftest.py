@@ -7,7 +7,8 @@ from pathlib import Path
 @pytest.fixture
 def project_root():
     """프로젝트 루트 디렉토리"""
-    return Path(__file__).parent.parent
+    # dev/scripts/tests/ → 프로젝트 루트 (3단계 위)
+    return Path(__file__).parent.parent.parent.parent
 
 
 @pytest.fixture
