@@ -1,0 +1,760 @@
+---
+# CMIS Project Context 입력 예시
+# 3가지 대표 시나리오: Greenfield Startup / Brownfield 기존 사업 / Hybrid 글로벌 진입
+
+examples:
+
+  # ========================================
+  # 예시 1: Greenfield - EdTech 스타트업 (AI 음성 기술)
+  # ========================================
+  - project_context_id: "PRJ-20251205-EdTech-Startup-001"
+    example_name: "AI 음성 기반 어학교육 스타트업 (Greenfield)"
+    version: 1
+    previous_version_id: null
+
+    focal_actor_id: "ACT-CLIENT-EdTech-Startup-001"
+    
+    mode: "greenfield"
+    
+    scope:
+      domain_id: "Adult_Language_Education_KR"
+      region: "KR"
+      segment: "office_worker_english"
+      time_horizon: "3_years"
+    
+    baseline_state:
+      as_of: "2025-12-05"
+      current_revenue:
+        amount: 0
+        currency: "KRW"
+        per: "year"
+      current_customers: 0
+      channel_mix: {}
+      margin_structure: {}
+      key_metrics: []
+      evidence_ids: []
+      notes:
+        - "신규 창업, 사업 시작 전"
+        - "제품 MVP 개발 중"
+    
+    assets_profile:
+      capability_traits:
+        - capability_id: "CAP-001"
+          name: "AI 음성합성 기술"
+          trait_set:
+            technology_domain: "speech_synthesis"
+            maturity_level: "production_ready"
+            scale_tier: "startup_scale"
+            deployment_type: "cloud_native"
+            language_coverage: ["korean", "english"]
+          evidence_id: "EVD-internal-tech-demo-001"
+          description: "실시간 TTS/STT 엔진 보유, 10K 동시 사용자 지원"
+        
+        - capability_id: "CAP-002"
+          name: "교육 콘텐츠 설계 경험"
+          trait_set:
+            domain_expertise: "education"
+            content_type: "curriculum"
+            maturity_level: "mvp"
+            language_coverage: ["korean"]
+          evidence_id: null
+          description: "창업팀 중 1명이 어학교육 커리큘럼 설계 5년 경력"
+      
+      channels:
+        - channel_id: "CHN-001"
+          channel_type: "online"
+          reach: 0
+          status: "planned"
+          description: "모바일 앱 + 웹 플랫폼 계획"
+      
+      brand_assets:
+        brand_awareness_level: "none"
+        brand_domains: []
+        notes: "신규 브랜드, 인지도 없음"
+      
+      organizational_assets:
+        team_size: 3
+        key_talent:
+          - role: "CTO"
+            background: "AI/ML 엔지니어, 음성인식 스타트업 5년"
+          - role: "CEO"
+            background: "EdTech PM 경력 3년"
+          - role: "Content Designer"
+            background: "어학교육 커리큘럼 설계 5년"
+        org_maturity: "startup"
+      
+      data_assets:
+        customer_data_volume: 0
+        proprietary_datasets: []
+    
+    constraints_profile:
+      hard_constraints:
+        - constraint_id: "CNS-001"
+          type: "financial"
+          description: "초기 투자 5억원 이내"
+          threshold:
+            max_initial_investment: 500000000
+            currency: "KRW"
+          evidence_id: "EVD-internal-investment-agreement-001"
+        
+        - constraint_id: "CNS-002"
+          type: "temporal"
+          description: "6개월 내 MVP 출시"
+          threshold:
+            mvp_deadline: "2026-06-01"
+          evidence_id: null
+        
+        - constraint_id: "CNS-003"
+          type: "organizational"
+          description: "팀 규모 10명 이하 유지 (1년차)"
+          threshold:
+            max_team_size: 10
+            period: "year_1"
+          evidence_id: null
+        
+        - constraint_id: "CNS-004"
+          type: "technical"
+          description: "모바일 우선 전략 (오프라인 불가)"
+          threshold:
+            delivery_channel: ["online"]
+          evidence_id: null
+    
+    preference_profile:
+      soft_preferences:
+        - preference_id: "PREF-001"
+          dimension: "strategic_priority"
+          value: "growth_oriented"
+          weight: 0.8
+          description: "초기 3년은 성장 우선, 수익은 부차적"
+        
+        - preference_id: "PREF-002"
+          dimension: "target_customer"
+          value:
+            preferred: ["office_worker", "professional"]
+            avoid: ["student", "retiree"]
+          weight: 0.6
+          description: "구매력 있는 직장인 타겟 선호"
+        
+        - preference_id: "PREF-003"
+          dimension: "pricing_model"
+          value: "subscription"
+          weight: 0.7
+          description: "구독형 수익 모델 선호"
+        
+        - preference_id: "PREF-004"
+          dimension: "market_positioning"
+          value: "premium_niche"
+          weight: 0.5
+          description: "프리미엄 니치 포지셔닝 선호"
+    
+    intent:
+      goal_type: "market_entry"
+      primary_goal_ids:
+        - "GOL-EdTech-Startup-Entry-001"
+      risk_tolerance: "balanced"
+      description: "한국 성인 어학교육 시장 진입, AI 기반 차별화"
+    
+    related_goal_ids:
+      - "GOL-EdTech-Startup-Entry-001"
+    
+    metadata:
+      project_name: "AI Voice Coach 한국 시장 진입"
+      owner: "CEO"
+      created_at: "2025-12-05T10:00:00"
+      team_email: "team@edtech-startup.com"
+    
+    lineage:
+      from_evidence_ids:
+        - "EVD-internal-tech-demo-001"
+        - "EVD-internal-investment-agreement-001"
+      from_value_ids: []
+      from_pattern_ids: []
+      from_program_id: "PH00_project_context_setup"
+      engine_ids: ["world_engine", "evidence_engine"]
+      policy_id: null
+      created_by_role: "structure_analyst"
+      created_at: "2025-12-05T10:00:00"
+
+  # ========================================
+  # 예시 2: Brownfield - 기존 오프라인 학원 체인
+  # ========================================
+  - project_context_id: "PRJ-20251205-OfflineAcademy-Chain-001"
+    example_name: "대형 오프라인 학원 체인 디지털 전환 (Brownfield)"
+    version: 1
+    previous_version_id: null
+
+    focal_actor_id: "ACT-CLIENT-OfflineAcademy-Chain-001"
+    
+    mode: "brownfield"
+    
+    scope:
+      domain_id: "Adult_Language_Education_KR"
+      region: "KR"
+      segment: "adult_language_general"
+      time_horizon: "3_years"
+    
+    baseline_state:
+      as_of: "2025-12-05"
+      
+      current_revenue:
+        amount: 80000000000
+        currency: "KRW"
+        per: "year"
+        breakdown:
+          english: 60000000000
+          chinese: 12000000000
+          japanese: 8000000000
+      
+      current_customers: 45000
+      
+      channel_mix:
+        offline: 0.95
+        online: 0.05
+        notes: "오프라인 중심, 온라인은 보조"
+      
+      margin_structure:
+        gross_margin: 0.45
+        operating_margin: 0.10
+        net_margin: 0.05
+        key_cost_drivers:
+          - "강사 인건비: 40%"
+          - "임대료: 25%"
+          - "마케팅: 15%"
+      
+      key_metrics:
+        - "VAL-baseline-revenue-001"
+        - "VAL-baseline-customers-001"
+        - "VAL-baseline-churn-001"
+      
+      evidence_ids:
+        - "EVD-internal-financial-statement-2024"
+        - "EVD-internal-crm-export-2024"
+        - "EVD-internal-branch-report-2024"
+    
+    assets_profile:
+      capability_traits:
+        - capability_id: "CAP-101"
+          name: "전국 오프라인 네트워크"
+          trait_set:
+            domain_expertise: "education"
+            content_type: "course_content"
+            maturity_level: "mature"
+            geographic_coverage: "national"
+            delivery_channel: "offline"
+          evidence_id: "EVD-internal-branch-list-001"
+          description: "전국 120개 지점 운영 중"
+        
+        - capability_id: "CAP-102"
+          name: "강사 네트워크"
+          trait_set:
+            domain_expertise: "education"
+            maturity_level: "mature"
+            scale_tier: "enterprise"
+          evidence_id: "EVD-internal-instructor-db-001"
+          description: "정규 강사 300명 + 시간강사 500명"
+        
+        - capability_id: "CAP-103"
+          name: "브랜드 인지도"
+          trait_set:
+            domain_expertise: "education"
+            geographic_coverage: "national"
+            maturity_level: "industry_leading"
+          evidence_id: "EVD-external-brand-survey-001"
+          description: "어학원 브랜드 인지도 Top 3"
+        
+        - capability_id: "CAP-104"
+          name: "디지털 인프라 (제한적)"
+          trait_set:
+            technology_domain: "web_development"
+            maturity_level: "early"
+            deployment_type: "on_premise"
+            scale_tier: "startup_scale"
+          evidence_id: null
+          description: "기본 웹사이트 + 간단한 LMS, 모바일 앱 없음"
+      
+      channels:
+        - channel_id: "CHN-101"
+          channel_type: "offline"
+          reach: 120
+          unit: "branches"
+          description: "전국 120개 지점"
+        
+        - channel_id: "CHN-102"
+          channel_type: "online"
+          reach: 5000
+          unit: "monthly_visitors"
+          description: "웹사이트 (정보성, 거래 미미)"
+      
+      brand_assets:
+        brand_awareness_level: "high"
+        brand_domains: ["adult_language_education"]
+        brand_equity_estimate: "500억원 (추정)"
+      
+      organizational_assets:
+        team_size: 450
+        key_talent:
+          - role: "교육본부장"
+            count: 1
+          - role: "지점장"
+            count: 120
+          - role: "정규 강사"
+            count: 300
+        org_maturity: "established"
+        org_culture: "offline_first, 보수적"
+      
+      data_assets:
+        customer_data_volume: 45000
+        customer_db_quality: "medium"
+        proprietary_datasets:
+          - "15년치 수강생 데이터"
+          - "지점별 성과 데이터"
+    
+    constraints_profile:
+      hard_constraints:
+        - constraint_id: "CNS-101"
+          type: "financial"
+          description: "디지털 전환 투자 연 30억 이내"
+          threshold:
+            max_annual_digital_capex: 3000000000
+            currency: "KRW"
+          evidence_id: "EVD-internal-board-resolution-001"
+        
+        - constraint_id: "CNS-102"
+          type: "organizational"
+          description: "기존 오프라인 매출 방어 필수"
+          threshold:
+            min_offline_revenue_retention: 0.90
+          evidence_id: null
+          notes: "오프라인 매출 10% 이상 감소 불가"
+        
+        - constraint_id: "CNS-103"
+          type: "temporal"
+          description: "3년 내 손익 방어 (적자 전환 불가)"
+          threshold:
+            max_years_to_profitability: 0
+            current_profitability: "positive"
+          evidence_id: "EVD-internal-financial-statement-2024"
+        
+        - constraint_id: "CNS-104"
+          type: "organizational"
+          description: "기존 강사 조직 대규모 구조조정 불가"
+          threshold:
+            max_layoff_ratio: 0.05
+          evidence_id: null
+          notes: "노조 존재, 대량 해고 시 분쟁 위험"
+    
+    preference_profile:
+      soft_preferences:
+        - preference_id: "PREF-101"
+          dimension: "strategic_priority"
+          value: "cash_flow_stability"
+          weight: 0.9
+          description: "안정적 현금흐름 최우선 (성장보다)"
+        
+        - preference_id: "PREF-102"
+          dimension: "transformation_pace"
+          value: "gradual"
+          weight: 0.8
+          description: "점진적 디지털 전환 선호"
+        
+        - preference_id: "PREF-103"
+          dimension: "asset_utilization"
+          value: "maximize_existing_offline"
+          weight: 0.7
+          description: "기존 오프라인 자산 활용 극대화"
+        
+        - preference_id: "PREF-104"
+          dimension: "market_positioning"
+          value: "maintain_premium_offline"
+          weight: 0.6
+          description: "오프라인 프리미엄 포지션 유지"
+    
+    intent:
+      goal_type: "expansion"
+      primary_goal_ids:
+        - "GOL-OfflineAcademy-Digital-Expansion-001"
+      risk_tolerance: "conservative"
+      description: "기존 오프라인 사업 방어하며 점진적 디지털 확장"
+    
+    related_goal_ids:
+      - "GOL-OfflineAcademy-Digital-Expansion-001"
+    
+    metadata:
+      project_name: "XYZ어학원 디지털 전환 프로젝트"
+      company_size: "중견기업 (450명)"
+      established_year: 2008
+      owner: "경영기획실장"
+      created_at: "2025-12-05T11:00:00"
+    
+    lineage:
+      from_evidence_ids:
+        - "EVD-internal-financial-statement-2024"
+        - "EVD-internal-crm-export-2024"
+        - "EVD-internal-branch-report-2024"
+        - "EVD-internal-tech-demo-001"
+        - "EVD-internal-board-resolution-001"
+      from_value_ids:
+        - "VAL-baseline-revenue-001"
+        - "VAL-baseline-customers-001"
+      from_pattern_ids: []
+      from_program_id: "PH00_project_context_setup_20251205"
+      engine_ids: ["world_engine", "evidence_engine", "value_engine"]
+      policy_id: "reporting_strict"
+      created_by_role: "structure_analyst"
+      created_at: "2025-12-05T11:00:00"
+
+  # ========================================
+  # 예시 3: Hybrid - 글로벌 온라인 플랫폼 한국 진입
+  # ========================================
+  - project_context_id: "PRJ-20251205-Global-Platform-KR-Entry-001"
+    example_name: "글로벌 온라인 학습 플랫폼 한국 진입 (Hybrid)"
+    version: 1
+    previous_version_id: null
+
+    focal_actor_id: "ACT-CLIENT-Global-Platform-001"
+    
+    mode: "hybrid"
+    
+    scope:
+      domain_id: "Adult_Language_Education_KR"
+      region: "KR"
+      segment: "adult_language_general"
+      time_horizon: "5_years"
+    
+    baseline_state:
+      as_of: "2025-12-05"
+      
+      current_revenue:
+        amount: 30000000000
+        currency: "KRW"
+        per: "year"
+        breakdown:
+          global_total: 50000000000
+          korea: 0
+        notes: "글로벌 매출 500억원, 한국은 아직 미진출"
+      
+      current_customers: 500000
+      current_customers_kr: 0
+      
+      channel_mix:
+        online: 1.0
+        geographic_split:
+          us: 0.40
+          europe: 0.35
+          asia_ex_kr: 0.25
+          kr: 0.00
+      
+      margin_structure:
+        gross_margin: 0.75
+        operating_margin: 0.20
+        net_margin: 0.12
+        unit_economics:
+          arpu: 100000
+          cac: 30000
+          ltv: 500000
+          payback_months: 3.6
+      
+      key_metrics:
+        - "VAL-baseline-global-revenue-001"
+        - "VAL-baseline-global-arpu-001"
+        - "VAL-baseline-global-ltv-001"
+      
+      evidence_ids:
+        - "EVD-internal-global-revenue-2024"
+        - "EVD-internal-unit-economics-2024"
+    
+    assets_profile:
+      capability_traits:
+        - capability_id: "CAP-201"
+          name: "SaaS 플랫폼 기술"
+          trait_set:
+            technology_domain: "platform_tech"
+            maturity_level: "industry_leading"
+            scale_tier: "hyperscale"
+            deployment_type: "cloud_native"
+            language_coverage: ["english", "spanish", "french", "german", "chinese", "japanese"]
+          evidence_id: "EVD-internal-platform-spec-001"
+          description: "100만 동시 사용자 지원 가능"
+        
+        - capability_id: "CAP-202"
+          name: "데이터 기반 성장 경험"
+          trait_set:
+            domain_expertise: "education"
+            maturity_level: "mature"
+            scale_tier: "growth_stage"
+          evidence_id: "EVD-internal-growth-playbook-001"
+          description: "5개국 진입 성공, A/B 테스트 기반 최적화"
+        
+        - capability_id: "CAP-203"
+          name: "AI/ML 개인화 엔진"
+          trait_set:
+            technology_domain: "AI_ML"
+            maturity_level: "production_ready"
+            scale_tier: "enterprise"
+          evidence_id: "EVD-internal-ml-engine-spec-001"
+          description: "사용자별 학습 경로 추천, 50만 사용자 학습 데이터 보유"
+        
+        - capability_id: "CAP-204"
+          name: "한국 시장 역량 (제한적)"
+          trait_set:
+            domain_expertise: "education"
+            geographic_coverage: "local"
+            maturity_level: "concept"
+          evidence_id: null
+          description: "한국어 UI/UX 없음, 한국 시장 이해 낮음"
+      
+      channels:
+        - channel_id: "CHN-201"
+          channel_type: "online"
+          reach: 5000000
+          unit: "monthly_active_users"
+          geographic: "global"
+        
+        - channel_id: "CHN-202"
+          channel_type: "partner"
+          reach: 0
+          geographic: "korea"
+          status: "planned"
+          description: "한국 파트너 채널 필요 (기업 교육 등)"
+      
+      brand_assets:
+        brand_awareness_level: "low"
+        brand_awareness_level_global: "high"
+        brand_domains: ["online_learning", "language_education"]
+        notes: "글로벌 브랜드, 한국 인지도 낮음"
+      
+      organizational_assets:
+        team_size: 250
+        team_size_korea: 0
+        key_talent:
+          - role: "Growth Team"
+            count: 30
+            description: "데이터 기반 마케팅/그로스 전문"
+          - role: "Product/Engineering"
+            count: 120
+          - role: "Content Team"
+            count: 50
+        org_maturity: "scaleup"
+      
+      data_assets:
+        customer_data_volume: 500000
+        proprietary_datasets:
+          - "50만 사용자 학습 행동 데이터"
+          - "200개국 시장 벤치마크 데이터"
+        data_infrastructure: "mature"
+    
+    constraints_profile:
+      hard_constraints:
+        - constraint_id: "CNS-201"
+          type: "financial"
+          description: "한국 시장 투자 연 50억 이내 (2년차까지)"
+          threshold:
+            max_annual_investment_kr: 5000000000
+            currency: "KRW"
+            period: "year_1_2"
+          evidence_id: "EVD-internal-budget-allocation-kr-001"
+        
+        - constraint_id: "CNS-202"
+          type: "temporal"
+          description: "18개월 내 의미 있는 MRR 확보 (10억/월)"
+          threshold:
+            target_mrr: 1000000000
+            deadline: "2027-06-01"
+          evidence_id: null
+        
+        - constraint_id: "CNS-203"
+          type: "regulatory"
+          description: "한국 개인정보보호법 준수"
+          threshold:
+            required_compliance: ["PIPA", "K-ISMS"]
+          evidence_id: null
+        
+        - constraint_id: "CNS-204"
+          type: "organizational"
+          description: "한국 팀 30명 이내 (초기)"
+          threshold:
+            max_team_size_kr: 30
+            period: "year_1"
+          evidence_id: "EVD-internal-headcount-plan-kr-001"
+    
+    preference_profile:
+      soft_preferences:
+        - preference_id: "PREF-201"
+          dimension: "strategic_priority"
+          value: "balanced_growth_and_unit_economics"
+          weight: 0.7
+          description: "성장 중요하지만 Unit Economics 건전성 유지"
+        
+        - preference_id: "PREF-202"
+          dimension: "market_positioning"
+          value: "premium_digital"
+          weight: 0.8
+          description: "프리미엄 디지털 학습 포지셔닝"
+        
+        - preference_id: "PREF-203"
+          dimension: "localization_depth"
+          value: "deep_localization"
+          weight: 0.6
+          description: "한국 시장에 맞는 깊은 현지화 선호"
+        
+        - preference_id: "PREF-204"
+          dimension: "partnership_strategy"
+          value: "strategic_partnership_preferred"
+          weight: 0.5
+          description: "한국 기업/기관과 전략적 파트너십 선호"
+    
+    intent:
+      goal_type: "market_entry"
+      primary_goal_ids:
+        - "GOL-Global-Platform-KR-Entry-001"
+      risk_tolerance: "balanced"
+      description: "글로벌 성공 플레이북 기반 한국 진입, 5년 내 Top 5 목표"
+    
+    related_goal_ids:
+      - "GOL-Global-Platform-KR-Entry-001"
+    
+    metadata:
+      project_name: "ABC Learning 한국 시장 진입 프로젝트"
+      company_hq: "San Francisco, USA"
+      company_stage: "Series C ($100M raised)"
+      owner: "Korea Market Lead"
+      created_at: "2025-12-05T12:00:00"
+    
+    lineage:
+      from_evidence_ids:
+        - "EVD-internal-global-revenue-2024"
+        - "EVD-internal-unit-economics-2024"
+        - "EVD-internal-platform-spec-001"
+        - "EVD-internal-growth-playbook-001"
+        - "EVD-internal-budget-allocation-kr-001"
+      from_value_ids:
+        - "VAL-baseline-global-revenue-001"
+        - "VAL-baseline-global-arpu-001"
+      from_pattern_ids:
+        - "PAT-subscription_model"
+        - "PAT-platform_business_model"
+      from_program_id: "PH00_project_context_setup_20251205"
+      engine_ids: ["world_engine", "evidence_engine", "value_engine"]
+      policy_id: "decision_balanced"
+      created_by_role: "structure_analyst"
+      created_at: "2025-12-05T12:00:00"
+
+# ========================================
+# 예시 사용법
+# ========================================
+usage_examples:
+  
+  example_1_greenfield:
+    description: "Greenfield 스타트업이 시장 진입 기회 평가"
+    code: |
+      # Step 1: Project Context 생성 (PH00)
+      project_context = create_project_context(
+          focal_actor_info=greenfield_startup_info,
+          domain_id="Adult_Language_Education_KR"
+      )
+      # → PRJ-20251205-EdTech-Startup-001
+      
+      # Step 2: 구조 분석 (PH01-PH14 with project_context)
+      market_report = structure_analysis_for_project(
+          domain_id="Adult_Language_Education_KR",
+          project_context_id="PRJ-20251205-EdTech-Startup-001"
+      )
+      # → 시장 구조 + "우리가 실행 가능한 기회" 포함
+      
+      # Step 3: 기회 발굴
+      opportunities = opportunity_discovery_for_project(
+          domain_id="Adult_Language_Education_KR",
+          project_context_id="PRJ-20251205-EdTech-Startup-001"
+      )
+      # → OPP 카드 (structure_fit + execution_fit 모두 표시)
+  
+  example_2_brownfield:
+    description: "기존 오프라인 학원이 디지털 전환 전략 수립"
+    code: |
+      # Step 1: Project Context 생성 (내부 데이터 포함)
+      project_context = create_project_context(
+          focal_actor_info=offline_academy_info,
+          internal_data_sources=[
+              "EVD-internal-financial-statement-2024",
+              "EVD-internal-crm-export-2024"
+          ],
+          domain_id="Adult_Language_Education_KR"
+      )
+      # → PRJ-20251205-OfflineAcademy-Chain-001
+      
+      # Step 2: 구조 분석
+      market_report = structure_analysis_for_project(
+          domain_id="Adult_Language_Education_KR",
+          project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"
+      )
+      # → "기존 오프라인 자산 활용" 관점 강조
+      
+      # Step 3: 전략 설계
+      strategies = strategy_design_for_project(
+          goal_id="GOL-OfflineAcademy-Digital-Expansion-001",
+          project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"
+      )
+      # → 점진적 디지털화 전략 (오프라인 방어 + 하이브리드)
+  
+  example_3_hybrid:
+    description: "글로벌 플랫폼이 한국 진입 평가"
+    code: |
+      # Step 1: Project Context 생성 (글로벌 baseline 포함)
+      project_context = create_project_context(
+          focal_actor_info=global_platform_info,
+          existing_baseline={
+              "global_revenue": 500억원,
+              "global_arpu": 100000,
+              "proven_playbook": "5개국 성공"
+          },
+          domain_id="Adult_Language_Education_KR"
+      )
+      # → PRJ-20251205-Global-Platform-KR-Entry-001
+      
+      # Step 2: 기회 발굴
+      opportunities = opportunity_discovery_for_project(
+          domain_id="Adult_Language_Education_KR",
+          project_context_id="PRJ-20251205-Global-Platform-KR-Entry-001"
+      )
+      # → "글로벌 성공 패턴" Prior 활용
+      # → execution_fit: 플랫폼 기술 (0.9), 한국 시장 이해 (0.3)
+      
+      # Step 3: 전략 설계
+      strategies = strategy_design_for_project(
+          goal_id="GOL-Global-Platform-KR-Entry-001",
+          project_context_id="PRJ-20251205-Global-Platform-KR-Entry-001"
+      )
+      # → 현지화 전략 + 파트너십 전략 조합
+
+# ========================================
+# 검증 체크리스트
+# ========================================
+validation_checklist:
+  project_context_quality:
+    - check: "focal_actor_id가 R-Graph에 존재하는가?"
+      method: "world_engine.get_node(focal_actor_id)"
+    
+    - check: "baseline_state의 핵심 Metric이 Evidence 기반인가?"
+      method: "모든 key_metrics에 evidence_ids 연결 확인"
+    
+    - check: "capability_traits가 Trait 스키마를 따르는가?"
+      method: "각 trait_set이 ontology.traits.capability_traits 정의와 일치 확인"
+    
+    - check: "hard_constraints에 Evidence 또는 명확한 근거가 있는가?"
+      method: "type=financial/regulatory인 제약은 evidence_id 필수"
+    
+    - check: "mode(greenfield/brownfield/hybrid)가 baseline_state와 일치하는가?"
+      method: |
+        - greenfield: current_revenue == 0
+        - brownfield: current_revenue > 0 AND 동일 domain
+        - hybrid: current_revenue > 0 BUT 다른 domain/region
+
+  philosophical_alignment:
+    - check: "Model-first: baseline이 모델로 표현되었는가?"
+      pass_criteria: "숫자만 나열 ❌, 구조적 표현 ✅"
+    
+    - check: "Evidence-first: baseline/constraints에 Evidence 있는가?"
+      pass_criteria: "evidence_ids 연결 또는 source 명시"
+    
+    - check: "Trait 기반: capability가 Trait 조합인가?"
+      pass_criteria: "문자열 리스트 ❌, trait_set ✅"
