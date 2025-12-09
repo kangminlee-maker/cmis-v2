@@ -1,10 +1,9 @@
 """UMIS v9 DART Evidence Connector
 
 한국 전자공시시스템(DART) API 연동
-v7 검증된 로직 기반 + v9 Evidence 스키마 통합
 
 검증 이력:
-- v7.11.0에서 11개 기업, 537개 항목으로 검증 완료
+- 11개 기업, 537개 항목으로 검증 완료
 - 성공률: 91% (11/12)
 - 검증 기업: 삼성전자, LG전자, GS리테일, YBM넷, 하이브 등
 """
@@ -42,18 +41,16 @@ class Evidence:
 
 
 class DARTConnector:
-    """DART API Connector for UMIS v9
+    """DART API Connector
     
-    v7 DARTClient의 검증된 로직을 v9 Evidence 스키마로 seamless 통합
-    
-    Features (v7 검증 완료):
+    검증된 기능:
     - 정확한 기업명 매칭 + 상장사 우선 선택
     - 개별재무제표(OFS) 우선 + strict 모드
     - 900 오류 자동 재시도 (3회, 2초 대기)
     - ZIP 압축 자동 해제
     
-    v9 통합:
-    - Evidence 스키마 자동 변환
+    Evidence 통합:
+    - umis_v9.yaml Evidence 스키마 준수
     - source_tier="official" (공식 공시)
     - lineage 자동 기록
     """
@@ -81,12 +78,11 @@ class DARTConnector:
     # ========================================
     
     def get_corp_code(self, company_name: str) -> Optional[str]:
-        """기업 코드 조회 (v7 검증 로직)
+        """기업 코드 조회
         
         전략:
         1. 정확한 이름 매칭 우선
         2. 부분 매칭 시 상장사 우선 (stock_code 기준)
-        3. '하이브' 검색 → 29개 중 상장사 자동 선택
         
         Args:
             company_name: 회사명 (예: "YBM넷")
@@ -136,17 +132,13 @@ class DARTConnector:
         fs_div: str = 'OFS',
         strict: bool = True
     ) -> Optional[List[Dict]]:
-        """재무제표 조회 (v7 검증 로직)
-        
-        전략:
-        - OFS (개별재무제표) 우선 (권장)
-        - strict=True시 fs_div 불일치 검증
+        """재무제표 조회
         
         Args:
             corp_code: 기업 코드
             year: 사업연도
-            fs_div: 'OFS' (개별) or 'CFS' (연결)
-            strict: fs_div 불일치 시 에러 반환 여부
+            fs_div: 'OFS' (개별재무제표, 권장) or 'CFS' (연결재무제표)
+            strict: fs_div 불일치 시 None 반환 여부
         
         Returns:
             재무제표 항목 목록 or None
@@ -186,28 +178,26 @@ class DARTConnector:
         company_name: str,
         year: int
     ) -> Optional[Evidence]:
-        """기업 매출 Evidence 수집 (v9 통합 메서드)
-        
-        v7 로직 + v9 Evidence 스키마 변환
+        """기업 매출 Evidence 수집
         
         Args:
             company_name: 회사명 (예: "YBM넷")
             year: 사업연도
         
         Returns:
-            Evidence 객체 (v9 스키마) or None
+            Evidence 객체 or None
         
         Example:
             >>> connector = DARTConnector()
             >>> evidence = connector.fetch_company_revenue("YBM넷", 2023)
             >>> evidence.metadata["revenue"]  # 817억원
         """
-        # 1. 기업 코드 조회 (v7 로직)
+        # 1. 기업 코드 조회
         corp_code = self.get_corp_code(company_name)
         if not corp_code:
             return None
         
-        # 2. 재무제표 조회 (v7 로직)
+        # 2. 재무제표 조회
         financials = self.get_financials(corp_code, year, fs_div='OFS')
         if not financials:
             return None

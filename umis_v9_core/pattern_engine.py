@@ -1,7 +1,6 @@
-"""UMIS v9 Pattern Engine v1
+"""UMIS v9 Pattern Engine
 
 패턴 매칭 및 갭 탐지
-v1: 코드 기반 2개 패턴 (subscription, platform)
 """
 
 from __future__ import annotations
@@ -13,17 +12,17 @@ from .types import PatternMatch, GapCandidate
 
 
 class PatternEngine:
-    """Pattern Engine v1 - 코드 기반 패턴 매칭
+    """Pattern Engine - Trait 기반 패턴 매칭 및 갭 탐지
     
-    v1 지원 패턴:
+    지원 패턴:
     - PAT-subscription_model: revenue_model == subscription
     - PAT-platform_business_model: institution_type == online_platform
+    - (기타 패턴: Pattern Graph로 확장 가능)
     
-    v2+ 예정:
-    - Pattern Graph 로딩
-    - 23개 BM Pattern 전체
+    고급 기능:
     - execution_fit_score (Project Context 기반)
     - value_chain_templates 연동
+    - strategic_frameworks 연동
     """
     
     def __init__(self):
@@ -35,11 +34,11 @@ class PatternEngine:
         graph: InMemoryGraph,
         project_context_id: str = None
     ) -> List[PatternMatch]:
-        """패턴 매칭 (v1: 간단 rule 기반)
+        """패턴 매칭
         
         Args:
             graph: R-Graph
-            project_context_id: 프로젝트 컨텍스트 (v1 미사용)
+            project_context_id: 프로젝트 컨텍스트 (선택)
         
         Returns:
             PatternMatch 목록
@@ -115,11 +114,11 @@ class PatternEngine:
         graph: InMemoryGraph,
         project_context_id: str = None
     ) -> List[GapCandidate]:
-        """기회/갭 탐지 (v1: state.entry_strategy_clues 기반)
+        """기회/갭 탐지
         
         Args:
             graph: R-Graph
-            project_context_id: 프로젝트 컨텍스트 (v1 미사용)
+            project_context_id: 프로젝트 컨텍스트 (선택)
         
         Returns:
             GapCandidate 목록

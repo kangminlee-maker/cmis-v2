@@ -1,7 +1,6 @@
-"""UMIS v9 Value Engine v1
+"""UMIS v9 Value Engine
 
-Metric 계산 엔진
-v1: R-Graph 직접 집계 (3개 Metric)
+Metric 계산 및 Fusion 엔진
 """
 
 from __future__ import annotations
@@ -15,22 +14,19 @@ from .config import UMISConfig
 
 
 class ValueEngine:
-    """Value Engine v1 - R-Graph 기반 Metric 계산
+    """Value Engine - R-Graph 기반 Metric 계산 및 Fusion
     
-    v1 지원 Metric:
+    지원 Metric:
     - MET-N_customers: Actor 집계
     - MET-Revenue: MoneyFlow 합산
     - MET-Avg_price_per_unit: Revenue / N_customers
+    - (기타 Metric: 확장 가능)
     
-    v2 추가 (v7 Fusion 로직 통합):
+    Fusion 기능:
     - 4-Method Fusion (Top-down/Bottom-up/Fermi/Proxy)
-    - 가중 평균 (v7 알고리즘)
-    - 범위 교집합 (v7 알고리즘)
+    - 가중 평균 알고리즘
+    - 범위 교집합
     - Convergence 검증 (±30%)
-    
-    v3+ 예정:
-    - 36개 Metric 전체
-    - project-level Metric
     """
     
     def __init__(self, config: Optional[UMISConfig] = None):
@@ -59,13 +55,13 @@ class ValueEngine:
         policy_ref: str = "reporting_strict",
         project_context_id: Optional[str] = None
     ) -> Tuple[List[ValueRecord], Dict[str, Any]]:
-        """Metric 평가 (v1: R-Graph 직접 집계만)
+        """Metric 평가
         
         Args:
             graph: R-Graph
             metric_requests: Metric 요청 목록
-            policy_ref: 품질 정책 (v1에서는 메타만 기록)
-            project_context_id: 프로젝트 컨텍스트 (v1 미사용)
+            policy_ref: 품질 정책
+            project_context_id: 프로젝트 컨텍스트 (선택)
         
         Returns:
             (value_records, value_program)

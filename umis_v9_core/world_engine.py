@@ -1,7 +1,6 @@
-"""UMIS v9 World Engine v1
+"""UMIS v9 World Engine
 
 Evidence → R-Graph 변환 및 snapshot 생성
-v1: Reality seed 기반만 (EvidenceEngine 미사용)
 """
 
 from __future__ import annotations
@@ -21,18 +20,14 @@ VALIDATION_GATES_REF = "umis_v9_validation_gates.yaml#gate_types"
 
 
 class WorldEngine:
-    """World Engine v1 - Reality seed → R-Graph 변환
+    """World Engine - Reality seed → R-Graph 변환
     
-    v1 범위:
+    기능:
     - Reality seed YAML 로딩
     - Actor/MoneyFlow/State 노드 생성
     - actor_pays_actor edge 생성
     - snapshot() API
-    
-    v2+ 예정:
-    - Evidence Engine 연동
-    - LLM 기반 구조 추출
-    - On-demand R-Graph 구축
+    - domain_registry 기반 동적 로딩
     """
     
     def __init__(self, project_root: Optional[Path] = None):
@@ -169,8 +164,8 @@ class WorldEngine:
             NotImplementedError: v1에서 지원하지 않는 domain_id
         
         Note:
-            v1에서는 segment, as_of, project_context_id는 meta에만 기록하고
-            실제 필터링/확장은 수행하지 않음 (v2+에서 구현)
+            segment, as_of, project_context_id는 meta에만 기록
+            실제 필터링/확장은 향후 구현 예정
         """
         seed_path = self._get_seed_path(domain_id)
         

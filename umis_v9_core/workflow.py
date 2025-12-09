@@ -1,4 +1,4 @@
-"""UMIS v9 Workflow Orchestrator v1
+"""UMIS v9 Workflow Orchestrator
 
 structure_analysis 워크플로우 실행
 """
@@ -17,9 +17,12 @@ from .config import UMISConfig
 
 
 class WorkflowOrchestrator:
-    """Workflow Orchestrator v1
+    """Workflow Orchestrator - structure_analysis 실행
     
-    structure_analysis 워크플로우 실행
+    3-Step 워크플로우:
+    1. World Engine → R-Graph snapshot
+    2. Pattern Engine → 패턴 매칭
+    3. Value Engine → Metric 계산
     """
     
     def __init__(self, config: Optional[UMISConfig] = None, project_root: Optional[Path] = None):
@@ -40,18 +43,13 @@ class WorkflowOrchestrator:
         self,
         input_data: StructureAnalysisInput
     ) -> StructureAnalysisResult:
-        """structure_analysis 워크플로우 실행 (v1: 3-Step)
-        
-        Steps:
-        1. World Engine → R-Graph snapshot
-        2. Pattern Engine → 패턴 매칭
-        3. Value Engine → Metric 계산
+        """structure_analysis 워크플로우 실행
         
         Args:
             input_data: StructureAnalysisInput
         
         Returns:
-            StructureAnalysisResult
+            StructureAnalysisResult (R-Graph 구조 + Pattern + Metric)
         """
         start_time = time.time()
         
@@ -88,7 +86,7 @@ class WorkflowOrchestrator:
         # Step 3: Metric Calculation
         print(f"[3/3] Calculating metrics...")
         
-        # v1: 3개 Metric 고정
+        # 핵심 Metric 계산
         metric_requests = [
             MetricRequest("MET-N_customers", {}),
             MetricRequest("MET-Revenue", {}),

@@ -1,7 +1,6 @@
-"""UMIS v9 Report Generator v1
+"""UMIS v9 Report Generator
 
 Markdown 리포트 생성
-v1: 간단 문자열 포맷팅 (3개 섹션)
 """
 
 from __future__ import annotations
@@ -28,14 +27,14 @@ def generate_structure_report(
     result: StructureAnalysisResult,
     output_path: Optional[str] = None
 ) -> str:
-    """Structure Analysis 리포트 생성 (v1: 3개 섹션)
+    """Structure Analysis 리포트 생성
     
     Args:
         result: StructureAnalysisResult
         output_path: 출력 파일 경로 (None이면 문자열만 반환)
     
     Returns:
-        Markdown 문자열
+        Markdown 문자열 (3개 섹션: Overview/Patterns/Metrics)
     """
     lines = []
     

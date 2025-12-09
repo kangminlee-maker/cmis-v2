@@ -29,7 +29,7 @@ def format_number(num: float) -> str:
 def cmd_structure_analysis(args):
     """structure-analysis 명령 실행"""
     print("=" * 60)
-    print("UMIS v9 - Structure Analysis v1")
+    print("UMIS v9 - Structure Analysis")
     print("=" * 60)
     print()
     
