@@ -183,4 +183,8 @@ pytest
 
 ---
 
+---
+
 **CMIS Team • 2025 • Production Ready**
+
+GitHub: [kangminlee-maker/cmis](https://github.com/kangminlee-maker/cmis)

@@ -9,7 +9,7 @@
 ## 1. GitHub에서 레포 이름 변경
 
 ### 웹사이트에서 변경
-1. https://github.com/kangminlee-maker/umis_v9 접속
+1. https://github.com/kangminlee-maker/cmis 접속
 2. **Settings** 탭 클릭
 3. 페이지 상단 **Repository name** 섹션
 4. `umis_v9` → `cmis` 변경
@@ -47,7 +47,7 @@ git push
 ### README.md
 ```markdown
 # 변경 전
-GitHub: [kangminlee-maker/umis_v9](https://github.com/kangminlee-maker/umis_v9)
+GitHub: [kangminlee-maker/cmis](https://github.com/kangminlee-maker/cmis)
 
 # 변경 후
 GitHub: [kangminlee-maker/cmis](https://github.com/kangminlee-maker/cmis)
