@@ -46,7 +46,7 @@ class WorldEngine:
     
     def _load_domain_registry(self) -> Dict[str, Any]:
         """domain_registry.yaml 로드"""
-        registry_path = self.project_root / "domain_registry.yaml"
+        registry_path = self.project_root / "config" / "domain_registry.yaml"
         
         if not registry_path.exists():
             return {"domains": []}

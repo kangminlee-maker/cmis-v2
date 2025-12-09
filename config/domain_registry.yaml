@@ -1,8 +1,8 @@
 ---
 cmis_domain_registry:
   meta:
-    description: "UMIS v9 도메인 설정 파일 레지스트리"
-    linked_core_umis_file: "umis_v9.yaml"
+    description: "CMIS 도메인 설정 파일 레지스트리"
+    linked_core_cmis_file: "cmis.yaml"
     linked_core_version: "9.0.0-alpha"
   domains:
     - domain_id: "Adult_Language_Education_KR"
@@ -16,4 +16,3 @@ cmis_domain_registry:
       config_file: "cmis_domain_PrivateEducation_KR.yaml"
       status: "template"
       region: "KR"
-

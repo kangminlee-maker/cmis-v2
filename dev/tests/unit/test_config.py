@@ -16,7 +16,7 @@ def test_config_loading(config_path):
 
 
 def test_metrics_indexing(config_path):
-    """Metric 스펙 인덱싱 테스트 (전체 umis_v9.yaml)"""
+    """Metric 스펙 인덱싱 테스트 (전체 cims.yaml)"""
     config = CMISConfig(config_path)
     
     # Metric 개수 확인 (36개)

@@ -142,7 +142,7 @@ cmis:
             allowed_values: ["continuous","daily","weekly","monthly","yearly","none"]
 
       domain_traits:
-        description: "산업/도메인별 추가 Trait 정의 (실제 정의는 도메인 YAML + domain_registry.yaml로 분리)"
+        description: "산업/도메인별 추가 Trait 정의 (실제 정의는 도메인 YAML + config/domain_registry.yaml로 분리)"
         schema:
           description: "도메인 Trait 공통 스키마"
           fields:
