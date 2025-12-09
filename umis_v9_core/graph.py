@@ -1,22 +1,15 @@
+"""UMIS v9 In-Memory Graph Implementation
+
+Simple in-memory graph for R-Graph POC and v1 implementation.
+Based on umis_v9.yaml#substrate_plane.graphs.reality_graph schema.
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Literal
 
-
-@dataclass
-class Node:
-  id: str
-  type: str
-  data: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class Edge:
-  type: str
-  source: str
-  target: str
-  data: Dict[str, Any] = field(default_factory=dict)
+# Import from types.py (v9 공통 타입)
+from .types import Node, Edge
 
 
 class InMemoryGraph:
@@ -57,17 +50,39 @@ class InMemoryGraph:
     return edge
 
   # --- simple queries ---
-  def neighbors(self, node_id: str, edge_type: str | None = None) -> List[Node]:
-    """특정 노드에서 나가는 edge를 따라간 이웃 node 목록."""
+  def neighbors(
+      self,
+      node_id: str,
+      edge_type: Optional[str] = None,
+      direction: Literal["out", "in", "both"] = "out"
+  ) -> List[Node]:
+    """특정 노드의 이웃 노드 목록 (v1: direction 파라미터 추가)
+    
+    Args:
+        node_id: 조회할 노드 ID
+        edge_type: Edge 타입 필터 (None이면 모든 타입)
+        direction: "out" (나가는), "in" (들어오는), "both" (양방향)
+    
+    Returns:
+        이웃 노드 목록
+    """
     result: List[Node] = []
+    
     for e in self.edges:
-      if e.source != node_id:
-        continue
-      if edge_type is not None and e.type != edge_type:
-        continue
-      node = self.nodes.get(e.target)
-      if node is not None:
-        result.append(node)
+      # outgoing edges
+      if direction in ("out", "both") and e.source == node_id:
+        if edge_type is None or e.type == edge_type:
+          node = self.nodes.get(e.target)
+          if node is not None and node not in result:
+            result.append(node)
+      
+      # incoming edges
+      if direction in ("in", "both") and e.target == node_id:
+        if edge_type is None or e.type == edge_type:
+          node = self.nodes.get(e.source)
+          if node is not None and node not in result:
+            result.append(node)
+    
     return result
 
   def incident_edges(self, node_id: str, edge_type: str | None = None) -> List[Edge]:

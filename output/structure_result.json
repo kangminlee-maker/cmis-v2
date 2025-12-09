@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "domain_id": "Adult_Language_Education_KR",
+    "region": "KR",
+    "segment": null,
+    "as_of": null,
+    "project_context_id": null
+  },
+  "graph_overview": {
+    "num_actors": 8,
+    "num_money_flows": 6,
+    "num_states": 1,
+    "actor_types": {
+      "customer_segment": 2,
+      "company": 5,
+      "partner": 1
+    },
+    "total_money_flow_amount": 325000000000.0
+  },
+  "pattern_matches": [
+    {
+      "pattern_id": "PAT-subscription_model",
+      "description": "정기 결제 구조를 가지는 구독형 비즈니스 모델",
+      "structure_fit_score": 1.0,
+      "execution_fit_score": null
+    },
+    {
+      "pattern_id": "PAT-platform_business_model",
+      "description": "공급자-플랫폼-수요자 구조의 플랫폼 비즈니스 모델",
+      "structure_fit_score": 1.0,
+      "execution_fit_score": null
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "MET-N_customers",
+      "point_estimate": 3020000.0,
+      "quality": {
+        "status": "ok",
+        "method": "r_graph_aggregation",
+        "literal_ratio": 1.0,
+        "spread_ratio": 0.0
+      }
+    },
+    {
+      "metric_id": "MET-Revenue",
+      "point_estimate": 290000000000.0,
+      "quality": {
+        "status": "ok",
+        "method": "r_graph_aggregation",
+        "literal_ratio": 1.0,
+        "spread_ratio": 0.0
+      }
+    },
+    {
+      "metric_id": "MET-Avg_price_per_unit",
+      "point_estimate": 96026.49006622516,
+      "quality": {
+        "status": "ok",
+        "method": "derived_calculation",
+        "literal_ratio": 1.0,
+        "spread_ratio": 0.0
+      }
+    }
+  ],
+  "execution_time": 0.004288911819458008
+}
