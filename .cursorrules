@@ -1,104 +1,36 @@
-# CMIS - AI Agent Rules (YAML-based)
+# CMIS - Contextual Market Intelligence System
+# Agent Rules (간결 버전)
 
-project:
-  name: "CMIS"
-  full_name: "Contextual Market Intelligence System"
-  version: "9.0.0-alpha"
-  brand_history: "2025-12-09: UMIS v9 → CMIS"
-  status: "Production Ready"
+## 파일 생성 위치
 
-philosophy:
-  - "Model-first, Number-second"
-  - "Evidence-first, Prior-last"
-  - "Graph-of-Graphs (R/P/V/D)"
-  - "Trait-based Ontology"
-  - "Contextual (Project Context)"
+### 프로덕션 루트 (8개만, 추가 금지)
+cmis.yaml, cmis_core/, cmis_cli/, config/, seeds/
+requirements.txt, README.md, env.example
 
-file_locations:
-  production_root:
-    purpose: "실행 필수 파일만"
-    allowed:
-      - "cmis.yaml (메인 스키마)"
-      - "cmis_core/*.py (엔진)"
-      - "cmis_cli/*.py (CLI)"
-      - "config/*.yaml (설정)"
-      - "seeds/*.yaml (데이터)"
-      - "requirements.txt, README.md, env.example"
-    
-  dev:
-    tests:
-      unit: "dev/tests/unit/test_*.py"
-      integration: "dev/tests/integration/test_*.py"
-      e2e: "dev/tests/e2e/test_e2e_*.py"
-    
-    scripts:
-      validation: "dev/scripts/validation/*.py"
-    
-    docs:
-      architecture: "dev/docs/architecture/*.md"
-      analysis: "dev/docs/analysis/*.md"
-      implementation: "dev/docs/implementation/*.md"
-    
-    other:
-      examples: "dev/examples/*.yaml"
-      reference: "dev/v7_reference/"
-      session: "dev/session_summary/*.yaml"
-      temp: "dev/temp/"
+### 개발 (dev/)
+- 테스트: dev/tests/{unit,integration,e2e}/test_*.py
+- 검증: dev/scripts/validation/*.py
+- 문서: dev/docs/{architecture,analysis,implementation}/*.md
+- 예시: dev/examples/*.yaml
+- 임시: dev/temp/
 
-naming:
-  python:
-    files: "snake_case.py"
-    engines: "{name}_engine.py"
-    tests: "test_{module}.py"
-    
-  yaml:
-    main: "cmis.yaml"
-    config: "cmis_{category}.yaml"
-    domain: "cmis_domain_{name}.yaml"
-    seed: "{domain_id}_reality_seed.yaml"
-    
-  imports:
-    - "from cmis_core.types import ..."
-    - "from cmis_core.world_engine import WorldEngine"
+## 금지
 
-forbidden:
-  brands:
-    - "UMIS"
-    - "umis_v9"
-    - "umis_"
-  
-  version_markers:
-    - "v1", "v2", "v3"
-    - "POC"
-    - "향후", "예정" (in code)
-  
-  locations:
-    - "test_*.py in root"
-    - "*_poc.py in root"
-    - "temp_*.* in root"
+❌ 루트에 test_*.py, example_*.py, temp_*.* 생성
+❌ UMIS, umis_v9 (옛 브랜드)
+❌ v1, v2, POC (버전 표시)
 
-required:
-  python:
-    - "from __future__ import annotations"
-    - "Type hints on all functions"
-    - "Docstrings on all classes/functions"
-  
-  yaml:
-    root_key: "cmis:"
-    seed_key: "cmis_reality_seed:"
-    registry_key: "cmis_domain_registry:"
+## 필수
 
-quick_reference:
-  new_engine: "→ cmis_core/{name}_engine.py"
-  new_test: "→ dev/tests/unit/test_{name}.py"
-  new_doc: "→ dev/docs/architecture/{Name}.md"
-  new_domain: "→ seeds/{DomainID}_reality_seed.yaml"
-  new_config: "→ config/cmis_domain_{Name}.yaml"
-  temp_file: "→ dev/temp/"
-  example: "→ dev/examples/"
+✅ from cmis_core.* import (not umis_v9_core)
+✅ cmis: (YAML 루트 키)
+✅ Type hints + docstrings
 
-validation_before_commit:
-  - "pytest (44 passed)"
-  - "No files in root except production essentials"
-  - "No legacy brands (UMIS, umis_v9)"
-  - "No version markers (v1, v2, POC)"
+## 빠른 참조
+
+새 엔진 → cmis_core/{name}_engine.py
+새 테스트 → dev/tests/unit/test_{name}.py
+새 문서 → dev/docs/architecture/{Name}.md
+임시 파일 → dev/temp/
+
+상세: dev/STRUCTURE.md
