@@ -1,4 +1,4 @@
-"""pytest configuration and fixtures for UMIS v9 tests"""
+"""pytest configuration and fixtures for CMIS tests"""
 
 import pytest
 from pathlib import Path
@@ -18,5 +18,5 @@ def seed_path(project_root):
 
 @pytest.fixture
 def config_path(project_root):
-    """umis_v9.yaml 경로"""
-    return project_root / "umis_v9.yaml"
+    """cmis.yaml 경로"""
+    return project_root / "cmis.yaml"

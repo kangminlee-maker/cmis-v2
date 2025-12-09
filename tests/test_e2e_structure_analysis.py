@@ -2,8 +2,8 @@
 
 import pytest
 from pathlib import Path
-from umis_v9_core.workflow import run_structure_analysis
-from umis_v9_core.report_generator import generate_structure_report
+from cmis_core.workflow import run_structure_analysis
+from cmis_core.report_generator import generate_structure_report
 
 
 def test_e2e_structure_analysis_adult_language(project_root):

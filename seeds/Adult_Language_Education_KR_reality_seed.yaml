@@ -1,5 +1,5 @@
 ---
-umis_v9_reality_seed:
+cmis_reality_seed:
   meta:
     domain_id: "Adult_Language_Education_KR"
     description: "한국 성인 어학교육 시장 구조 POC용 Reality Graph 시드"

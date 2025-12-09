@@ -1,5 +1,5 @@
 ---
-umis_v9_pattern_benchmarks:
+cmis_pattern_benchmarks:
   meta:
     description: "패턴별 전형적인 구조/Metric 범위를 담는 벤치마크 스켈레톤 (v7 Benchmarks 요약용)"
     linked_to:

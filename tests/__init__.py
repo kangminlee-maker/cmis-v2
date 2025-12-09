@@ -1,4 +1,4 @@
-"""UMIS v9 Tests Package
+"""CMIS Tests Package
 
-Unit and integration tests for UMIS v9 core functionality.
+Unit and integration tests for CMIS core functionality.
 """

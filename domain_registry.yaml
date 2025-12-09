@@ -1,19 +1,19 @@
 ---
-umis_v9_domain_registry:
+cmis_domain_registry:
   meta:
     description: "UMIS v9 도메인 설정 파일 레지스트리"
     linked_core_umis_file: "umis_v9.yaml"
     linked_core_version: "9.0.0-alpha"
   domains:
     - domain_id: "Adult_Language_Education_KR"
-      config_file: "umis_v9_domain_AdultLanguage_KR.yaml"
+      config_file: "cmis_domain_AdultLanguage_KR.yaml"
       status: "poc"
       region: "KR"
     - domain_id: "B2B_SaaS"
-      config_file: "umis_v9_domain_B2B_SaaS.yaml"
+      config_file: "cmis_domain_B2B_SaaS.yaml"
       status: "template"
     - domain_id: "Private_Education_KR"
-      config_file: "umis_v9_domain_PrivateEducation_KR.yaml"
+      config_file: "cmis_domain_PrivateEducation_KR.yaml"
       status: "template"
       region: "KR"
 

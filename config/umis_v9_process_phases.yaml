@@ -1,5 +1,5 @@
 ---
-umis_v9_process_phases:
+cmis_process_phases:
   meta:
     description: "canonical_workflows의 상세 Phase 분해 (v7 Adult Language 사례 기반 최소 버전)"
     linked_to: "umis_v9.yaml#canonical_workflows"

@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from umis_v9_core.world_engine import WorldEngine
+from cmis_core.world_engine import WorldEngine
 
 
 def test_world_engine_init(project_root):

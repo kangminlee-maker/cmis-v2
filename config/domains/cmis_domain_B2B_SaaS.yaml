@@ -1,5 +1,5 @@
 ---
-umis_v9_domain:
+cmis_domain:
   meta:
     domain_id: "B2B_SaaS"
     description: "B2B SaaS 도메인 설정 (예시/템플릿)"

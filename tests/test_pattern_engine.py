@@ -1,8 +1,8 @@
 """Tests for Pattern Engine"""
 
 import pytest
-from umis_v9_core.pattern_engine import PatternEngine
-from umis_v9_core.world_engine import WorldEngine
+from cmis_core.pattern_engine import PatternEngine
+from cmis_core.world_engine import WorldEngine
 
 
 def test_pattern_engine_init():

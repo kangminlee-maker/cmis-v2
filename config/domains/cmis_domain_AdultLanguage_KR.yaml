@@ -1,5 +1,5 @@
 ---
-umis_v9_domain:
+cmis_domain:
   meta:
     domain_id: "Adult_Language_Education_KR"
     description: "한국 성인 대상 어학교육 시장 POC 도메인 설정"

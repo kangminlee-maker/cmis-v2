@@ -1,23 +1,23 @@
 """Tests for Config Loader"""
 
 import pytest
-from umis_v9_core.config import UMISConfig, MetricSpec
+from cmis_core.config import CMISConfig, MetricSpec
 
 
 def test_config_loading(config_path):
-    """umis_v9.yaml 로딩 테스트"""
-    config = UMISConfig(config_path)
+    """cmis.yaml 로딩 테스트"""
+    config = CMISConfig(config_path)
     
-    assert config.umis_v9 is not None
-    assert "meta" in config.umis_v9
-    assert "planes" in config.umis_v9
-    assert "ontology" in config.umis_v9
-    assert config.umis_v9["meta"]["version"] == "9.0.0-alpha"
+    assert config.cmis is not None
+    assert "meta" in config.cmis
+    assert "planes" in config.cmis
+    assert "ontology" in config.cmis
+    assert config.cmis["meta"]["version"] == "9.0.0-alpha"
 
 
 def test_metrics_indexing(config_path):
     """Metric 스펙 인덱싱 테스트 (전체 umis_v9.yaml)"""
-    config = UMISConfig(config_path)
+    config = CMISConfig(config_path)
     
     # Metric 개수 확인 (36개)
     assert len(config.metrics) >= 30
@@ -40,7 +40,7 @@ def test_metrics_indexing(config_path):
 
 def test_metric_sets(config_path):
     """Metric Set 조회 테스트"""
-    config = UMISConfig(config_path)
+    config = CMISConfig(config_path)
     
     # structure_core_economics set 확인
     core_economics = config.get_metric_set("structure_core_economics")
@@ -53,7 +53,7 @@ def test_metric_sets(config_path):
 
 def test_data_sources_indexing(config_path):
     """Data Source 인덱싱 테스트"""
-    config = UMISConfig(config_path)
+    config = CMISConfig(config_path)
     
     # Data Sources 확인
     assert len(config.data_sources) >= 5
@@ -70,10 +70,10 @@ def test_data_sources_indexing(config_path):
 
 def test_quality_profiles(config_path):
     """Quality Profile 로딩 테스트"""
-    config = UMISConfig(config_path)
+    config = CMISConfig(config_path)
     
     try:
-        policies = config.umis_v9["policies"]
+        policies = config.cmis["policies"]
         quality_profiles = policies.get("quality_profiles", {})
         assert "reporting_strict" in quality_profiles
         assert "decision_balanced" in quality_profiles

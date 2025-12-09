@@ -1,4 +1,4 @@
-# UMIS v9 - Universal Market Intelligence System
+# CMIS - Universal Market Intelligence System
 
 **버전**: 9.0.0-alpha  
 **상태**: Production Ready  
@@ -6,7 +6,7 @@
 
 ---
 
-## 🎯 UMIS v9란?
+## 🎯 CMIS란?
 
 시장/비즈니스 세계를 **Reality/Pattern/Value/Decision 그래프**로 표현하고,  
 구조 이해 → 기회 발굴 → 전략 설계 → 학습을 수행하는  
@@ -39,7 +39,7 @@ cp env.example .env
 
 ```bash
 # 시장 구조 분석
-python3 -m umis_v9_cli structure-analysis \
+python3 -m cmis_cli structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR
 
@@ -54,10 +54,10 @@ python3 -m umis_v9_cli structure-analysis \
 ## 📦 프로젝트 구조
 
 ```
-umis_v9/
-├── umis_v9.yaml           # 메인 스키마 정의
+cmis/
+├── cmis.yaml           # 메인 스키마 정의
 ├── domain_registry.yaml   # 도메인 레지스트리
-├── umis_v9_core/          # Core 엔진
+├── cmis_core/          # Core 엔진
 │   ├── types.py
 │   ├── graph.py
 │   ├── config.py
@@ -68,11 +68,11 @@ umis_v9/
 │   ├── report_generator.py
 │   └── evidence/
 │       └── dart_connector.py
-├── umis_v9_cli/           # CLI
+├── cmis_cli/           # CLI
 │   └── __main__.py
 ├── config/                # 설정 YAML
-│   ├── umis_v9_agent_protocols.yaml
-│   ├── umis_v9_process_phases.yaml
+│   ├── cmis_agent_protocols.yaml
+│   ├── cmis_process_phases.yaml
 │   └── domains/
 ├── seeds/                 # Reality seed
 │   └── Adult_Language_Education_KR_reality_seed.yaml
@@ -114,9 +114,9 @@ pytest tests/test_world_engine.py -v
 
 **아키텍처** (`dev/docs/architecture/`):
 - `UMIS_v9_Architecture_Blueprint_v9.md`: 전체 아키텍처
-- `umis_v9_philosophy_concept.md`: 핵심 철학
-- `umis_v9_roadmap.md`: 개발 로드맵
-- `umis_v9_project_context_layer_design.md`: Project Context 설계
+- `cmis_philosophy_concept.md`: 핵심 철학
+- `cmis_roadmap.md`: 개발 로드맵
+- `cmis_project_context_layer_design.md`: Project Context 설계
 
 **구현** (`dev/docs/implementation/`):
 - `UMIS_v9_Implementation_Strategy_Final.md`: 구현 전략
@@ -134,7 +134,7 @@ pytest tests/test_world_engine.py -v
 1. **Reality seed 생성**:
    ```yaml
    # seeds/Your_Domain_reality_seed.yaml
-   umis_v9_reality_seed:
+   cmis_reality_seed:
      meta:
        domain_id: "Your_Domain"
      actors: [...]
@@ -143,7 +143,7 @@ pytest tests/test_world_engine.py -v
 
 2. **실행**:
    ```bash
-   python3 -m umis_v9_cli structure-analysis --domain Your_Domain --region KR
+   python3 -m cmis_cli structure-analysis --domain Your_Domain --region KR
    ```
 
 ---
@@ -175,4 +175,4 @@ python3 -m pytest tests/ -v
 
 ---
 
-**UMIS v9 Team • 2025 • Production Ready**
+**CMIS Team • 2025 • Production Ready**

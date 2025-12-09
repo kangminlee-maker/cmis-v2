@@ -5,7 +5,7 @@ Note: DART API Key가 필요한 테스트는 환경변수 없을 시 skip
 
 import pytest
 import os
-from umis_v9_core.evidence.dart_connector import DARTConnector, Evidence
+from cmis_core.evidence.dart_connector import DARTConnector, Evidence
 
 
 def test_dart_connector_init_without_key():

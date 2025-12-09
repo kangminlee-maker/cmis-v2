@@ -1,4 +1,4 @@
-"""UMIS v9 Core Types
+"""CMIS Core Types
 
 Common dataclasses used across all v9 modules.
 Based on umis_v9.yaml ontology and graph schemas.

@@ -1,4 +1,4 @@
-# UMIS v9 - v1 Release
+# CMIS - v1 Release
 
 **버전**: 9.0.0-alpha-v1  
 **릴리스**: 2025-12-05  
@@ -8,7 +8,7 @@
 
 ## 🎯 v1이란?
 
-UMIS v9의 **첫 번째 작동 버전**으로, `structure_analysis` 워크플로우를 **최소 vertical slice**로 구현했습니다.
+CMIS의 **첫 번째 작동 버전**으로, `structure_analysis` 워크플로우를 **최소 vertical slice**로 구현했습니다.
 
 **핵심 기능**:
 - ✅ Reality seed → R-Graph 구축
@@ -36,12 +36,12 @@ cp env.example .env
 
 ```bash
 # CLI로 구조 분석
-python3 -m umis_v9_cli structure-analysis \
+python3 -m cmis_cli structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR
 
 # JSON 출력
-python3 -m umis_v9_cli structure-analysis \
+python3 -m cmis_cli structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
   --output output/result.json
@@ -68,7 +68,7 @@ python3 -m umis_v9_cli structure-analysis \
 - ✅ World Engine (Reality seed → R-Graph)
 - ✅ Pattern Engine (2개 패턴 매칭)
 - ✅ Value Engine (3개 Metric 계산 + Fusion 로직)
-- ✅ Config Loader (umis_v9.yaml 파싱)
+- ✅ Config Loader (cmis.yaml 파싱)
 
 **Workflow**:
 - ✅ Workflow Orchestrator (World→Pattern→Value)
@@ -96,7 +96,7 @@ python3 -m umis_v9_cli structure-analysis \
 ## 📁 파일 구조
 
 ```
-umis_v9_core/
+cmis_core/
   ├── types.py          # 공통 타입
   ├── graph.py          # InMemoryGraph
   ├── config.py         # Config Loader
@@ -109,7 +109,7 @@ umis_v9_core/
       ├── __init__.py
       └── dart_connector.py  # DART API
 
-umis_v9_cli/
+cmis_cli/
   ├── __init__.py
   └── __main__.py       # CLI
 
@@ -149,7 +149,7 @@ pytest tests/test_e2e_structure_analysis.py -v
 ### Python API
 
 ```python
-from umis_v9_core.workflow import run_structure_analysis
+from cmis_core.workflow import run_structure_analysis
 
 result = run_structure_analysis(
     domain_id="Adult_Language_Education_KR",
@@ -165,16 +165,16 @@ print(f"Metrics: {len(result.metrics)}")
 
 ```bash
 # 기본 실행
-python3 -m umis_v9_cli structure-analysis --domain Adult_Language_Education_KR --region KR
+python3 -m cmis_cli structure-analysis --domain Adult_Language_Education_KR --region KR
 
 # JSON 출력
-python3 -m umis_v9_cli structure-analysis \
+python3 -m cmis_cli structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
   --output output/result.json
 
 # 세그먼트 지정
-python3 -m umis_v9_cli structure-analysis \
+python3 -m cmis_cli structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
   --segment office_worker
@@ -188,7 +188,7 @@ python3 -m umis_v9_cli structure-analysis \
    ```yaml
    # seeds/Your_Domain_ID_reality_seed.yaml
    ---
-   umis_v9_reality_seed:
+   cmis_reality_seed:
      meta:
        domain_id: "Your_Domain_ID"
        as_of: "2025-12-05"
@@ -209,13 +209,13 @@ python3 -m umis_v9_cli structure-analysis \
    ```yaml
    domains:
      - domain_id: "Your_Domain_ID"
-       config_file: "umis_v9_domain_Your_Domain.yaml"
+       config_file: "cmis_domain_Your_Domain.yaml"
        status: "active"
    ```
 
 3. 실행:
    ```bash
-   python3 -m umis_v9_cli structure-analysis --domain Your_Domain_ID --region KR
+   python3 -m cmis_cli structure-analysis --domain Your_Domain_ID --region KR
    ```
 
 ---
@@ -236,12 +236,12 @@ python3 -m umis_v9_cli structure-analysis \
 
 ## 🔗 참조 문서
 
-- `umis_v9.yaml`: 전체 스키마 (1,767줄)
-- `umis_v9_philosophy_concept.md`: v9 철학
+- `cmis.yaml`: 전체 스키마 (1,767줄)
+- `cmis_philosophy_concept.md`: v9 철학
 - `UMIS_v9_Architecture_Blueprint_v9.md`: 아키텍처
 - `UMIS_v9_Implementation_Strategy_Final.md`: 구현 전략
 - `V7_Code_Reuse_Analysis.md`: v7 재사용 분석
 
 ---
 
-**UMIS v9 Team • 2025-12-05 • v1 Release**
+**CMIS Team • 2025-12-05 • v1 Release**

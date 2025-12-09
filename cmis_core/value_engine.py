@@ -1,4 +1,4 @@
-"""UMIS v9 Value Engine
+"""CMIS Value Engine
 
 Metric 계산 및 Fusion 엔진
 """
@@ -10,7 +10,7 @@ from typing import List, Tuple, Dict, Any, Optional
 
 from .graph import InMemoryGraph
 from .types import MetricRequest, ValueRecord
-from .config import UMISConfig
+from .config import CMISConfig
 
 
 class ValueEngine:
@@ -29,13 +29,13 @@ class ValueEngine:
     - Convergence 검증 (±30%)
     """
     
-    def __init__(self, config: Optional[UMISConfig] = None):
+    def __init__(self, config: Optional[CMISConfig] = None):
         """
         Args:
             config: UMIS 설정 (None이면 기본 로드)
         """
         if config is None:
-            config = UMISConfig()
+            config = CMISConfig()
         
         self.config = config
         self.metrics = config.metrics

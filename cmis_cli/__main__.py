@@ -1,4 +1,4 @@
-"""UMIS v9 CLI - Command Line Interface
+"""CMIS CLI - Command Line Interface
 
 Usage:
     umis structure-analysis --domain Adult_Language_Education_KR --region KR
@@ -11,7 +11,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from umis_v9_core.workflow import run_structure_analysis
+from cmis_core.workflow import run_structure_analysis
 
 
 def format_number(num: float) -> str:
@@ -29,7 +29,7 @@ def format_number(num: float) -> str:
 def cmd_structure_analysis(args):
     """structure-analysis 명령 실행"""
     print("=" * 60)
-    print("UMIS v9 - Structure Analysis")
+    print("CMIS - Structure Analysis")
     print("=" * 60)
     print()
     
@@ -101,7 +101,7 @@ def cmd_structure_analysis(args):
 def main():
     """메인 진입점"""
     parser = argparse.ArgumentParser(
-        description="UMIS v9 - Universal Market Intelligence System v9"
+        description="CMIS - Universal Market Intelligence System v9"
     )
     
     subparsers = parser.add_subparsers(dest='command', help='Commands')

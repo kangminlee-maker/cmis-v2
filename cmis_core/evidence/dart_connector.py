@@ -1,4 +1,4 @@
-"""UMIS v9 DART Evidence Connector
+"""CMIS DART Evidence Connector
 
 한국 전자공시시스템(DART) API 연동
 

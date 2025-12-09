@@ -1,8 +1,8 @@
 """Tests for InMemoryGraph"""
 
 import pytest
-from umis_v9_core.graph import InMemoryGraph
-from umis_v9_core.types import Node, Edge
+from cmis_core.graph import InMemoryGraph
+from cmis_core.types import Node, Edge
 
 
 def test_node_upsert():

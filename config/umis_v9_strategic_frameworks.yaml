@@ -1,5 +1,5 @@
 ---
-umis_v9_strategic_frameworks:
+cmis_strategic_frameworks:
   meta:
     description: "UMIS v9에서 Strategy/Pattern/Decision Graph를 잇는 전략 프레임워크 스켈레톤 정의"
     linked_to:

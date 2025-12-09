@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""UMIS v9 POC: 매우 단순한 pattern_engine 구현.
+"""CMIS POC: 매우 단순한 pattern_engine 구현.
 
 - reality_graph (InMemoryGraph)만 사용해서 Adult_Language_Education_KR 도메인에서
   몇 가지 대표 패턴과 갭 후보를 찾아본다.

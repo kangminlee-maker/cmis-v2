@@ -1,5 +1,5 @@
 ---
-umis_v9:
+cmis:
   meta:
     version: "9.0.0-alpha"
     codename: "Reality-Pattern-Value OS"
@@ -13,15 +13,15 @@ umis_v9:
     references:
       - "umis_architecture_blueprint_v7.x"   # 6-Agent, 4-Layer RAG, Estimator 4-Stage 등  [oai_citation:0‡UMIS_ARCHITECTURE_BLUEPRINT.md](sediment://file_000000002d44720984a75c9384b8ac54)
       - "UMIS_ARCHITECTURE_BLUEPRINT_v8"     # Value OS, Value Graph, Metrics Spec, 4 Planes 등  [oai_citation:1‡UMIS_ARCHITECTURE_BLUEPRINT_v8.md](sediment://file_00000000b0d872099a2d4bb0d53c6df8)
-      - "umis_v9_philosophy_concept.md"      # v9 철학·컨셉·방향성 상세 설명
-      - "umis_v9_roadmap.md"                 # Phase/스프린트 기반 구현 로드맵
+      - "cmis_philosophy_concept.md"      # v9 철학·컨셉·방향성 상세 설명
+      - "cmis_roadmap.md"                 # Phase/스프린트 기반 구현 로드맵
 
   philosophy:
     identity: >
       UMIS v9는 시장/비즈니스 세계를
       (현실 구조 Reality)·(반복 패턴 Pattern)·(값/지표 Value)·(목표/전략 Decision)으로
       동시에 다루는 Market Intelligence OS이다.
-      세부 철학은 `umis_v9_philosophy_concept.md`, 실행 단계는 `umis_v9_roadmap.md`의
+      세부 철학은 `cmis_philosophy_concept.md`, 실행 단계는 `cmis_roadmap.md`의
       Phase별 vertical slice 전략과 연동된다.
     core_principles:
       - "Model-first, Number-second"           # 세계 모델(구조/패턴)이 먼저, 숫자는 그 위의 결과
@@ -275,7 +275,7 @@ umis_v9:
     # ---------------- Role Plane (Agent) ----------------
     role_plane:
       description: "사람 역할/앱 관점 – Agent = Persona + Workflow + View"
-      collaboration_protocols_ref: "umis_v9_agent_protocols.yaml"
+      collaboration_protocols_ref: "cmis_agent_protocols.yaml"
       roles:
         - id: "structure_analyst"
           label: "Structure Analyst (Observer 2.0)"
@@ -578,7 +578,7 @@ umis_v9:
           description: "프로젝트별 사용자/조직 상황 컨텍스트 저장소 (Brownfield/Greenfield 모두 지원)"
           id_prefix: "PRJ-"
           linked_to:
-            - "umis_v9_project_context_layer_design.md"
+            - "cmis_project_context_layer_design.md"
             - "UMIS_v9_Project_Context_Philosophy_Alignment.md"
           schema:
             fields:
@@ -1621,15 +1621,15 @@ umis_v9:
               - id: "reporting_strict"
                 description: "공식/Evidence 중심, Prior 최소"
                 quality_profile_ref: "reporting_strict"
-                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
+                validation_gates_ref: "cmis_validation_gates.yaml#gate_types"
               - id: "decision_balanced"
                 description: "Evidence 우선, 필요 시 Prior 허용"
                 quality_profile_ref: "decision_balanced"
-                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
+                validation_gates_ref: "cmis_validation_gates.yaml#gate_types"
               - id: "exploration_friendly"
                 description: "기회 탐색용, Prior/패턴 활용 허용"
                 quality_profile_ref: "exploration_friendly"
-                validation_gates_ref: "umis_v9_validation_gates.yaml#gate_types"
+                validation_gates_ref: "cmis_validation_gates.yaml#gate_types"
           api:
             - name: "resolve_policy"
               description: "Role/용도에 따라 적용할 Policy 결정"
@@ -1703,7 +1703,7 @@ umis_v9:
     - id: "structure_analysis"
       role_id: "structure_analyst"
       description: "특정 시장/도메인의 구조/메커니즘 및 핵심 economics 이해"
-      process_phases_ref: "umis_v9_process_phases.yaml#structure_analysis"
+      process_phases_ref: "cmis_process_phases.yaml#structure_analysis"
       steps:
         - call: "world_engine.snapshot"
           with:

@@ -1,5 +1,5 @@
 ---
-umis_v9_value_chain_templates:
+cmis_value_chain_templates:
   meta:
     description: "R-Graph 기반 가치사슬 분석 템플릿 스켈레톤 (BM/도메인 공통 구조 정의)"
     linked_to:

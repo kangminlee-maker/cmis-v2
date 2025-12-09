@@ -1,5 +1,5 @@
 ---
-umis_v9_validation:
+cmis_validation:
   description: "UMIS v9 YAML/도메인 설정 검증 가이드 (도구/체크리스트 요약)"
 
   tools:

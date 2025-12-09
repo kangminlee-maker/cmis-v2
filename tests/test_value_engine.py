@@ -1,9 +1,9 @@
 """Tests for Value Engine"""
 
 import pytest
-from umis_v9_core.world_engine import WorldEngine
-from umis_v9_core.value_engine import ValueEngine
-from umis_v9_core.types import MetricRequest
+from cmis_core.world_engine import WorldEngine
+from cmis_core.value_engine import ValueEngine
+from cmis_core.types import MetricRequest
 
 
 def test_value_engine_init():

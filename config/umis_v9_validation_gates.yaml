@@ -1,11 +1,11 @@
 ---
-umis_v9_validation_gates:
+cmis_validation_gates:
   meta:
     description: "품질 보증을 위한 최소 검증 게이트 정의 (MECE / Four-Method / Data Reliability / 3자 게이트)"
     linked_to:
       - "umis_v9.yaml#policies.quality_profiles"
       - "umis_v9.yaml#planes.cognition_plane.engines.policy_engine"
-      - "umis_v9_process_phases.yaml#workflows.structure_analysis"
+      - "cmis_process_phases.yaml#workflows.structure_analysis"
 
   gate_types:
 

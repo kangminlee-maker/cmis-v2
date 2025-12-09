@@ -1,4 +1,4 @@
-"""UMIS v9 Report Generator
+"""CMIS Report Generator
 
 Markdown 리포트 생성
 """
@@ -120,7 +120,7 @@ def generate_structure_report(
     lines.append(f"")
     
     # Footer
-    lines.append(f"**생성**: UMIS v9 Structure Analysis v1")
+    lines.append(f"**생성**: CMIS Structure Analysis v1")
     lines.append(f"**실행 시간**: {result.execution_time:.2f}초")
     lines.append(f"")
     

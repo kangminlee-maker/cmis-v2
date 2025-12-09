@@ -1,4 +1,4 @@
-"""UMIS v9 Pattern Engine
+"""CMIS Pattern Engine
 
 패턴 매칭 및 갭 탐지
 """

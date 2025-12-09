@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""UMIS v9 POC: 매우 단순한 value_engine 구현.
+"""CMIS POC: 매우 단순한 value_engine 구현.
 
 - InMemoryGraph + umis_v9.yaml의 metrics_spec 일부를 사용해
   Adult_Language_Education_KR 도메인에서 구조 분석에 필요한 몇 가지 Metric을 계산한다.

@@ -1,8 +1,8 @@
 """Tests for Workflow Orchestrator"""
 
 import pytest
-from umis_v9_core.workflow import WorkflowOrchestrator, run_structure_analysis
-from umis_v9_core.types import StructureAnalysisInput
+from cmis_core.workflow import WorkflowOrchestrator, run_structure_analysis
+from cmis_core.types import StructureAnalysisInput
 
 
 def test_workflow_orchestrator_init(project_root):

@@ -1,11 +1,11 @@
 ---
-umis_v9_agent_protocols:
+cmis_agent_protocols:
   meta:
     description: "Role Plane Agent 간 협업 프로토콜 (structure_analysis / opportunity_discovery 최소 버전)"
     linked_to:
       - "umis_v9.yaml#planes.role_plane"
       - "umis_v9.yaml#canonical_workflows"
-      - "umis_v9_process_phases.yaml#workflows"
+      - "cmis_process_phases.yaml#workflows"
 
   collaboration_patterns:
 

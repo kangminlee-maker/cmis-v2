@@ -1,5 +1,5 @@
 ---
-umis_v9_domain:
+cmis_domain:
   meta:
     domain_id: "Private_Education_KR"
     description: "한국 사교육 도메인 설정 (예시/템플릿)"

@@ -1,4 +1,4 @@
-"""UMIS v9 In-Memory Graph Implementation
+"""CMIS In-Memory Graph Implementation
 
 Simple in-memory graph for R-Graph POC and v1 implementation.
 Based on umis_v9.yaml#substrate_plane.graphs.reality_graph schema.
@@ -17,7 +17,7 @@ class InMemoryGraph:
 
   - node는 id/type/data만 가진다.
   - edge는 type/source/target/data를 가진다.
-  - UMIS v9의 reality_graph 스키마를 전부 구현하지 않고,
+  - CMIS의 reality_graph 스키마를 전부 구현하지 않고,
     POC에 필요한 최소 기능만 제공한다.
   """
 

@@ -1,4 +1,4 @@
-"""UMIS v9 Workflow Orchestrator
+"""CMIS Workflow Orchestrator
 
 structure_analysis 워크플로우 실행
 """
@@ -13,7 +13,7 @@ from .types import StructureAnalysisInput, StructureAnalysisResult, MetricReques
 from .world_engine import WorldEngine
 from .pattern_engine import PatternEngine
 from .value_engine import ValueEngine
-from .config import UMISConfig
+from .config import CMISConfig
 
 
 class WorkflowOrchestrator:
@@ -25,14 +25,14 @@ class WorkflowOrchestrator:
     3. Value Engine → Metric 계산
     """
     
-    def __init__(self, config: Optional[UMISConfig] = None, project_root: Optional[Path] = None):
+    def __init__(self, config: Optional[CMISConfig] = None, project_root: Optional[Path] = None):
         """
         Args:
             config: UMIS 설정
             project_root: 프로젝트 루트
         """
         if config is None:
-            config = UMISConfig()
+            config = CMISConfig()
         
         self.config = config
         self.world_engine = WorldEngine(project_root)

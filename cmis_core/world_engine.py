@@ -1,4 +1,4 @@
-"""UMIS v9 World Engine
+"""CMIS World Engine
 
 Evidence → R-Graph 변환 및 snapshot 생성
 """
@@ -86,7 +86,7 @@ class WorldEngine:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
         
-        root = data.get("umis_v9_reality_seed", {})
+        root = data.get("cmis_reality_seed", {})
         graph = InMemoryGraph()
         
         # Actors
