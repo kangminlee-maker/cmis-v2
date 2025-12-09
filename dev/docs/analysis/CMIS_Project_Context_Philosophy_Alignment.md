@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # UMIS v9: Project Context Layer 설계의 철학 정합성 분석
 
 **문서 목적**: `umis_v9_project_context_layer_design.md`의 설계가 `umis_v9_philosophy_concept.md`의 핵심 철학과 일치하는지 검증하고, 개선점을 도출

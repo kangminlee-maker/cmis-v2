@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # UMIS v9 Structure Analysis 워크플로우 다이어그램
 
 **문서 목적**: v9 Structure Analysis 워크플로우를 시각적으로 표현한 다이어그램 모음

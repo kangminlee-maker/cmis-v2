@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # UMIS v9: structure_analysis 프로덕션 구현 로드맵
 
 **문서 목적**: structure_analysis 워크플로우를 v7.x 품질 수준으로 프로덕션 구현하기 위한 단계별 작업 계획

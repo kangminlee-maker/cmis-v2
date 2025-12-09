@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # UMIS v9: structure_analysis v1 구현 전략 (최종)
 
 **문서 목적**: Vertical Slice + v7 재사용을 통한 빠른 프로덕션 구현 전략

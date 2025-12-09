@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # v7.x 코드 재사용 분석: v9 구현에 활용 가능한 모듈
 
 **문서 목적**: v7.x 레포 (https://github.com/kangminlee-maker/umis/tree/alpha)에서 v9 구현 시 재사용 가능한 코드/로직/패턴 분석

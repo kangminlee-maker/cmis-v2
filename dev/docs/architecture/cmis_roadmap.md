@@ -1,3 +1,9 @@
+---
+**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+- Universal Market Intelligence → Contextual Market Intelligence
+- v9 핵심 차별점 (Project Context Layer) 반영
+---
+
 # UMIS v9 구현 로드맵 (스프린트 단위 상위 설계)
 
 UMIS v9를 실제로 구현하려면 **한 번에 전체를 만드는 방식이 아니라**,  
