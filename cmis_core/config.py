@@ -83,6 +83,7 @@ class CMISConfig:
         self.metric_sets: Dict[str, List[str]] = self._index_metric_sets()
         self.patterns: Dict[str, PatternSpec] = self._index_patterns()
         self.data_sources: Dict[str, Dict] = self._index_data_sources()
+        self.policies: Dict[str, Dict] = self._index_policies()
         
         # Environment 설정
         self.env = Settings()
@@ -141,6 +142,16 @@ class CMISConfig:
             print(f"Warning: Data Sources 로딩 실패 - {e}")
         
         return sources
+    
+    def _index_policies(self) -> Dict[str, Dict]:
+        """Policy 인덱싱"""
+        try:
+            policies = self.cmis.get("policies", {})
+            return {
+                "quality_profiles": policies.get("quality_profiles", {})
+            }
+        except KeyError:
+            return {"quality_profiles": {}}
     
     # --- 편의 메서드 ---
     

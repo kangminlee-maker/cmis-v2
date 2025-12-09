@@ -5,12 +5,13 @@ Metric 계산 및 Fusion 엔진
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Tuple, Dict, Any, Optional
 
 from .graph import InMemoryGraph
 from .types import MetricRequest, ValueRecord
 from .config import CMISConfig
+from .evidence_engine import EvidenceEngine, SourceRegistry
 
 
 class ValueEngine:
@@ -29,16 +30,29 @@ class ValueEngine:
     - Convergence 검증 (±30%)
     """
     
-    def __init__(self, config: Optional[CMISConfig] = None):
+    def __init__(
+        self,
+        config: Optional[CMISConfig] = None,
+        evidence_engine: Optional[EvidenceEngine] = None
+    ):
         """
         Args:
-            config: UMIS 설정 (None이면 기본 로드)
+            config: CMIS 설정 (None이면 기본 로드)
+            evidence_engine: EvidenceEngine (None이면 기본 생성)
         """
         if config is None:
             config = CMISConfig()
         
         self.config = config
         self.metrics = config.metrics
+        
+        # Evidence Engine (v2 통합)
+        if evidence_engine is None:
+            # 기본 SourceRegistry 생성 (스텁만)
+            source_registry = SourceRegistry()
+            evidence_engine = EvidenceEngine(config, source_registry)
+        
+        self.evidence_engine = evidence_engine
         
         # v7 Fusion 가중치 (v9 4-Method에 맞게 조정)
         self.default_method_weights = {
@@ -53,22 +67,57 @@ class ValueEngine:
         graph: InMemoryGraph,
         metric_requests: List[MetricRequest],
         policy_ref: str = "reporting_strict",
-        project_context_id: Optional[str] = None
+        project_context_id: Optional[str] = None,
+        use_evidence_engine: bool = True
     ) -> Tuple[List[ValueRecord], Dict[str, Any]]:
-        """Metric 평가
+        """Metric 평가 (v2: EvidenceEngine 통합)
         
         Args:
             graph: R-Graph
             metric_requests: Metric 요청 목록
             policy_ref: 품질 정책
             project_context_id: 프로젝트 컨텍스트 (선택)
+            use_evidence_engine: EvidenceEngine 사용 여부 (기본 True)
         
         Returns:
             (value_records, value_program)
+        
+        로직 (v2):
+            1. EvidenceEngine.fetch_for_metrics() 호출 (use_evidence_engine=True)
+            2. Evidence 있으면 → EvidenceRecord → ValueRecord 변환
+            3. Evidence 없으면 → 기존 R-Graph 기반 계산 (fallback)
         """
         results = []
+        evidence_bundles = {}
         
+        # 1. EvidenceEngine 호출 (옵션)
+        if use_evidence_engine:
+            try:
+                evidence_multi = self.evidence_engine.fetch_for_metrics(
+                    metric_requests,
+                    policy_ref=policy_ref
+                )
+                evidence_bundles = evidence_multi.bundles
+            except Exception as e:
+                # EvidenceEngine 실패 시 경고만 (fallback)
+                print(f"Warning: EvidenceEngine failed: {e}")
+        
+        # 2. Metric별 평가
         for req in metric_requests:
+            # 2.1 Evidence 우선 시도
+            evidence_bundle = evidence_bundles.get(req.metric_id)
+            
+            if evidence_bundle and evidence_bundle.records:
+                # Evidence 있음 → ValueRecord 변환
+                record = self._evidence_to_value_record(
+                    req.metric_id,
+                    req.context,
+                    evidence_bundle
+                )
+                results.append(record)
+                continue
+            
+            # 2.2 Fallback: R-Graph 기반 계산
             if req.metric_id == "MET-N_customers":
                 value = self._compute_n_customers(graph, req.context)
                 record = self._build_record(
@@ -110,14 +159,85 @@ class ValueEngine:
         
         # Value Program (실행 추적)
         value_program = {
-            "engine": "ValueEngine_v1",
+            "engine": "ValueEngine_v2",
             "policy_ref": policy_ref,
             "project_context_id": project_context_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "use_evidence_engine": use_evidence_engine,
+            "evidence_metrics": list(evidence_bundles.keys()),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "metric_ids": [r.metric_id for r in results],
         }
         
         return results, value_program
+    
+    # ========================================
+    # Evidence → ValueRecord 변환
+    # ========================================
+    
+    def _evidence_to_value_record(
+        self,
+        metric_id: str,
+        context: Dict[str, Any],
+        evidence_bundle: Any  # EvidenceBundle
+    ) -> ValueRecord:
+        """EvidenceBundle → ValueRecord 변환
+        
+        Args:
+            metric_id: Metric ID
+            context: 컨텍스트
+            evidence_bundle: EvidenceBundle
+        
+        Returns:
+            ValueRecord
+        """
+        # Best evidence 선택 (신뢰도 높은 순)
+        best_record = evidence_bundle.get_best_record()
+        
+        if best_record is None:
+            # Evidence 없음 → 빈 record
+            return self._build_record(
+                metric_id,
+                context,
+                None,
+                method="evidence_not_found",
+                status="failed"
+            )
+        
+        # Evidence 값 추출
+        value = best_record.value
+        
+        # Quality 계산 (EvidenceBundle의 quality_summary 활용)
+        quality_summary = evidence_bundle.quality_summary
+        
+        quality = {
+            "status": "ok",
+            "method": "evidence_direct",
+            "literal_ratio": quality_summary.get("literal_ratio", 0.0),
+            "spread_ratio": quality_summary.get("spread_ratio", 0.0),
+            "evidence_source": best_record.source_id,
+            "evidence_tier": best_record.source_tier,
+            "confidence": best_record.confidence,
+        }
+        
+        # Lineage (evidence_ids 포함)
+        lineage = {
+            "from_evidence_ids": [r.evidence_id for r in evidence_bundle.records],
+            "from_value_ids": [],
+            "from_pattern_ids": [],
+            "from_program_id": "EvidenceEngine",
+            "engine_ids": ["evidence_engine", "value_engine"],
+            "policy_id": None,
+            "created_by_role": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        return ValueRecord(
+            metric_id=metric_id,
+            context=context,
+            point_estimate=value if isinstance(value, (int, float)) else None,
+            quality=quality,
+            lineage=lineage,
+        )
     
     # ========================================
     # Metric 계산 로직
@@ -394,7 +514,7 @@ class ValueEngine:
             "engine_ids": ["value_engine"],
             "policy_id": None,
             "created_by_role": None,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         
         return ValueRecord(
