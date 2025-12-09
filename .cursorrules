@@ -1,36 +1,27 @@
 # CMIS - Contextual Market Intelligence System
-# Agent Rules (간결 버전)
+# 2025-12-09: UMIS → CMIS 브랜드 전환
 
-## 파일 생성 위치
+## 파일 위치 (핵심!)
 
-### 프로덕션 루트 (8개만, 추가 금지)
-cmis.yaml, cmis_core/, cmis_cli/, config/, seeds/
-requirements.txt, README.md, env.example
+프로덕션 루트 (8개만): cmis.yaml, cmis_core/, cmis_cli/, config/, seeds/, requirements.txt, README.md, env.example
 
-### 개발 (dev/)
-- 테스트: dev/tests/{unit,integration,e2e}/test_*.py
-- 검증: dev/scripts/validation/*.py
-- 문서: dev/docs/{architecture,analysis,implementation}/*.md
-- 예시: dev/examples/*.yaml
-- 임시: dev/temp/
+dev/:
+- tests/{unit,integration,e2e}/ - 테스트
+- scripts/validation/ - 검증
+- docs/{architecture,analysis,implementation}/ - 문서
+- examples/ - 예시
+- temp/ - 임시
 
-## 금지
+## 금지 ❌
 
-❌ 루트에 test_*.py, example_*.py, temp_*.* 생성
-❌ UMIS, umis_v9 (옛 브랜드)
-❌ v1, v2, POC (버전 표시)
+루트에 test_*.py, example_*.py 생성 금지
+UMIS, umis_v9 사용 금지 (→ CMIS, cmis)
+v1, v2, POC 표시 금지
 
-## 필수
+## 규칙 ✅
 
-✅ from cmis_core.* import (not umis_v9_core)
-✅ cmis: (YAML 루트 키)
-✅ Type hints + docstrings
-
-## 빠른 참조
-
-새 엔진 → cmis_core/{name}_engine.py
-새 테스트 → dev/tests/unit/test_{name}.py
-새 문서 → dev/docs/architecture/{Name}.md
-임시 파일 → dev/temp/
+import cmis_core (not umis_v9_core)
+YAML 루트: cmis:
+Type hints + docstrings 필수
 
 상세: dev/STRUCTURE.md
