@@ -97,4 +97,8 @@ class InMemoryGraph:
 
   def nodes_by_type(self, node_type: str) -> List[Node]:
     return [n for n in self.nodes.values() if n.type == node_type]
+  
+  def edges_by_type(self, edge_type: str) -> List[Edge]:
+    """특정 타입의 edge 목록"""
+    return [e for e in self.edges if e.type == edge_type]
 

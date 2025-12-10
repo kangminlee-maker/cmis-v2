@@ -1,0 +1,58 @@
+---
+# Pattern: 마켓플레이스 모델
+# Family: Business Model Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-marketplace_model"
+  name: "마켓플레이스 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    공급자와 수요자를 중개하는 양면 시장 모델.
+    거래 수수료가 주 수익원, 네트워크 효과 존재.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        institution_type:
+          - "online_platform"
+          - "marketplace"
+
+  graph_structure:
+    requires:
+      - edge_type: "actor_serves_actor"
+        min_count: 2
+        note: "공급자-수요자 관계"
+
+  quantitative_bounds:
+    take_rate:
+      min: 0.05
+      max: 0.35
+      typical: [0.10, 0.25]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-platform_business_model"
+    - "PAT-network_effects"
+    - "PAT-transaction_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-Platform_commission_fees"
+    - "MET-Revenue"
+
+  suited_for_contexts:
+    - "ARCH-platform_global"
+
+  required_capabilities:
+    - technology_domain: "platform_tech"
+      maturity_level: "production_ready"
+
+  required_assets:
+    channels:
+      online: true
+      min_reach: 10000
+
+  constraint_checks: []
+

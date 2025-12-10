@@ -65,22 +65,232 @@ class ValueRecord:
 # ========================================
 
 @dataclass
-class PatternMatch:
-    """패턴 매칭 결과"""
-    pattern_id: str  # "PAT-subscription_model", etc.
+class PatternSpec:
+    """Pattern 정의 (v1.1 - 13개 필드)
+    
+    Pattern은 Trait 조합 + Graph 구조로 정의됩니다.
+    Ontology lock-in 최소화를 위해 고정 타입이 아닌 Trait 기반 정의.
+    """
+    pattern_id: str
+    name: str
+    family: str  # "business_model_patterns", "value_chain_patterns", etc.
     description: str
+    
+    # Trait 제약
+    trait_constraints: Dict[str, Any]
+    # {
+    #   "money_flow": {
+    #     "required_traits": {"revenue_model": "subscription"},
+    #     "optional_traits": {"recurrence": ["monthly", "yearly"]}
+    #   }
+    # }
+    
+    # Graph 구조 제약
+    graph_structure: Dict[str, Any]
+    # {
+    #   "requires": [
+    #     {"node_type": "money_flow", "min_count": 1}
+    #   ]
+    # }
+    
+    # 정량 제약 (선택)
+    quantitative_bounds: Optional[Dict[str, Any]] = None
+    
+    # Pattern 관계
+    composes_with: List[str] = field(default_factory=list)
+    conflicts_with: List[str] = field(default_factory=list)
+    specializes: Optional[str] = None
+    
+    # Benchmark (ValueEngine 연동)
+    benchmark_metrics: List[str] = field(default_factory=list)
+    
+    # Context Archetype 적합성
+    suited_for_contexts: List[str] = field(default_factory=list)
+    
+    # ===== v1.1 추가: Execution Fit 계산용 =====
+    required_capabilities: List[Dict[str, Any]] = field(default_factory=list)
+    required_assets: Dict[str, Any] = field(default_factory=dict)
+    constraint_checks: List[str] = field(default_factory=list)
+
+
+@dataclass
+class PatternMatch:
+    """패턴 매칭 결과 (v1.1 - 8개 필드)"""
+    pattern_id: str
+    description: str
+    
+    # 점수
     structure_fit_score: float  # 0.0 ~ 1.0
     execution_fit_score: Optional[float] = None  # project_context 있을 때만
+    combined_score: float = 0.0  # structure × execution (or structure if no execution)
+    
+    # 증거
     evidence: Dict[str, Any] = field(default_factory=dict)
-    # evidence 예: {"source": "money_flow.traits.revenue_model", "node_ids": [...]}
+    
+    # ===== v1.1 추가: Instance 정보 =====
+    anchor_nodes: Dict[str, List[str]] = field(default_factory=dict)
+    # {"actor": ["ACT-001"], "money_flow": ["MFL-101"]}
+    
+    instance_scope: Optional[Dict[str, Any]] = None
+    # {"domain": "education", "focal_actor": "ACT-001"}
 
 
 @dataclass
 class GapCandidate:
     """기회/갭 후보"""
+    pattern_id: str  # 추가: 어떤 Pattern이 누락됐는지
     description: str
+    expected_level: str = "common"  # "core", "common", "rare"
+    feasibility: str = "unknown"  # "high", "medium", "low", "unknown"
+    execution_fit_score: Optional[float] = None
     related_pattern_ids: List[str] = field(default_factory=list)
     evidence: Dict[str, Any] = field(default_factory=dict)
+
+
+# ========================================
+# Project Context (Simplified for Phase 2)
+# ========================================
+
+@dataclass
+class ProjectContext:
+    """Project Context (간소화 버전 - Phase 2용)
+    
+    실제 구현은 cmis.yaml의 project_context_store 스키마 참조
+    Phase 2에서는 Execution Fit 계산에 필요한 최소 필드만 구현
+    """
+    project_context_id: str
+    
+    # Scope
+    scope: Dict[str, Any]
+    # {"domain_id": "...", "region": "...", "segment": "..."}
+    
+    # Assets Profile
+    assets_profile: Dict[str, Any]
+    # {
+    #   "capability_traits": [
+    #     {"technology_domain": "AI_ML", "maturity_level": "production_ready"}
+    #   ],
+    #   "channels": [...],
+    #   "brand_assets": {...},
+    #   "organizational_assets": {...}
+    # }
+    
+    # Constraints Profile
+    constraints_profile: Dict[str, Any] = field(default_factory=dict)
+    # {
+    #   "hard_constraints": [
+    #     {"constraint_id": "...", "type": "financial", "threshold": ...}
+    #   ]
+    # }
+    
+    # Preference Profile
+    preference_profile: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ContextArchetype:
+    """Context Archetype (간소화 버전)
+    
+    특정 시장/산업의 전형적인 특징과 Expected Pattern Set
+    """
+    archetype_id: str
+    name: str
+    description: str
+    
+    # 판별 기준
+    criteria: Dict[str, Any]
+    # {"region": "KR", "domain": "education", "delivery_channel": "online"}
+    
+    # Expected Pattern Set
+    expected_patterns: Dict[str, List[Dict]]
+    # {
+    #   "core": [{"pattern_id": "PAT-...", "weight": 0.9}],
+    #   "common": [...],
+    #   "rare": [...]
+    # }
+    
+    # 신뢰도 (determine_context_archetype에서 설정)
+    confidence: float = 1.0
+
+
+# ========================================
+# Search Strategy Types (v2.0)
+# ========================================
+
+@dataclass
+class SearchContext:
+    """검색 Context (통합 모델)
+    
+    검색 전략 수립에 필요한 모든 정보
+    """
+    # 기본
+    domain_id: str
+    region: str
+    metric_id: str
+    year: int
+    
+    # 언어 (다국어 검색)
+    language: str = "auto"  # "ko", "en", "ja", "auto"
+    
+    # 정책
+    policy_mode: str = "decision_balanced"
+    
+    # 선택적
+    data_source_id: Optional[str] = None
+    segment: Optional[str] = None
+    
+    # Budget
+    max_queries: int = 5
+    max_total_time: int = 30  # seconds
+    max_cost_per_metric: float = 0.01  # USD
+
+
+@dataclass
+class SearchStep:
+    """검색 단계"""
+    data_source_id: str
+    base_query_template: str
+    use_llm_query: bool
+    num_queries: int
+    languages: List[str]
+    timeout_sec: int
+    priority: int = 1
+
+
+@dataclass
+class SearchPlan:
+    """검색 계획"""
+    metric_id: str
+    context: SearchContext
+    steps: List[SearchStep]
+    total_budget: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class QueryResultQuality:
+    """쿼리 결과 품질 평가"""
+    score: float  # 0.0 ~ 1.0
+    
+    # 기본 지표
+    has_numbers: bool
+    num_numbers: int
+    year_match: bool
+    
+    # Source
+    source_tier: str
+    source_id: str
+    
+    # 언어
+    language: str
+    query: str
+    
+    # 평가 상세
+    metric_relevance: float = 0.5
+    temporal_relevance: float = 0.5
+    numeric_confidence: float = 0.5
+    
+    # 메타
+    notes: Dict[str, Any] = field(default_factory=dict)
 
 
 # ========================================

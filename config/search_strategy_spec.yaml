@@ -1,0 +1,97 @@
+---
+# 검색 전략 명세 (Metric × DataSource)
+# 2025-12-10: Search Strategy v2.0
+
+strategies:
+  MET-TAM:
+    per_source:
+      Commercial_Market_Research:
+        template: "{domain} {region} total addressable market {year}"
+        use_llm: false
+        num_queries: 1
+        languages: [en]
+      
+      GenericWebSearch:
+        template: "{domain} {region} market size {year}"
+        use_llm: true
+        num_queries: 5
+        languages: [ko, en]
+      
+      Academic_Papers:
+        template: "{domain} market analysis {year}"
+        use_llm: true
+        num_queries: 3
+        languages: [en]
+  
+  MET-SAM:
+    per_source:
+      GenericWebSearch:
+        template: "{domain} {region} serviceable available market {year}"
+        use_llm: true
+        num_queries: 3
+        languages: [ko, en]
+  
+  MET-Revenue:
+    per_source:
+      KR_DART_filings:
+        template: "{company_name} {year} revenue"
+        use_llm: false
+        num_queries: 1
+        languages: [ko]
+      
+      GenericWebSearch:
+        template: "{domain} {region} revenue {year}"
+        use_llm: true
+        num_queries: 3
+        languages: [ko, en]
+  
+  MET-GDP:
+    per_source:
+      ECOS:
+        template: "GDP {year}"
+        use_llm: false
+        num_queries: 1
+        languages: [ko]
+      
+      WorldBank:
+        template: "{region} GDP {year}"
+        use_llm: false
+        num_queries: 1
+        languages: [en]
+
+# Policy별 기본 전략
+policy_defaults:
+  reporting_strict:
+    max_queries_per_metric: 3
+    use_llm: false
+    max_time: 10
+    prefer_official: true
+  
+  decision_balanced:
+    max_queries_per_metric: 5
+    use_llm: true
+    max_time: 20
+    prefer_official: true
+  
+  exploration_friendly:
+    max_queries_per_metric: 10
+    use_llm: true
+    max_time: 30
+    prefer_official: false
+
+# 다국어 기본 전략
+language_strategy:
+  KR:
+    default_languages: [ko, en]
+    primary: ko
+  
+  US:
+    default_languages: [en]
+  
+  JP:
+    default_languages: [ja, en]
+    primary: ja
+  
+  CN:
+    default_languages: [zh, en]
+    primary: zh

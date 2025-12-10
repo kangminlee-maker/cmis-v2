@@ -1,0 +1,56 @@
+---
+# Pattern: 분산 시장 구조
+# Family: Competitive Structure Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-fragmented_market"
+  name: "분산 시장 구조"
+  family: "competitive_structure_patterns"
+  description: |
+    다수의 소규모 업체가 경쟁하는 구조.
+    HHI < 1000, 진입 장벽 낮음, 차별화 어려움.
+
+  trait_constraints:
+    actor:
+      required_traits:
+        kind: "company"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 10
+        traits:
+          kind: "company"
+        note: "다수 경쟁자"
+
+  quantitative_bounds:
+    hhi_revenue:
+      min: 0
+      max: 1000
+      typical: [200, 800]
+      source: "pattern_benchmarks"
+
+    top5_revenue_share:
+      min: 0.10
+      max: 0.50
+      typical: [0.20, 0.40]
+      source: "pattern_benchmarks"
+
+  composes_with: []
+
+  conflicts_with:
+    - "PAT-market_concentration"
+    - "PAT-winner_take_all"
+
+  benchmark_metrics:
+    - "MET-HHI_revenue"
+    - "MET-Top5_revenue_share"
+
+  suited_for_contexts:
+    - "ARCH-local_services"
+
+  required_capabilities: []
+  required_assets: {}
+  constraint_checks: []
+

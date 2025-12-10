@@ -1,0 +1,52 @@
+---
+# Context Archetype 1: 한국 디지털 서비스 시장
+# 2025-12-10: Phase 2
+
+archetype:
+  archetype_id: "ARCH-digital_service_KR"
+  name: "한국 디지털 서비스 시장"
+  description: |
+    한국의 B2C/B2B 디지털 서비스 시장.
+    SaaS, 플랫폼, 콘텐츠, 교육 등 온라인 서비스.
+
+  # 판별 기준
+  criteria:
+    region: "KR"
+    delivery_channel: "online"
+    resource_kind:
+      - "digital_service"
+      - "software_license"
+
+  # Expected Pattern Set
+  expected_patterns:
+    core:  # 90%+ 시장에서 관찰
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.90
+        rationale: "대부분의 디지털 서비스가 구독형"
+
+      - pattern_id: "PAT-recurring_revenue"
+        weight: 0.85
+        rationale: "반복 수익 구조가 핵심"
+
+    common:  # 50-90% 시장에서 관찰
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.70
+        rationale: "무료 체험 → 유료 전환 흔함"
+
+      - pattern_id: "PAT-network_effects"
+        weight: 0.60
+        rationale: "플랫폼/커뮤니티 요소"
+
+      - pattern_id: "PAT-tiered_pricing"
+        weight: 0.50
+        rationale: "Basic/Pro/Enterprise 등급"
+
+    rare:  # 10-50% 시장에서 관찰 (기회)
+      - pattern_id: "PAT-platform_business_model"
+        weight: 0.30
+        rationale: "양면/다면 시장 (드물지만 강력)"
+
+      - pattern_id: "PAT-marketplace_model"
+        weight: 0.20
+        rationale: "중개 모델 (특정 영역)"
+

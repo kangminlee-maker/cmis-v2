@@ -1,0 +1,49 @@
+---
+# Pattern: 수평 전문화
+# Family: Value Chain Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-horizontal_specialization"
+  name: "수평 전문화 모델"
+  family: "value_chain_patterns"
+  description: |
+    가치사슬의 특정 단계에 집중하는 전문화 전략.
+    깊이 있는 전문성 확보, 파트너십 중요.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        specialization_focus: "horizontal"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+
+  quantitative_bounds:
+    revenue_concentration:
+      min: 0.70
+      max: 1.00
+      typical: [0.80, 0.95]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-niche_specialization"
+
+  conflicts_with:
+    - "PAT-vertical_integration"
+
+  benchmark_metrics:
+    - "MET-Operating_margin"
+
+  suited_for_contexts:
+    - "ARCH-b2b_specialized"
+
+  required_capabilities:
+    - domain_expertise: null
+      maturity_level: "production_ready"
+
+  required_assets: {}
+  constraint_checks: []
+

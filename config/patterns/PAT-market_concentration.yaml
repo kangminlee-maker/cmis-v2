@@ -1,0 +1,95 @@
+---
+# Pattern 4: 시장 집중 구조
+# Family: Competitive Structure Patterns
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-market_concentration"
+  name: "시장 집중 구조"
+  family: "competitive_structure_patterns"
+  description: |
+    소수의 상위 기업이 시장 매출의 대부분을 차지하는 경쟁 구조.
+    HHI > 2500 또는 Top3 점유율 > 70%인 경우.
+    진입 장벽이 높고, 경쟁 강도가 낮은 특징.
+
+  # Trait 제약
+  trait_constraints:
+    actor:
+      required_traits:
+        kind: "company"
+      optional_traits:
+        market_position:
+          - "leader"
+          - "challenger"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 3
+        traits:
+          kind: "company"
+        note: "최소 3개 기업 필요"
+
+      - edge_type: "actor_competes_with_actor"
+        min_count: 1
+        properties:
+          intensity:
+            - "low"
+            - "medium"
+
+  # 정량 제약
+  quantitative_bounds:
+    hhi_revenue:
+      min: 2500
+      max: 10000
+      typical: [3000, 5000]
+      source: "pattern_benchmarks"
+      unit: "index"
+
+    top3_revenue_share:
+      min: 0.50
+      max: 1.00
+      typical: [0.70, 0.90]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    top5_revenue_share:
+      min: 0.60
+      max: 1.00
+      typical: [0.80, 0.95]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-winner_take_all"
+
+  conflicts_with:
+    - "PAT-fragmented_market"
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-HHI_revenue"
+    - "MET-Top3_revenue_share"
+    - "MET-Top5_revenue_share"
+
+  # Context Archetype
+  suited_for_contexts:
+    - "ARCH-tech_platform_global"
+    - "ARCH-capital_intensive_KR"
+
+  # Execution Fit 요구사항
+  required_capabilities: []
+
+  required_assets:
+    organizational_assets:
+      org_maturity:
+        - "established"
+        - "mature"
+
+  constraint_checks:
+    - "min_financial_buffer_100M"
+

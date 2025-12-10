@@ -50,7 +50,7 @@ class DuckDuckGoSource(BaseSearchSource):
             )
     
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
-        """Evidence 수집"""
+        """Evidence 수집 (2-Stage Fetching)"""
         query = self.build_search_query(request)  # Base
         
         try:
@@ -61,12 +61,27 @@ class DuckDuckGoSource(BaseSearchSource):
         if not results:
             raise DataNotFoundError(f"No results")
         
+        # Stage 1: Snippet에서 시도
         numbers = self.extract_numbers(results)  # Base
+        
+        # Stage 2: 데이터 없으면 Full page 자동 시도
+        if not numbers and not self.fetch_full_page:
+            print(f"No numbers in snippets, fetching full pages...")
+            results = self._enrich_with_full_content(results)
+            numbers = self.extract_numbers(results)
         
         if not numbers:
             raise DataNotFoundError(f"No numbers")
         
-        value, confidence = self.calculate_consensus(numbers)  # Base
+        # Primary + Hints 추출
+        evidence_data = self.extract_all_evidence_with_hints(results, request)
+        
+        value = evidence_data["primary"]["value"]
+        confidence = evidence_data["primary"]["confidence"]
+        hints = evidence_data["hints"]
+        
+        if value is None:
+            raise DataNotFoundError(f"No numbers")
         
         # DuckDuckGo는 Google보다 신뢰도 약간 낮음
         confidence = max(0.5, confidence - 0.05)
@@ -82,7 +97,9 @@ class DuckDuckGoSource(BaseSearchSource):
             metadata={
                 "query": query,
                 "num_results": len(results),
-                "num_numbers": len(numbers),
+                "num_numbers": len(evidence_data["all_numbers"]),
+                "hints": hints,  # 모든 관련 숫자 저장
+                "hints_count": len(hints)
             },
             retrieved_at=datetime.now(timezone.utc).isoformat(),
             lineage={"search_engine": "duckduckgo", "query": query}
@@ -99,10 +116,10 @@ class DuckDuckGoSource(BaseSearchSource):
     def _search(self, query: str) -> List[Dict[str, Any]]:
         """DuckDuckGo 검색"""
         try:
-            results = self.ddgs.text(
-                keywords=query,
+            results = list(self.ddgs.text(
+                query,
                 max_results=self.max_results
-            )
+            ))
             
             if not results:
                 return []

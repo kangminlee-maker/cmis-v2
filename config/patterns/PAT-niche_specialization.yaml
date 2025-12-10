@@ -1,0 +1,57 @@
+---
+# Pattern: 틈새 전문화
+# Family: Competitive Structure Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-niche_specialization"
+  name: "틈새 전문화 전략"
+  family: "competitive_structure_patterns"
+  description: |
+    특정 틈새 시장에 집중하는 전문화 전략.
+    작은 시장이지만 높은 점유율, 전문성 확보.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        market_focus: "niche"
+        specialization_level: "high"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+
+  quantitative_bounds:
+    niche_market_share:
+      min: 0.30
+      max: 0.90
+      typical: [0.50, 0.70]
+      source: "pattern_benchmarks"
+
+    market_size_ratio:
+      min: 0.01
+      max: 0.20
+      typical: [0.05, 0.15]
+      source: "pattern_benchmarks"
+      note: "전체 시장 대비 틈새 시장 비율"
+
+  composes_with:
+    - "PAT-horizontal_specialization"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-SAM"
+    - "MET-Revenue"
+
+  suited_for_contexts:
+    - "ARCH-b2b_specialized"
+
+  required_capabilities:
+    - domain_expertise: null
+      maturity_level: "production_ready"
+
+  required_assets: {}
+  constraint_checks: []
+

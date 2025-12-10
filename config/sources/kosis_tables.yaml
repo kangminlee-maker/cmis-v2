@@ -1,0 +1,31 @@
+---
+# KOSIS 통계표 매핑
+# 2025-12-10: 하드코딩 제거
+
+tables:
+  - stat_type: population
+    orgId: "101"
+    tblId: "DT_1B04006"
+    name: "주민등록인구 (시군구/성/연령)"
+    itmId: "T2"
+    prdSe: "Y"
+    description: "주민등록 기준 인구 수"
+    keywords:
+      - n_customers
+      - population
+      - 인구
+    
+  - stat_type: household
+    orgId: "101"
+    tblId: "DT_1B04005N"
+    name: "가구 및 세대 현황"
+    itmId: "T2"
+    prdSe: "Y"
+    description: "주민등록 기준 가구 수"
+    keywords:
+      - household
+      - family
+      - 가구
+
+# 향후 추가할 통계표는 여기에 추가
+# (코드 수정 불필요)

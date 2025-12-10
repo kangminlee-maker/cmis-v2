@@ -1,0 +1,87 @@
+---
+# Pattern 5: 반복 수익 구조
+# Family: Revenue Architecture Patterns
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-recurring_revenue"
+  name: "반복 수익 구조"
+  family: "revenue_architecture_patterns"
+  description: |
+    전체 매출의 70% 이상이 반복적/예측 가능한 수익으로 구성.
+    구독, 계약, 유지보수 등 다양한 형태 포함.
+    재무 안정성과 예측 가능성이 높음.
+
+  # Trait 제약
+  trait_constraints:
+    money_flow:
+      required_traits:
+        payment_recurs: true
+      optional_traits:
+        recurrence:
+          - "monthly"
+          - "quarterly"
+          - "yearly"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "money_flow"
+        min_count: 1
+        traits:
+          payment_recurs: true
+
+      - node_type: "contract"
+        min_count: 1
+        note: "계약 기반 관계"
+
+  # 정량 제약
+  quantitative_bounds:
+    recurring_revenue_ratio:
+      min: 0.70
+      max: 1.00
+      typical: [0.80, 0.95]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    revenue_predictability:
+      min: 0.60
+      max: 1.00
+      typical: [0.75, 0.90]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-subscription_model"
+    - "PAT-contract_based_model"
+
+  conflicts_with:
+    - "PAT-transaction_model"
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-Revenue"
+    - "MET-Churn_rate"
+
+  # Context Archetype
+  suited_for_contexts:
+    - "ARCH-b2b_saas"
+    - "ARCH-enterprise_software"
+
+  # Execution Fit 요구사항
+  required_capabilities:
+    - maturity_level: "production_ready"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 5
+      org_maturity:
+        - "scaleup"
+        - "established"
+        - "mature"
+
+  constraint_checks: []
+

@@ -1,0 +1,59 @@
+---
+# Pattern: 생태계 잠금 효과
+# Family: Growth Mechanism Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-ecosystem_lock_in"
+  name: "생태계 잠금 효과"
+  family: "growth_mechanism_patterns"
+  description: |
+    제품/서비스 생태계에 고객을 묶어두는 메커니즘.
+    전환 비용이 높아 이탈률 낮음.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        switching_cost: "high"
+
+  graph_structure:
+    requires:
+      - node_type: "resource"
+        min_count: 3
+        note: "다양한 제품/서비스"
+
+  quantitative_bounds:
+    switching_cost_ratio:
+      min: 0.50
+      max: 3.00
+      typical: [1.00, 2.00]
+      source: "pattern_benchmarks"
+
+    retention_rate:
+      min: 0.85
+      max: 0.99
+      typical: [0.90, 0.95]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-platform_business_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-Churn_rate"
+    - "MET-LTV"
+
+  suited_for_contexts:
+    - "ARCH-platform_global"
+    - "ARCH-enterprise_software"
+
+  required_capabilities:
+    - maturity_level: "mature"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 50
+
+  constraint_checks: []
+

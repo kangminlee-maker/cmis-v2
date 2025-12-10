@@ -1,0 +1,62 @@
+---
+# Pattern: 승자 독식 구조
+# Family: Competitive Structure Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-winner_take_all"
+  name: "승자 독식 구조"
+  family: "competitive_structure_patterns"
+  description: |
+    1위 업체가 시장의 대부분을 차지하는 극단적 집중.
+    Top1 점유율 > 50%, 네트워크 효과가 원인.
+
+  trait_constraints:
+    actor:
+      required_traits:
+        kind: "company"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+        traits:
+          kind: "company"
+
+  quantitative_bounds:
+    top1_revenue_share:
+      min: 0.50
+      max: 0.95
+      typical: [0.60, 0.80]
+      source: "pattern_benchmarks"
+
+    hhi_revenue:
+      min: 3000
+      max: 10000
+      typical: [5000, 8000]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-network_effects"
+    - "PAT-platform_business_model"
+
+  conflicts_with:
+    - "PAT-fragmented_market"
+
+  benchmark_metrics:
+    - "MET-Top3_revenue_share"
+    - "MET-HHI_revenue"
+
+  suited_for_contexts:
+    - "ARCH-platform_global"
+
+  required_capabilities:
+    - scale_tier: "hyperscale"
+
+  required_assets:
+    organizational_assets:
+      org_maturity: "mature"
+
+  constraint_checks:
+    - "min_market_share_40pct"
+

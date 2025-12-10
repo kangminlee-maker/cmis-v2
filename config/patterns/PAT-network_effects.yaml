@@ -1,0 +1,88 @@
+---
+# Pattern 3: 네트워크 효과
+# Family: Growth Mechanism Patterns
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-network_effects"
+  name: "네트워크 효과"
+  family: "growth_mechanism_patterns"
+  description: |
+    사용자 수가 증가할수록 개별 사용자의 가치가 증가하는 성장 메커니즘.
+    플랫폼, 소셜 네트워크, 마켓플레이스에서 강하게 관찰됨.
+
+  # Trait 제약
+  trait_constraints:
+    actor:
+      optional_traits:
+        institution_type:
+          - "online_platform"
+          - "marketplace"
+
+    event:
+      optional_traits:
+        event_type:
+          - "user_interaction"
+          - "network_connection"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 100
+        note: "네트워크 효과는 최소 사용자 규모 필요"
+
+      - edge_type: "actor_interacts_with_actor"
+        min_count: 10
+        note: "사용자 간 상호작용"
+
+  # 정량 제약
+  quantitative_bounds:
+    user_growth_rate:
+      min: 0.05
+      typical: [0.15, 0.40]
+      source: "pattern_benchmarks"
+      unit: "ratio_per_year"
+
+    network_density:
+      min: 0.10
+      typical: [0.20, 0.50]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-platform_business_model"
+    - "PAT-viral_growth"
+    - "PAT-marketplace_model"
+
+  conflicts_with: []
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-N_customers"
+    - "MET-Revenue"
+
+  # Context Archetype
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+    - "ARCH-platform_global"
+
+  # Execution Fit 요구사항
+  required_capabilities:
+    - technology_domain: "platform_tech"
+      maturity_level: "production_ready"
+
+  required_assets:
+    channels:
+      online: true
+      min_reach: 10000
+
+    data_assets:
+      customer_data_volume: 1000
+
+  constraint_checks:
+    - "min_user_base_1000"
+

@@ -1,0 +1,35 @@
+---
+# Context Archetype 4: 간단한 디지털 서비스 (테스트용)
+# 2025-12-10: Phase 2
+
+archetype:
+  archetype_id: "ARCH-simple_digital"
+  name: "간단한 디지털 서비스"
+  description: |
+    디지털 서비스 기본 Archetype (테스트/POC용).
+    Criteria가 단순하여 매칭하기 쉬움.
+
+  # 판별 기준 (단순)
+  criteria:
+    resource_kind: "digital_service"
+
+  # Expected Pattern Set
+  expected_patterns:
+    core:
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.90
+
+      - pattern_id: "PAT-recurring_revenue"
+        weight: 0.85
+
+    common:
+      - pattern_id: "PAT-network_effects"
+        weight: 0.60
+
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.55
+
+    rare:
+      - pattern_id: "PAT-platform_business_model"
+        weight: 0.30
+

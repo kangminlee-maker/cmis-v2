@@ -629,28 +629,142 @@ class EvidenceEngine:
     def fetch_for_reality_slice(
         self,
         scope: Dict[str, Any],
-        as_of: str
-    ) -> EvidenceBundle:
-        """Reality Graph 구성을 위한 Evidence 수집
+        as_of: str,
+        policy_ref: str = "reporting_strict"
+    ) -> List[EvidenceRecord]:
+        """Reality Graph 구성을 위한 Evidence 수집 (개선)
+        
+        WorldEngine이 Reality Graph를 구성할 때 사용.
+        Scope에 필요한 모든 Evidence 유형을 자동으로 수집.
         
         Args:
-            scope: 시장/도메인 범위
-            as_of: 기준 시점
+            scope: {"domain_id": "...", "region": "...", "segment": "..."}
+            as_of: 기준 시점 (year)
+            policy_ref: 정책
         
         Returns:
-            EvidenceBundle
+            EvidenceRecord 리스트 (Actor, MoneyFlow, State 관련)
         """
-        # TODO: 구현
-        request = EvidenceRequest(
-            request_id=f"REQ-reality-{uuid.uuid4().hex[:8]}",
+        domain_id = scope.get("domain_id", "")
+        region = scope.get("region", "KR")
+        segment = scope.get("segment")
+        
+        # 1. 모든 Source에게 "이 scope에서 뭘 제공할 수 있나요?" 물어보기
+        # (하드코딩 대신 동적 발견)
+        
+        # Scope 기반 범용 EvidenceRequest 생성
+        scope_request = EvidenceRequest(
+            request_id=f"reality-scope-{uuid.uuid4().hex[:8]}",
             request_type="reality_slice",
-            context={**scope, "as_of": as_of}
+            context={
+                "domain_id": domain_id,
+                "region": region,
+                "segment": segment,
+                "year": as_of
+            },
+            required_capabilities=["*"]  # 모든 capability
         )
         
-        policy = EvidencePolicy.from_config("reporting_strict", self.config)
-        plan = self.planner.build_plan(request, policy)
+        # 2. Capable sources 찾기
+        capable_sources = self.source_registry.find_capable_sources(scope_request)
         
-        return self.executor.run(plan, policy)
+        if not capable_sources:
+            return []
+        
+        # 3. 각 Source에서 가능한 모든 Evidence 수집
+        all_evidence = []
+        
+        for source in capable_sources:
+            # Source가 제공 가능한 Evidence 유형 확인
+            provides = source.get_capabilities().get("provides", [])
+            
+            # 각 capability에 대해 Evidence 수집 시도
+            for capability in provides:
+                # Capability → Metric 매핑 (동적)
+                metric_id = self._capability_to_metric(capability, scope)
+                
+                if not metric_id:
+                    continue
+                
+                # MetricRequest 생성
+                metric_req = MetricRequest(
+                    metric_id=metric_id,
+                    context={
+                        "domain_id": domain_id,
+                        "region": region,
+                        "segment": segment,
+                        "year": as_of
+                    }
+                )
+                
+                try:
+                    # 개별 수집 (Graceful degradation)
+                    result = self.fetch_for_metrics([metric_req], policy_ref)
+                    
+                    for bundle in result.bundles.values():
+                        all_evidence.extend(bundle.evidence_list)
+                
+                except Exception as e:
+                    # 실패해도 계속 진행
+                    print(f"Warning: Failed {capability} from {source.source_id}: {e}")
+                    continue
+        
+        return all_evidence
+    
+    def _capability_to_metric(
+        self,
+        capability: str,
+        scope: Dict[str, Any]
+    ) -> Optional[str]:
+        """Capability → Metric ID 매핑 (동적, cmis.yaml 기반)
+        
+        Args:
+            capability: Source capability (예: "population_by_age")
+            scope: Scope 정보
+        
+        Returns:
+            Metric ID or None
+        """
+        # cmis.yaml metrics_spec에서 동적 생성
+        if not hasattr(self, '_capability_mapping_cache'):
+            self._capability_mapping_cache = self._build_capability_mapping()
+        
+        return self._capability_mapping_cache.get(capability)
+    
+    def _build_capability_mapping(self) -> Dict[str, str]:
+        """cmis.yaml metrics_spec에서 Capability → Metric 매핑 동적 생성
+        
+        단일 진실의 원천: cmis.yaml
+        
+        Returns:
+            {capability: metric_id}
+        """
+        mapping = {}
+        
+        # metrics_spec에서 추출
+        for metric_id, spec in self.config.metrics.items():
+            # direct_evidence_sources가 capability 리스트
+            sources = spec.direct_evidence_sources
+            
+            for source_capability in sources:
+                # 첫 번째 매핑 우선 (중복 시)
+                if source_capability not in mapping:
+                    mapping[source_capability] = metric_id
+        
+        # Fallback: 일반적인 매핑 (cmis.yaml에 없을 경우)
+        fallback = {
+            "population_by_age": "MET-N_customers",
+            "household_income_distribution": "MET-N_customers",
+            "market_data": "MET-TAM",
+            "long_tail_facts": "MET-TAM"
+        }
+        
+        for cap, metric in fallback.items():
+            if cap not in mapping:
+                mapping[cap] = metric
+        
+        return mapping
+    
     
     def _metric_to_evidence_request(
         self,

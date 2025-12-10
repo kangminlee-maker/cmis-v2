@@ -1,0 +1,44 @@
+---
+# 검색 쿼리 템플릿
+# 2025-12-10: 하드코딩 제거
+
+# Metric별 최적 쿼리 템플릿
+templates:
+  MET-TAM:
+    template: "{domain} {region} total addressable market size {year}"
+    keywords:
+      - market size
+      - total addressable market
+  
+  MET-SAM:
+    template: "{domain} {region} serviceable available market {year}"
+    keywords:
+      - market size
+      - serviceable market
+  
+  MET-Revenue:
+    template: "{domain} {region} market size revenue {year}"
+    keywords:
+      - market size
+      - revenue
+  
+  MET-GDP:
+    template: "{region} GDP gross domestic product {year}"
+    keywords:
+      - GDP
+      - gross domestic product
+  
+  MET-CPI:
+    template: "{region} consumer price index inflation {year}"
+    keywords:
+      - CPI
+      - inflation
+      - consumer price
+
+# 기본 템플릿 (매칭 안 될 경우)
+default:
+  template: "{domain} {region} {metric} {year}"
+  keywords:
+    - market size
+
+# 향후 Metric별 최적 쿼리는 여기에 추가

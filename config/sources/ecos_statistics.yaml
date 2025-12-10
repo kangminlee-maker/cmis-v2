@@ -1,0 +1,58 @@
+---
+# ECOS 100대 통계지표 매핑
+# 2025-12-10: 하드코딩 제거
+
+statistics:
+  - stat_type: gdp
+    keyword: "GDP(명목, 계절조정)"
+    name: "GDP (명목, 계절조정)"
+    unit: "십억원"
+    keywords_match:
+      - gdp
+    keywords_exclude:
+      - growth
+      - real
+  
+  - stat_type: gdp_growth
+    keyword: "경제성장률(실질, 계절조정 전기대비)"
+    name: "경제성장률 (실질, 전기대비)"
+    unit: "%"
+    keywords_match:
+      - gdp
+      - growth
+  
+  - stat_type: gdp_real
+    keyword: "GDP(실질)"
+    name: "GDP (실질)"
+    unit: "십억원"
+    keywords_match:
+      - gdp
+      - real
+  
+  - stat_type: cpi
+    keyword: "소비자물가지수"
+    name: "소비자물가지수 (2020=100)"
+    unit: "지수"
+    keywords_match:
+      - cpi
+    keywords_exclude: []
+  
+  - stat_type: base_rate
+    keyword: "한국은행 기준금리"
+    name: "한국은행 기준금리"
+    unit: "%"
+    keywords_match:
+      - interest
+      - rate
+      - 금리
+  
+  - stat_type: call_rate
+    keyword: "콜금리(익일물)"
+    name: "콜금리 (익일물)"
+    unit: "%"
+    keywords_match:
+      - call
+      - rate
+
+# 향후 추가 지표는 여기에 추가
+# (코드 수정 불필요)

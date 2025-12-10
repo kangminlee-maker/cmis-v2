@@ -1,0 +1,51 @@
+---
+# Pattern: 외주 중심 모델
+# Family: Value Chain Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-outsourcing_model"
+  name: "외주 중심 모델"
+  family: "value_chain_patterns"
+  description: |
+    핵심 역량 외 대부분을 외주/파트너에게 위임.
+    자산 경량화, 유연성 확보가 장점.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        outsourcing_ratio: "high"
+
+  graph_structure:
+    requires:
+      - edge_type: "actor_partners_with_actor"
+        min_count: 3
+        note: "다수 파트너"
+
+  quantitative_bounds:
+    outsourcing_cost_ratio:
+      min: 0.40
+      max: 0.90
+      typical: [0.60, 0.80]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-asset_light_model"
+
+  conflicts_with:
+    - "PAT-vertical_integration"
+
+  benchmark_metrics:
+    - "MET-OPEX"
+
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+
+  required_capabilities: []
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 5
+
+  constraint_checks: []
+

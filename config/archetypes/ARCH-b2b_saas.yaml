@@ -1,0 +1,54 @@
+---
+# Context Archetype 2: B2B SaaS 시장
+# 2025-12-10: Phase 2
+
+archetype:
+  archetype_id: "ARCH-b2b_saas"
+  name: "B2B SaaS 시장"
+  description: |
+    기업 대상 SaaS (Software as a Service) 시장.
+    클라우드 기반, 구독형, 엔터프라이즈 소프트웨어.
+
+  # 판별 기준
+  criteria:
+    domain: "b2b_saas"
+    delivery_channel: "online"
+    resource_kind: "software_license"
+
+  # Expected Pattern Set
+  expected_patterns:
+    core:  # 90%+ 관찰
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.95
+        rationale: "SaaS의 기본 모델"
+
+      - pattern_id: "PAT-recurring_revenue"
+        weight: 0.95
+        rationale: "ARR/MRR 중심"
+
+      - pattern_id: "PAT-tiered_pricing"
+        weight: 0.90
+        rationale: "Starter/Professional/Enterprise"
+
+    common:  # 50-90% 관찰
+      - pattern_id: "PAT-land_and_expand"
+        weight: 0.70
+        rationale: "작게 시작 → 확장 전략"
+
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.65
+        rationale: "클라우드 기반, 자산 경량"
+
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.50
+        rationale: "Free trial → Paid (일부)"
+
+    rare:  # 10-50% 관찰
+      - pattern_id: "PAT-usage_based_pricing"
+        weight: 0.30
+        rationale: "사용량 기반 (특정 카테고리)"
+
+      - pattern_id: "PAT-platform_business_model"
+        weight: 0.20
+        rationale: "App Store/Marketplace 형태"
+

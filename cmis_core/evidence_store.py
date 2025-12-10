@@ -205,6 +205,13 @@ class SQLiteBackend(StorageBackend):
 class EvidenceStore:
     """Evidence 저장소
     
+    기능:
+    - Evidence 캐싱 (TTL 기반)
+    - Evidence 조회
+    - Hints 재활용 (v2.2)
+    """
+    """Evidence 저장소
+    
     역할:
     - Evidence 영구 저장 (EvidenceRecord → evidence_store)
     - 캐싱 (동일 요청 재사용)
@@ -310,6 +317,91 @@ class EvidenceStore:
         """만료된 항목 삭제 (SQLite 전용)"""
         if isinstance(self.backend, SQLiteBackend):
             self.backend.cleanup_expired()
+    
+    # ========================================
+    # Hints 재활용 (v2.2)
+    # ========================================
+    
+    def query_hints(
+        self,
+        domain_id: Optional[str] = None,
+        region: Optional[str] = None,
+        metric_pattern: Optional[str] = None,
+        min_confidence: float = 0.4
+    ) -> List[Dict[str, Any]]:
+        """과거 검색에서 수집한 hints 조회
+        
+        Args:
+            domain_id: Domain 필터
+            region: Region 필터
+            metric_pattern: Metric 패턴 ("MET-*", "MET-TAM" 등)
+            min_confidence: 최소 신뢰도
+        
+        Returns:
+            Hint 리스트 (신뢰도 기준 정렬)
+        """
+        all_hints = []
+        
+        # MemoryBackend에서 hints 추출
+        if hasattr(self.backend, '_data'):
+            for key, entry in self.backend._data.items():
+                bundle_dict = entry.get("value")
+                
+                if not bundle_dict:
+                    continue
+                
+                # Evidence에서 hints 추출
+                for evidence in bundle_dict.get("evidence_list", []):
+                    hints = evidence.get("metadata", {}).get("hints", [])
+                    
+                    for hint in hints:
+                        # 필터링
+                        if self._match_hint_filter(
+                            hint,
+                            domain_id,
+                            region,
+                            metric_pattern,
+                            min_confidence
+                        ):
+                            all_hints.append(hint)
+        
+        # 신뢰도 기준 정렬
+        all_hints.sort(key=lambda h: h.get("confidence", 0), reverse=True)
+        
+        return all_hints
+    
+    def _match_hint_filter(
+        self,
+        hint: Dict,
+        domain_id: Optional[str],
+        region: Optional[str],
+        metric_pattern: Optional[str],
+        min_confidence: float
+    ) -> bool:
+        """Hint 필터 매칭"""
+        # Confidence
+        if hint.get("confidence", 0) < min_confidence:
+            return False
+        
+        # Domain
+        if domain_id and hint.get("domain_id") != domain_id:
+            return False
+        
+        # Region
+        if region and hint.get("region") != region:
+            return False
+        
+        # Metric
+        if metric_pattern:
+            hint_metric = hint.get("metric_id", "")
+            
+            if metric_pattern == "MET-*":
+                if not hint_metric.startswith("MET-"):
+                    return False
+            elif hint_metric != metric_pattern:
+                return False
+        
+        return True
     
     # ========================================
     # 캐시 키 생성

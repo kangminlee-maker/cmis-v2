@@ -1,0 +1,55 @@
+---
+# Pattern: 사용량 기반 가격
+# Family: Revenue Architecture Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-usage_based_pricing"
+  name: "사용량 기반 가격 모델"
+  family: "revenue_architecture_patterns"
+  description: |
+    실제 사용량에 따라 과금하는 수익 구조.
+    Pay-as-you-go, 사용한 만큼만 지불.
+    클라우드, API, 유틸리티 서비스 등.
+
+  trait_constraints:
+    money_flow:
+      required_traits:
+        pricing_model: "usage_based"
+
+  graph_structure:
+    requires:
+      - node_type: "money_flow"
+        min_count: 1
+        traits:
+          pricing_model: "usage_based"
+
+  quantitative_bounds:
+    revenue_variability:
+      min: 0.30
+      max: 0.80
+      typical: [0.40, 0.60]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-subscription_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-Revenue"
+    - "MET-ARPU"
+
+  suited_for_contexts:
+    - "ARCH-cloud_infrastructure"
+    - "ARCH-api_service"
+
+  required_capabilities:
+    - technology_domain: "platform_tech"
+
+  required_assets:
+    data_assets:
+      customer_data_volume: 1000
+
+  constraint_checks: []
+

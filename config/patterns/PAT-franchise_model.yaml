@@ -1,0 +1,52 @@
+---
+# Pattern: 프랜차이즈 모델
+# Family: Business Model Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-franchise_model"
+  name: "프랜차이즈 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    가맹점 기반 확장 모델.
+    로열티/가맹비가 주 수익원, 브랜드 일관성 유지.
+
+  trait_constraints:
+    contract:
+      optional_traits:
+        contract_type: "franchise"
+
+  graph_structure:
+    requires:
+      - node_type: "contract"
+        min_count: 3
+        note: "최소 가맹점 수"
+
+  quantitative_bounds:
+    royalty_rate:
+      min: 0.03
+      max: 0.15
+      typical: [0.05, 0.10]
+      source: "pattern_benchmarks"
+
+  composes_with: []
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-Royalty_expenses"
+    - "MET-Revenue"
+
+  suited_for_contexts:
+    - "ARCH-retail_offline"
+
+  required_capabilities:
+    - domain_expertise: "retail"
+
+  required_assets:
+    brand_awareness_level:
+      - "medium"
+      - "high"
+      - "dominant"
+
+  constraint_checks: []
+

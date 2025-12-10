@@ -1,0 +1,53 @@
+---
+# Pattern: Land and Expand (확장 전략)
+# Family: Growth Mechanism Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-land_and_expand"
+  name: "Land and Expand 전략"
+  family: "growth_mechanism_patterns"
+  description: |
+    작은 계약으로 시작 → 조직 내 확산/업셀.
+    B2B SaaS에서 흔함, expansion revenue가 핵심.
+
+  trait_constraints:
+    contract:
+      optional_traits:
+        expansion_clause: true
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 5
+        note: "B2B 고객"
+
+  quantitative_bounds:
+    expansion_revenue_ratio:
+      min: 0.30
+      max: 0.80
+      typical: [0.40, 0.60]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-subscription_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-Revenue"
+    - "MET-ARPU"
+
+  suited_for_contexts:
+    - "ARCH-b2b_saas"
+
+  required_capabilities:
+    - domain_expertise: null
+      maturity_level: "production_ready"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 10
+
+  constraint_checks: []
+

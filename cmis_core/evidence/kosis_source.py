@@ -2,23 +2,27 @@
 
 KOSIS (국가통계포털) OpenAPI를 통한 Evidence 수집
 
-✅ 구현 완료 (2025-12-09):
-- KOSIS 서비스 정상 작동 중
-- API 호출 성공 (인구 통계 검증)
-- JavaScript JSON 파싱 구현
-- JSON 형식 사용 (SDMX 대신)
+구현 완료 (2025-12-09 ~ 2025-12-10):
+- 2개 통계표 매핑 (인구, 가구)
+- 17개 지역 코드 지원 (전국 + 시도별)
+- 시계열 데이터 조회 (start_year ~ end_year)
+- 동적 파라미터 처리 (objL1, objL2, itmId)
+- JavaScript JSON 파싱 안정성 개선
 
 검증 결과:
 - 2024년 전국 인구: 51,217,221명
 - Official tier, Confidence: 0.95
+- 지역별 조회: 서울, 부산, 경기 등
+- 시계열 조회: 2020-2024
 
 핵심 파라미터:
 - loadGubun=2 (필수!)
-- itmId='T2+' (+ 필수!)
-- objL1='00+' (전국 합계)
+- itmId (통계표별 동적 매핑)
+- objL1 (지역 코드, REGION_CODES 참조)
 - objL2='ALL' (필수!)
+- prdSe (Y=년, Q=분기, M=월)
 
-형식: JSON (이유: 단순성, Python 호환성)
+형식: JSON (JavaScript JSON 파싱)
 """
 
 from __future__ import annotations
@@ -26,6 +30,8 @@ from __future__ import annotations
 import os
 import re
 import uuid
+import yaml
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
@@ -51,29 +57,83 @@ class KOSISSource(BaseDataSource):
     기능:
     - 인구 통계 조회
     - 가구 통계 조회
-    - 소득 분포 조회
+    - 시계열 데이터 조회
+    - 지역별 데이터 조회 (전국, 17개 시도)
+    
+    지원 통계표:
+    - DT_1B04006: 주민등록인구
+    - DT_1B04005N: 가구 및 세대 현황
     
     API 문서: https://kosis.kr/openapi/
     """
     
-    # 주요 통계표 ID
-    STAT_TABLES = {
-        "population": {
-            "orgId": "101",  # 통계청
-            "tblId": "DT_1B04006",  # 주민등록인구
-            "name": "주민등록인구 (시군구/성/연령)"
-        },
-        "population_annual": {
-            "orgId": "101",
-            "tblId": "DT_1B040M1",
-            "name": "주민등록연앙인구"
-        },
-        "household": {
-            "orgId": "101",
-            "tblId": "DT_1B04005",  # 가구 통계 (예시)
-            "name": "가구 통계"
-        }
-    }
+    # YAML에서 로딩 (하드코딩 제거)
+    _tables_cache = None
+    _regions_cache = None
+    
+    @classmethod
+    def _load_stat_tables(cls) -> Dict:
+        """config/sources/kosis_tables.yaml 로딩"""
+        if cls._tables_cache is not None:
+            return cls._tables_cache
+        
+        config_path = Path(__file__).parent.parent.parent / "config" / "sources" / "kosis_tables.yaml"
+        
+        if not config_path.exists():
+            # Fallback: 기본값
+            return {
+                "population": {
+                    "orgId": "101",
+                    "tblId": "DT_1B04006",
+                    "itmId": "T2",
+                    "prdSe": "Y"
+                }
+            }
+        
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        
+        # 리스트 → 딕셔너리 변환
+        tables = {}
+        for table in data.get("tables", []):
+            stat_type = table.pop("stat_type")
+            tables[stat_type] = table
+        
+        cls._tables_cache = tables
+        return tables
+    
+    @classmethod
+    def _load_region_codes(cls) -> Dict:
+        """config/sources/kosis_regions.yaml 로딩"""
+        if cls._regions_cache is not None:
+            return cls._regions_cache
+        
+        config_path = Path(__file__).parent.parent.parent / "config" / "sources" / "kosis_regions.yaml"
+        
+        if not config_path.exists():
+            # Fallback
+            return {"KR": "00", "전국": "00"}
+        
+        with open(config_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        
+        # 리스트 → 딕셔너리 변환
+        codes = {}
+        for region in data.get("regions", []):
+            codes[region["name"]] = region["code"]
+        
+        cls._regions_cache = codes
+        return codes
+    
+    @property
+    def STAT_TABLES(self):
+        """동적 로딩"""
+        return self._load_stat_tables()
+    
+    @property
+    def REGION_CODES(self):
+        """동적 로딩"""
+        return self._load_region_codes()
     
     def __init__(
         self,
@@ -147,7 +207,8 @@ class KOSISSource(BaseDataSource):
             data = self._fetch_stat_data(
                 stat_info["orgId"],
                 stat_info["tblId"],
-                request.context
+                request.context,
+                stat_info
             )
         except requests.Timeout:
             raise SourceTimeoutError(f"KOSIS API timeout")
@@ -177,6 +238,7 @@ class KOSISSource(BaseDataSource):
                 "orgId": stat_info["orgId"],
                 "tblId": stat_info["tblId"],
                 "stat_name": stat_info["name"],
+                "itmId": stat_info.get("itmId"),
                 "context": request.context
             },
             retrieved_at=datetime.now(timezone.utc).isoformat(),
@@ -210,7 +272,8 @@ class KOSISSource(BaseDataSource):
         self,
         org_id: str,
         tbl_id: str,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
+        stat_info: Optional[Dict[str, Any]] = None
     ) -> Optional[List[Dict]]:
         """KOSIS 통계표 데이터 조회
         
@@ -218,33 +281,56 @@ class KOSISSource(BaseDataSource):
             org_id: 기관 ID (예: "101" = 통계청)
             tbl_id: 통계표 ID (예: "DT_1B04006")
             context: 컨텍스트 (year, region 등)
+            stat_info: 통계표 메타 정보 (itmId, prdSe 등)
         
         Returns:
             통계 데이터 리스트 (JavaScript JSON → Python dict 변환)
         """
+        # 기본 파라미터
         params = {
             'method': 'getList',
             'apiKey': self.api_key,
             'orgId': org_id,
             'tblId': tbl_id,
-            'itmId': 'T2+',  # 인구수 항목 (+ 필수!)
-            'objL1': '00+',  # 전국 합계 (00 = 전국)
-            'objL2': 'ALL',  # 전체 (필수!)
-            'objL3': '',
-            'objL4': '',
-            'objL5': '',
-            'objL6': '',
-            'objL7': '',
-            'objL8': '',
             'format': 'json',
-            'jsonVD': 'Y',  # Value Description
-            'prdSe': 'Y',  # 연도 주기
-            'loadGubun': '2',  # 필수! (2 = 조회구분)
+            'jsonVD': 'Y',
+            'loadGubun': '2',
         }
         
-        # Year 추가
+        # 통계표 정보에서 파라미터 설정
+        if stat_info:
+            params['itmId'] = stat_info.get('itmId', 'T2') + '+'
+            params['prdSe'] = stat_info.get('prdSe', 'Y')
+        else:
+            params['itmId'] = 'T2+'
+            params['prdSe'] = 'Y'
+        
+        # 지역 코드 설정 (objL1)
+        region = context.get("region", "KR")
+        area = context.get("area", region)
+        region_code = self.REGION_CODES.get(area, "00")
+        params['objL1'] = region_code + '+'
+        
+        # objL2~objL8 설정
+        params['objL2'] = context.get('objL2', 'ALL')
+        params['objL3'] = context.get('objL3', '')
+        params['objL4'] = context.get('objL4', '')
+        params['objL5'] = context.get('objL5', '')
+        params['objL6'] = context.get('objL6', '')
+        params['objL7'] = context.get('objL7', '')
+        params['objL8'] = context.get('objL8', '')
+        
+        # 시계열 파라미터 설정
         year = context.get("year")
-        if year:
+        start_year = context.get("start_year")
+        end_year = context.get("end_year")
+        
+        if start_year and end_year:
+            # 시계열 조회
+            params['startPrdDe'] = str(start_year)
+            params['endPrdDe'] = str(end_year)
+        elif year:
+            # 단일 연도 조회
             params['startPrdDe'] = str(year)
             params['endPrdDe'] = str(year)
         else:
@@ -300,22 +386,38 @@ class KOSISSource(BaseDataSource):
         import re
         import json
         
+        if not text or not text.strip():
+            raise SourceNotAvailableError("Empty response from KOSIS API")
+        
         # {key:value} → {"key":value} 변환
         # 주의: 값 안의 콤마는 건드리지 않도록
         text_fixed = re.sub(r'([{,])(\w+):', r'\1"\2":', text)
         
         try:
-            return json.loads(text_fixed)
+            result = json.loads(text_fixed)
+            
+            # 빈 결과 체크
+            if isinstance(result, list) and len(result) == 0:
+                return []
+            
+            # 에러 응답 체크 (dict with err field)
+            if isinstance(result, dict):
+                if 'err' in result and result.get('err') != '0':
+                    err_msg = result.get('errMsg', 'Unknown error')
+                    raise SourceNotAvailableError(f"KOSIS API error: {err_msg}")
+            
+            return result
+            
         except json.JSONDecodeError as e:
             raise SourceNotAvailableError(
-                f"Failed to parse KOSIS JSON: {e}"
+                f"Failed to parse KOSIS JSON: {e}\nText: {text[:200]}"
             )
     
     def _parse_stat_data(
         self,
         data: Any,
         request: EvidenceRequest
-    ) -> Optional[float]:
+    ) -> Any:
         """KOSIS 통계 데이터 파싱
         
         Args:
@@ -323,7 +425,7 @@ class KOSISSource(BaseDataSource):
             request: EvidenceRequest
         
         Returns:
-            파싱된 값 (None이면 실패)
+            파싱된 값 (시계열이면 list, 단일값이면 float, None이면 실패)
         """
         # KOSIS는 list 반환
         # 예: [{"C1": "2024", "DT": "50000000", "UNIT_NM": "명"}, ...]
@@ -334,7 +436,39 @@ class KOSISSource(BaseDataSource):
         if not data:
             return None
         
-        # 첫 번째 항목의 DT (Data) 값 사용
+        # 시계열 여부 확인 (start_year, end_year context)
+        is_timeseries = (
+            request.context.get("start_year") is not None and
+            request.context.get("end_year") is not None
+        )
+        
+        if is_timeseries:
+            # 시계열 데이터: 연도별로 그룹화하여 합계만 추출
+            # KOSIS는 objL2='ALL'일 때 연령대별 등 세부 항목 반환
+            # 첫 번째 항목이 보통 합계
+            year_data = {}
+            
+            for item in data:
+                prd_de = item.get('PRD_DE', '')
+                dt_value = item.get('DT', '')
+                
+                # 첫 번째 항목만 사용 (합계)
+                if prd_de and prd_de not in year_data:
+                    try:
+                        value = float(dt_value.replace(',', ''))
+                        year_data[prd_de] = {
+                            'period': prd_de,
+                            'value': value,
+                            'unit': item.get('UNIT_NM', '')
+                        }
+                    except (ValueError, AttributeError):
+                        continue
+            
+            # 정렬된 시계열 리스트 반환
+            timeseries = [year_data[year] for year in sorted(year_data.keys())]
+            return timeseries if timeseries else None
+        
+        # 단일 시점 데이터: 첫 번째 항목 (합계) 사용
         first_item = data[0]
         dt_value = first_item.get('DT', '')
         
@@ -349,38 +483,31 @@ class KOSISSource(BaseDataSource):
         self,
         request: EvidenceRequest
     ) -> Optional[str]:
-        """통계 유형 결정
-        
-        Metric ID 또는 context에서 유형 추론
+        """통계 유형 결정 (패턴 매칭, YAML 기반)
         
         Args:
             request: EvidenceRequest
         
         Returns:
-            stat_type ("population", "household", etc.) or None
+            stat_type or None
         """
-        # Metric ID 기반
-        if request.metric_id:
-            metric_lower = request.metric_id.lower()
+        # Context 명시적 지정
+        if "stat_type" in request.context:
+            return request.context["stat_type"]
+        
+        # YAML의 keywords 기반 매칭
+        search_text = f"{request.metric_id or ''} {request.context}".lower()
+        
+        for stat_type, info in self.STAT_TABLES.items():
+            keywords = info.get("keywords", [])
             
-            if "n_customers" in metric_lower or "population" in metric_lower:
-                return "population"
-            
-            if "household" in metric_lower or "family" in metric_lower:
-                return "household"
+            if any(kw in search_text for kw in keywords):
+                return stat_type
         
-        # Context 기반
-        context_str = str(request.context).lower()
-        
-        if "population" in context_str or "인구" in context_str:
-            return "population"
-        
-        if "household" in context_str or "가구" in context_str:
-            return "household"
-        
-        # 기본: 인구 통계
+        # Fallback
         if request.context.get("region") == "KR":
             return "population"
         
         return None
+
 

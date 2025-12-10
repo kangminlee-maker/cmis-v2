@@ -1,0 +1,88 @@
+---
+# Pattern 6: 플랫폼 비즈니스 모델
+# Family: Business Model Patterns (추가)
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-platform_business_model"
+  name: "플랫폼 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    공급자-플랫폼-수요자의 3자 구조를 가지는 비즈니스 모델.
+    양면/다면 시장, 수수료 기반 수익, 네트워크 효과가 핵심.
+
+  # Trait 제약
+  trait_constraints:
+    actor:
+      required_traits:
+        institution_type: "online_platform"
+      optional_traits:
+        kind: "company"
+
+    money_flow:
+      optional_traits:
+        revenue_model:
+          - "usage_based"
+          - "subscription"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+        traits:
+          institution_type: "online_platform"
+
+  # 정량 제약
+  quantitative_bounds:
+    platform_commission_rate:
+      min: 0.05
+      max: 0.30
+      typical: [0.10, 0.20]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    gross_margin:
+      min: 0.50
+      max: 0.95
+      typical: [0.70, 0.85]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-network_effects"
+    - "PAT-marketplace_model"
+
+  conflicts_with: []
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-Platform_commission_fees"
+    - "MET-Gross_margin"
+    - "MET-N_customers"
+
+  # Context Archetype
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+    - "ARCH-platform_global"
+
+  # Execution Fit 요구사항
+  required_capabilities:
+    - technology_domain: "platform_tech"
+      maturity_level: "production_ready"
+    - scale_tier: "growth_stage"
+
+  required_assets:
+    channels:
+      online: true
+      min_reach: 10000
+
+    data_assets:
+      customer_data_volume: 5000
+
+  constraint_checks:
+    - "min_monthly_revenue_50K"
+

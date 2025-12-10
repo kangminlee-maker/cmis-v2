@@ -1,0 +1,86 @@
+---
+# Pattern 2: 자산 경량화 모델
+# Family: Value Chain Patterns
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-asset_light_model"
+  name: "자산 경량화 모델"
+  family: "value_chain_patterns"
+  description: |
+    물리적 자산을 최소화하고 변동비 중심으로 운영하는 가치사슬 구조.
+    디지털 서비스, 플랫폼, 외주 중심 비즈니스에서 관찰됨.
+
+  # Trait 제약
+  trait_constraints:
+    resource:
+      required_traits:
+        kind: "digital_service"
+      optional_traits:
+        marginal_cost_profile: "low"
+
+    actor:
+      optional_traits:
+        inventory_risk: "low"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "resource"
+        min_count: 1
+        traits:
+          kind: "digital_service"
+
+  # 정량 제약
+  quantitative_bounds:
+    capex_to_revenue:
+      min: 0.0
+      max: 0.20
+      typical: [0.05, 0.15]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    gross_margin:
+      min: 0.50
+      max: 0.95
+      typical: [0.70, 0.90]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-subscription_model"
+    - "PAT-platform_business_model"
+
+  conflicts_with:
+    - "PAT-capital_intensive_model"
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-CapEx"
+    - "MET-Gross_margin"
+    - "MET-Operating_margin"
+
+  # Context Archetype
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+    - "ARCH-saas_global"
+
+  # Execution Fit 요구사항
+  required_capabilities:
+    - technology_domain: "platform_tech"
+      maturity_level: "production_ready"
+
+  required_assets:
+    channels:
+      online: true
+
+    organizational_assets:
+      org_maturity:
+        - "startup"
+        - "scaleup"
+
+  constraint_checks: []
+

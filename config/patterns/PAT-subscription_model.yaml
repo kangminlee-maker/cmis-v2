@@ -1,0 +1,102 @@
+---
+# Pattern 1: 구독형 비즈니스 모델
+# Family: Business Model Patterns
+# 2025-12-10: Phase 1 Core Infrastructure
+
+pattern:
+  pattern_id: "PAT-subscription_model"
+  name: "구독형 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    정기적인 결제 구조를 가지는 비즈니스 모델.
+    월/연 단위 반복 수익이 핵심이며, 고객 유지(Retention)가 중요.
+    SaaS, 구독 서비스, 멤버십 등에서 관찰됨.
+
+  # Trait 제약
+  trait_constraints:
+    money_flow:
+      required_traits:
+        revenue_model: "subscription"
+        payment_recurs: true
+      optional_traits:
+        recurrence:
+          - "monthly"
+          - "yearly"
+          - "quarterly"
+
+  # Graph 구조 제약
+  graph_structure:
+    requires:
+      - node_type: "money_flow"
+        min_count: 1
+        traits:
+          revenue_model: "subscription"
+
+  # 정량 제약 (Benchmark)
+  quantitative_bounds:
+    churn_rate:
+      min: 0.01
+      max: 0.15
+      typical: [0.03, 0.08]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    gross_margin:
+      min: 0.40
+      max: 0.95
+      typical: [0.60, 0.85]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+    ltv_cac_ratio:
+      min: 1.0
+      typical: [3.0, 5.0]
+      source: "pattern_benchmarks"
+      unit: "ratio"
+
+  # Pattern 관계
+  composes_with:
+    - "PAT-freemium_model"
+    - "PAT-tiered_pricing"
+    - "PAT-network_effects"
+
+  conflicts_with:
+    - "PAT-transaction_model"
+
+  specializes: null
+
+  # Benchmark Metrics
+  benchmark_metrics:
+    - "MET-Churn_rate"
+    - "MET-Gross_margin"
+    - "MET-LTV"
+    - "MET-CAC"
+    - "MET-Payback_period"
+    - "MET-ARPU"
+
+  # Context Archetype 적합성
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+    - "ARCH-saas_global"
+    - "ARCH-media_streaming"
+
+  # Execution Fit 요구사항
+  required_capabilities:
+    - technology_domain: "platform_tech"
+      maturity_level: "mvp"
+    - deployment_type: "cloud_native"
+
+  required_assets:
+    channels:
+      online: true
+      min_reach: 1000
+
+    brand_awareness_level:
+      - "low"
+      - "medium"
+      - "high"
+      - "dominant"
+
+  constraint_checks:
+    - "min_monthly_revenue_10K"
+

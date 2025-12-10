@@ -1,0 +1,60 @@
+---
+# Pattern: 계층 가격 구조
+# Family: Revenue Architecture Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-tiered_pricing"
+  name: "계층 가격 구조"
+  family: "revenue_architecture_patterns"
+  description: |
+    여러 가격 등급을 제공하는 수익 구조.
+    Basic/Pro/Enterprise 등, 고객 세분화 및 업셀 기회.
+
+  trait_constraints:
+    resource:
+      optional_traits:
+        pricing_tiers: "multiple"
+
+  graph_structure:
+    requires:
+      - node_type: "resource"
+        min_count: 2
+        note: "최소 2개 등급"
+
+  quantitative_bounds:
+    tier_count:
+      min: 2
+      max: 5
+      typical: [3, 4]
+      source: "pattern_benchmarks"
+
+    premium_tier_ratio:
+      min: 0.10
+      max: 0.40
+      typical: [0.20, 0.30]
+      source: "pattern_benchmarks"
+      note: "프리미엄 등급 고객 비율"
+
+  composes_with:
+    - "PAT-subscription_model"
+    - "PAT-freemium_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-ARPU"
+    - "MET-Revenue"
+
+  suited_for_contexts:
+    - "ARCH-b2b_saas"
+    - "ARCH-digital_service_KR"
+
+  required_capabilities: []
+
+  required_assets:
+    channels:
+      online: true
+
+  constraint_checks: []
+

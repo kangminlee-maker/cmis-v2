@@ -131,6 +131,7 @@ class PatternEngine:
             
             for clue in clues:
                 gaps.append(GapCandidate(
+                    pattern_id="PAT-unknown",  # v1.1에서 추가된 필드
                     description=clue,
                     related_pattern_ids=["PAT-subscription_model", "PAT-platform_business_model"],
                     evidence={

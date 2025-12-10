@@ -1,0 +1,62 @@
+---
+# Pattern: 바이럴 성장
+# Family: Growth Mechanism Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-viral_growth"
+  name: "바이럴 성장 메커니즘"
+  family: "growth_mechanism_patterns"
+  description: |
+    사용자가 새 사용자를 초대/추천하는 바이럴 루프.
+    K-factor > 1이면 exponential growth.
+
+  trait_constraints:
+    event:
+      optional_traits:
+        event_type:
+          - "referral"
+          - "invitation"
+          - "share"
+
+  graph_structure:
+    requires:
+      - node_type: "event"
+        min_count: 10
+        note: "바이럴 이벤트"
+
+  quantitative_bounds:
+    k_factor:
+      min: 0.50
+      max: 3.00
+      typical: [0.80, 1.50]
+      source: "pattern_benchmarks"
+
+    viral_coefficient:
+      min: 0.10
+      max: 0.50
+      typical: [0.20, 0.35]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-network_effects"
+    - "PAT-freemium_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-N_customers"
+
+  suited_for_contexts:
+    - "ARCH-social_network"
+    - "ARCH-consumer_app"
+
+  required_capabilities:
+    - technology_domain: "platform_tech"
+
+  required_assets:
+    channels:
+      online: true
+
+  constraint_checks: []
+

@@ -66,7 +66,7 @@ class BaseSearchSource(BaseDataSource):
     # ========================================
     
     def build_search_query(self, request: EvidenceRequest) -> str:
-        """검색 쿼리 구성 (공통)"""
+        """검색 쿼리 구성 (개선)"""
         parts = []
         
         # domain_id
@@ -81,10 +81,21 @@ class BaseSearchSource(BaseDataSource):
             region_map = {"KR": "Korea", "US": "United States", "JP": "Japan"}
             parts.append(region_map.get(region, region))
         
-        # metric_id
+        # metric_id - 더 구체적인 키워드
         if request.metric_id:
-            metric_word = request.metric_id.replace("MET-", "").replace("_", " ").lower()
-            parts.append(metric_word)
+            metric_id = request.metric_id.lower()
+            
+            # Revenue, TAM 등은 "market size" 추가
+            if "revenue" in metric_id or "tam" in metric_id:
+                parts.append("market size")
+            
+            if "revenue" in metric_id:
+                parts.append("revenue")
+            elif "tam" in metric_id:
+                parts.append("total addressable market")
+            else:
+                metric_word = request.metric_id.replace("MET-", "").replace("_", " ").lower()
+                parts.append(metric_word)
         
         # year
         year = request.context.get("year")
@@ -119,6 +130,77 @@ class BaseSearchSource(BaseDataSource):
             numbers.extend(extracted)
         
         return numbers
+    
+    def extract_all_evidence_with_hints(
+        self,
+        results: List[Dict[str, Any]],
+        request: EvidenceRequest
+    ) -> Dict[str, Any]:
+        """모든 Evidence 추출 (primary + hints)
+        
+        Args:
+            results: 검색 결과
+            request: Evidence 요청
+        
+        Returns:
+            {
+                "primary": {"value": float, "confidence": float},
+                "all_numbers": [float, ...],
+                "hints": [
+                    {
+                        "value": float,
+                        "context": str,
+                        "snippet": str,
+                        "url": str,
+                        "confidence": float
+                    }
+                ]
+            }
+        """
+        all_numbers = []
+        hints = []
+        
+        for i, result in enumerate(results):
+            # 텍스트 추출
+            if 'full_content' in result:
+                text = result['full_content']
+            elif 'body' in result:
+                text = result['body']
+            else:
+                text = result.get('snippet', '')
+            
+            # 숫자 추출
+            result_numbers = self.extract_numbers_from_text(text)
+            all_numbers.extend(result_numbers)
+            
+            # Hint로 저장
+            for num in result_numbers:
+                hints.append({
+                    "value": num,
+                    "context": result.get('title', '')[:100],
+                    "snippet": text[:200],
+                    "source_url": result.get('link', '') or result.get('href', ''),
+                    "confidence": 0.5,  # Hint 기본 신뢰도
+                    "result_index": i,
+                    "metric_id": request.metric_id,
+                    "domain_id": request.context.get("domain_id", ""),
+                    "region": request.context.get("region", "")
+                })
+        
+        # Primary (consensus)
+        if all_numbers:
+            primary_value, primary_confidence = self.calculate_consensus(all_numbers)
+        else:
+            primary_value, primary_confidence = None, 0.0
+        
+        return {
+            "primary": {
+                "value": primary_value,
+                "confidence": primary_confidence
+            },
+            "all_numbers": all_numbers,
+            "hints": hints
+        }
     
     def extract_numbers_from_text(self, text: str) -> List[float]:
         """텍스트에서 숫자 추출 (공통)

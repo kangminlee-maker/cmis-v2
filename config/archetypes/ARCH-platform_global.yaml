@@ -1,0 +1,57 @@
+---
+# Context Archetype 3: 글로벌 플랫폼 시장
+# 2025-12-10: Phase 2
+
+archetype:
+  archetype_id: "ARCH-platform_global"
+  name: "글로벌 플랫폼 시장"
+  description: |
+    글로벌 디지털 플랫폼 시장.
+    양면/다면 시장, 네트워크 효과, 규모의 경제.
+
+  # 판별 기준
+  criteria:
+    institution_type: "online_platform"
+    delivery_channel: "online"
+
+  # Expected Pattern Set
+  expected_patterns:
+    core:  # 90%+ 관찰
+      - pattern_id: "PAT-platform_business_model"
+        weight: 0.95
+        rationale: "플랫폼의 핵심 모델"
+
+      - pattern_id: "PAT-network_effects"
+        weight: 0.90
+        rationale: "네트워크 효과가 핵심"
+
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.85
+        rationale: "자산 경량, 확장성"
+
+    common:  # 50-90% 관찰
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.70
+        rationale: "구독 요소 (일부)"
+
+      - pattern_id: "PAT-marketplace_model"
+        weight: 0.65
+        rationale: "중개/거래 플랫폼"
+
+      - pattern_id: "PAT-winner_take_all"
+        weight: 0.60
+        rationale: "네트워크 효과 → 승자 독식"
+
+      - pattern_id: "PAT-market_concentration"
+        weight: 0.55
+        rationale: "상위 플랫폼 집중"
+
+    rare:  # 10-50% 관찰
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.40
+        rationale: "일부 플랫폼만 무료 제공"
+
+      - pattern_id: "PAT-viral_growth"
+        weight: 0.35
+        rationale: "초기 성장 전략"
+

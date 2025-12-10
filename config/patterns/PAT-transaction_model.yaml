@@ -1,0 +1,62 @@
+---
+# Pattern: 거래형 비즈니스 모델
+# Family: Business Model Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-transaction_model"
+  name: "거래형 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    일회성 거래 중심의 비즈니스 모델.
+    구독과 달리 거래당 수익 발생, 재구매율이 중요.
+    E-commerce, 거래 중개 등에서 관찰.
+
+  trait_constraints:
+    money_flow:
+      required_traits:
+        revenue_model: "one_off"
+        payment_recurs: false
+
+  graph_structure:
+    requires:
+      - node_type: "money_flow"
+        min_count: 1
+        traits:
+          revenue_model: "one_off"
+
+  quantitative_bounds:
+    repeat_purchase_rate:
+      min: 0.10
+      max: 0.80
+      typical: [0.30, 0.60]
+      source: "pattern_benchmarks"
+
+    gross_margin:
+      min: 0.20
+      max: 0.70
+      typical: [0.30, 0.50]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-marketplace_model"
+
+  conflicts_with:
+    - "PAT-subscription_model"
+
+  benchmark_metrics:
+    - "MET-Revenue"
+    - "MET-Gross_margin"
+
+  suited_for_contexts:
+    - "ARCH-ecommerce_KR"
+
+  required_capabilities:
+    - maturity_level: "mvp"
+
+  required_assets:
+    channels:
+      online: true
+
+  constraint_checks: []
+

@@ -1,0 +1,65 @@
+---
+# Pattern: 프리미엄 모델
+# Family: Business Model Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-freemium_model"
+  name: "프리미엄 비즈니스 모델"
+  family: "business_model_patterns"
+  description: |
+    무료 버전 제공 후 유료 전환 유도 모델.
+    Free → Premium 전환율이 핵심 지표.
+    SaaS, 앱, 게임 등에서 흔함.
+
+  trait_constraints:
+    resource:
+      optional_traits:
+        pricing_model:
+          - "freemium"
+          - "free_trial"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 10
+        note: "최소 사용자 규모"
+
+  quantitative_bounds:
+    free_to_paid_conversion:
+      min: 0.01
+      max: 0.15
+      typical: [0.02, 0.05]
+      source: "pattern_benchmarks"
+
+    free_user_ratio:
+      min: 0.70
+      max: 0.99
+      typical: [0.85, 0.95]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-subscription_model"
+    - "PAT-tiered_pricing"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-N_customers"
+    - "MET-Revenue"
+
+  suited_for_contexts:
+    - "ARCH-digital_service_KR"
+    - "ARCH-saas_global"
+
+  required_capabilities:
+    - technology_domain: "platform_tech"
+
+  required_assets:
+    channels:
+      online: true
+      min_reach: 5000
+
+  constraint_checks:
+    - "min_free_users_1000"
+

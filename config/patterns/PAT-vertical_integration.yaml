@@ -1,0 +1,55 @@
+---
+# Pattern: 수직 통합
+# Family: Value Chain Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-vertical_integration"
+  name: "수직 통합 모델"
+  family: "value_chain_patterns"
+  description: |
+    가치사슬의 여러 단계를 직접 소유/운영하는 구조.
+    공급부터 유통까지 통합, 마진 확보 및 품질 통제.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        value_chain_position:
+          - "upstream"
+          - "midstream"
+          - "downstream"
+
+  graph_structure:
+    requires:
+      - edge_type: "actor_owns_actor"
+        min_count: 2
+        note: "가치사슬 다단계 소유"
+
+  quantitative_bounds:
+    vertical_integration_ratio:
+      min: 0.50
+      max: 1.00
+      typical: [0.70, 0.90]
+      source: "pattern_benchmarks"
+
+  composes_with: []
+  conflicts_with:
+    - "PAT-outsourcing_model"
+
+  benchmark_metrics:
+    - "MET-Gross_margin"
+    - "MET-COGS"
+
+  suited_for_contexts:
+    - "ARCH-manufacturing"
+
+  required_capabilities:
+    - scale_tier: "growth_stage"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 50
+
+  constraint_checks:
+    - "min_capital_10M"
+

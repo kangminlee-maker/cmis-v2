@@ -1,0 +1,61 @@
+---
+# Pattern: 자본 집약형 모델
+# Family: Value Chain Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-capital_intensive_model"
+  name: "자본 집약형 모델"
+  family: "value_chain_patterns"
+  description: |
+    높은 초기 투자와 고정 자산이 필요한 구조.
+    제조, 인프라, 물류 등 자산 집약 산업.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        marginal_cost_profile: "high"
+        inventory_risk: "high"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+
+  quantitative_bounds:
+    capex_to_revenue:
+      min: 0.20
+      max: 2.00
+      typical: [0.40, 1.00]
+      source: "pattern_benchmarks"
+
+    gross_margin:
+      min: 0.10
+      max: 0.50
+      typical: [0.20, 0.40]
+      source: "pattern_benchmarks"
+
+  composes_with:
+    - "PAT-vertical_integration"
+
+  conflicts_with:
+    - "PAT-asset_light_model"
+
+  benchmark_metrics:
+    - "MET-CapEx"
+    - "MET-Gross_margin"
+
+  suited_for_contexts:
+    - "ARCH-manufacturing"
+    - "ARCH-infrastructure"
+
+  required_capabilities:
+    - scale_tier: "enterprise"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 100
+
+  constraint_checks:
+    - "min_capital_100M"
+

@@ -1,0 +1,73 @@
+---
+# World Bank 지표 매핑
+# 2025-12-10: OFFICIAL Tier 확장 (글로벌)
+
+indicators:
+  - stat_type: gdp
+    indicator_code: "NY.GDP.MKTP.CD"
+    name: "GDP (current US$)"
+    unit: "current US$"
+    keywords:
+      - gdp
+      - gross domestic product
+    exclude_keywords:
+      - growth
+      - per capita
+  
+  - stat_type: gdp_growth
+    indicator_code: "NY.GDP.MKTP.KD.ZG"
+    name: "GDP growth (annual %)"
+    unit: "%"
+    keywords:
+      - gdp
+      - growth
+  
+  - stat_type: gdp_per_capita
+    indicator_code: "NY.GDP.PCAP.CD"
+    name: "GDP per capita (current US$)"
+    unit: "current US$"
+    keywords:
+      - gdp
+      - per capita
+  
+  - stat_type: population
+    indicator_code: "SP.POP.TOTL"
+    name: "Population, total"
+    unit: "people"
+    keywords:
+      - population
+      - n_customers
+  
+  - stat_type: internet_users
+    indicator_code: "IT.NET.USER.ZS"
+    name: "Internet users (% of population)"
+    unit: "% of population"
+    keywords:
+      - internet
+      - penetration
+  
+  - stat_type: education_expenditure
+    indicator_code: "SE.XPD.TOTL.GD.ZS"
+    name: "Education expenditure (% of GDP)"
+    unit: "% of GDP"
+    keywords:
+      - education
+      - expenditure
+  
+  - stat_type: unemployment
+    indicator_code: "SL.UEM.TOTL.ZS"
+    name: "Unemployment (% of total labor force)"
+    unit: "%"
+    keywords:
+      - unemployment
+  
+  - stat_type: inflation
+    indicator_code: "FP.CPI.TOTL.ZG"
+    name: "Inflation, consumer prices (annual %)"
+    unit: "%"
+    keywords:
+      - inflation
+      - cpi
+
+# 향후 지표 추가는 여기에
+# World Bank Indicators: https://data.worldbank.org/indicator

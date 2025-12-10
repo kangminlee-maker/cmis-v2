@@ -1,0 +1,55 @@
+---
+# Pattern: 규모의 경제
+# Family: Growth Mechanism Patterns
+# 2025-12-10: Phase 3
+
+pattern:
+  pattern_id: "PAT-scale_economies"
+  name: "규모의 경제"
+  family: "growth_mechanism_patterns"
+  description: |
+    규모 증가 시 단위 비용 감소 메커니즘.
+    고정비 분산, 구매력 증가 등으로 마진 개선.
+
+  trait_constraints:
+    actor:
+      optional_traits:
+        scale_tier:
+          - "enterprise"
+          - "hyperscale"
+
+  graph_structure:
+    requires:
+      - node_type: "actor"
+        min_count: 1
+
+  quantitative_bounds:
+    unit_cost_elasticity:
+      min: -0.50
+      max: -0.10
+      typical: [-0.30, -0.20]
+      source: "pattern_benchmarks"
+      note: "규모 2배 → 단위 비용 20-30% 감소"
+
+  composes_with:
+    - "PAT-platform_business_model"
+    - "PAT-asset_light_model"
+
+  conflicts_with: []
+
+  benchmark_metrics:
+    - "MET-COGS"
+    - "MET-Gross_margin"
+
+  suited_for_contexts:
+    - "ARCH-platform_global"
+
+  required_capabilities:
+    - scale_tier: "growth_stage"
+
+  required_assets:
+    organizational_assets:
+      min_team_size: 20
+
+  constraint_checks: []
+
