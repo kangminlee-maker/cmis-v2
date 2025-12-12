@@ -826,3 +826,186 @@ class LearningResult:
     
     # Lineage
     lineage: Dict[str, Any] = field(default_factory=dict)
+
+
+# ========================================
+# Belief & Prior (BeliefEngine)
+# ========================================
+
+@dataclass
+class BeliefRecord:
+    """Belief/Prior Distribution 통합 레코드
+    
+    BeliefEngine에서 관리하는 Metric에 대한 Prior/Posterior Distribution.
+    Evidence가 부족할 때 최후 수단으로 사용.
+    
+    Usage:
+        # Pattern 기반 Prior 생성
+        prior = BeliefRecord(
+            belief_id="PRIOR-abc123",
+            metric_id="MET-SAM",
+            context={"domain_id": "...", "region": "KR"},
+            distribution={"type": "lognormal", "params": {...}},
+            confidence=0.5,
+            source="pattern_benchmark",
+            observations=[],
+            n_observations=0,
+            created_at="2025-12-12T10:00:00Z",
+            updated_at="2025-12-12T10:00:00Z",
+            lineage={"from_pattern_ids": ["PAT-001"]}
+        )
+        
+        # Outcome 기반 Belief 업데이트
+        updated = BeliefRecord(
+            belief_id="BELIEF-def456",
+            metric_id="MET-SAM",
+            context={"domain_id": "...", "region": "KR"},
+            distribution={"type": "normal", "params": {...}},
+            confidence=0.85,
+            source="learned",
+            observations=[{"value": 50000, "weight": 1.0, "source": "OUT-001"}],
+            n_observations=1,
+            created_at="2025-12-12T10:00:00Z",
+            updated_at="2025-12-12T11:00:00Z",
+            lineage={"from_prior_id": "PRIOR-abc123", "from_outcome_ids": ["OUT-001"]}
+        )
+    """
+    
+    # 식별
+    belief_id: str  # "BELIEF-xxxx" 또는 "PRIOR-xxxx"
+    metric_id: str  # "MET-SAM", "MET-TAM", etc.
+    context: Dict[str, Any]  # {"domain_id": "...", "region": "...", "segment": "..."}
+    
+    # Distribution
+    distribution: Dict[str, Any]
+    # {
+    #   "type": "normal" | "lognormal" | "uniform" | "beta" | "empirical",
+    #   "params": {"mu": 50000, "sigma": 10000} | {...},
+    #   "percentiles": {"p10": ..., "p50": ..., "p90": ...}  # optional
+    # }
+    
+    confidence: float  # 0.0 ~ 1.0
+    # - 0.1: Uninformative prior (매우 넓은 분포)
+    # - 0.5: Pattern benchmark 기반
+    # - 0.7: Domain expert 기반
+    # - 0.85+: 여러 observation 기반 학습된 belief
+    
+    source: str
+    # "pattern_benchmark" | "uninformative" | "learned" | "domain_expert"
+    
+    # Observations (업데이트용)
+    observations: List[Dict[str, Any]]
+    # [
+    #   {"value": 50000, "weight": 1.0, "source": "EVD-001"},
+    #   {"value": 48000, "weight": 0.8, "source": "OUT-002"},
+    #   ...
+    # ]
+    
+    n_observations: int  # 누적 관측 횟수
+    
+    # 시간
+    created_at: str  # ISO datetime
+    updated_at: str  # ISO datetime
+    
+    # Lineage
+    lineage: Dict[str, Any] = field(default_factory=dict)
+    # {
+    #   "from_evidence_ids": ["EVD-001", ...],  # Evidence 기반 관측
+    #   "from_outcome_ids": ["OUT-001", ...],   # Outcome 기반 관측
+    #   "from_prior_id": "PRIOR-abc123",        # 이전 Prior/Belief
+    #   "from_pattern_ids": ["PAT-001", ...],   # Pattern Benchmark
+    #   "engine_ids": ["belief_engine"],
+    #   "created_at": "...",
+    #   "policy_adjustment": "reporting_strict_conservative"  # Policy 조정
+    # }
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Dict로 직렬화 (JSON 저장용)"""
+        return {
+            "belief_id": self.belief_id,
+            "metric_id": self.metric_id,
+            "context": self.context,
+            "distribution": self.distribution,
+            "confidence": self.confidence,
+            "source": self.source,
+            "observations": self.observations,
+            "n_observations": self.n_observations,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "lineage": self.lineage
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BeliefRecord":
+        """Dict에서 복원"""
+        return cls(
+            belief_id=data["belief_id"],
+            metric_id=data["metric_id"],
+            context=data["context"],
+            distribution=data["distribution"],
+            confidence=data["confidence"],
+            source=data["source"],
+            observations=data.get("observations", []),
+            n_observations=data.get("n_observations", 0),
+            created_at=data["created_at"],
+            updated_at=data["updated_at"],
+            lineage=data.get("lineage", {})
+        )
+    
+    def to_value_record(self) -> Dict[str, Any]:
+        """ValueRecord 형식으로 변환 (value_store 저장용)
+        
+        BeliefRecord를 value_store에 저장할 때 사용.
+        origin="prior" 또는 "learned"로 구분.
+        
+        Returns:
+            ValueRecord 호환 dict
+        """
+        return {
+            "value_id": f"VAL-{self.belief_id}",
+            "metric_id": self.metric_id,
+            "context": self.context,
+            "point_estimate": None,  # Prior는 분포만 사용
+            "distribution": self.distribution,
+            "quality": {
+                "literal_ratio": 0.0,  # Prior는 literal evidence 없음
+                "spread_ratio": self._calculate_spread(),
+                "confidence": self.confidence
+            },
+            "origin": "prior" if self.source in ["pattern_benchmark", "uninformative", "domain_expert"] else "learned",
+            "lineage": self.lineage,
+            "stored_at": self.updated_at
+        }
+    
+    def _calculate_spread(self) -> float:
+        """분포의 spread_ratio 계산 (간이 버전)
+        
+        Returns:
+            spread_ratio (0~1+)
+        """
+        if self.distribution.get("type") == "normal":
+            params = self.distribution.get("params", {})
+            mu = params.get("mu", 0)
+            sigma = params.get("sigma", 0)
+            if mu > 0:
+                return sigma / mu  # Coefficient of Variation
+            return 0.0
+        
+        elif self.distribution.get("type") == "lognormal":
+            # Lognormal은 sigma 파라미터가 spread
+            params = self.distribution.get("params", {})
+            return params.get("sigma", 0.5)
+        
+        elif self.distribution.get("type") == "uniform":
+            # Uniform은 범위
+            params = self.distribution.get("params", {})
+            min_val = params.get("min", 0)
+            max_val = params.get("max", 0)
+            mean = (min_val + max_val) / 2
+            if mean > 0:
+                return (max_val - min_val) / (2 * mean)
+            return 0.0
+        
+        else:
+            # 기타 분포는 0.5 기본값
+            return 0.5

@@ -1,0 +1,31 @@
+{
+  "value_id": "VAL-BELIEF-e0c0cef5",
+  "metric_id": "MET-Revenue",
+  "context": {
+    "domain_id": "test"
+  },
+  "point_estimate": null,
+  "distribution": {
+    "type": "normal",
+    "params": {
+      "mu": 50000,
+      "sigma": 5000
+    }
+  },
+  "quality": {
+    "literal_ratio": 0.0,
+    "spread_ratio": 0.1,
+    "confidence": 0.6
+  },
+  "origin": "learned",
+  "lineage": {
+    "from_evidence_ids": [],
+    "from_outcome_ids": [],
+    "from_prior_id": null,
+    "engine_ids": [
+      "belief_engine"
+    ],
+    "created_at": "2025-12-12T01:50:12.149068+00:00"
+  },
+  "stored_at": "2025-12-12T01:50:12.149067+00:00"
+}

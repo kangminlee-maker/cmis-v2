@@ -1,0 +1,33 @@
+{
+  "value_id": "VAL-BELIEF-d815188e",
+  "metric_id": "MET-TAM",
+  "context": {
+    "domain_id": "test"
+  },
+  "point_estimate": null,
+  "distribution": {
+    "type": "normal",
+    "params": {
+      "mu": 59900.990099009905,
+      "sigma": 497.51859510499463
+    }
+  },
+  "quality": {
+    "literal_ratio": 0.0,
+    "spread_ratio": 0.008305682331504869,
+    "confidence": 0.66
+  },
+  "origin": "learned",
+  "lineage": {
+    "from_evidence_ids": [],
+    "from_outcome_ids": [
+      "OUT-001"
+    ],
+    "from_prior_id": "BELIEF-9742e4a2",
+    "engine_ids": [
+      "belief_engine"
+    ],
+    "created_at": "2025-12-12T01:43:57.615460+00:00"
+  },
+  "stored_at": "2025-12-12T01:43:57.615458+00:00"
+}

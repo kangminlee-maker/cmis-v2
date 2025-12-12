@@ -1,17 +1,18 @@
 ---
 cmis:
   meta:
-    version: "3.3.0"
+    version: "3.4.0"
     codename: "Contextual Market Intelligence System"
     description: >
-      CMIS v3.3 – 시장/비즈니스 세계를
+      CMIS v3.4 – 시장/비즈니스 세계를
       Reality/Pattern/Value/Decision 그래프로 표현하고,
       Understand → Discover → Decide → Learn 루프를 통해
       구조 이해·기회 발굴·전략 설계·학습까지 수행하는 완성된 Market Intelligence OS.
+      BeliefEngine 추가로 9개 엔진 완성.
     status: "production_ready"
-    release_date: "2025-12-11"
-    completion: "89%"
-    engines_completed: "8/9"
+    release_date: "2025-12-12"
+    completion: "100%"
+    engines_completed: "9/9"
     authors:
       - "cmis-architect"
     references:
@@ -1669,6 +1670,135 @@ cmis:
                 - "learned_patterns에 패턴별 실행 성과 기록"
                 - "새 버전 project_context 생성 (version += 1)"
 
+        belief_engine:
+          description: "Prior/Belief 관리 및 불확실성 정량화 - Evidence 부족 시 마지막 수단"
+          version: "v1.0"
+          status: "production_ready"
+          inputs:
+            - "substrate_plane.graphs.pattern_graph"
+            - "substrate_plane.graphs.value_graph"
+            - "substrate_plane.stores.value_store"
+          outputs:
+            - "prior_distributions (ValueRecord origin=prior)"
+            - "belief_updates (ValueRecord origin=learned)"
+          api:
+            - name: "query_prior"
+              description: "ValueEngine prior_estimation 단계에서 호출"
+              input:
+                metric_id: "metric_id"
+                context: "dict"
+                policy_ref: "policy_ref"
+              output:
+                prior_id: "string"
+                prior_distribution: "distribution"
+                confidence: "float"
+                source: "enum[pattern_benchmark,uninformative,learned,domain_expert]"
+                policy_mode: "string"
+                lineage: "lineage_ref"
+              notes:
+                - "Pattern Benchmark 기반 Prior 생성 (confidence 0.5)"
+                - "Evidence 없으면 Uninformative Prior (confidence 0.1)"
+                - "reporting_strict: confidence×0.5, spread×2.0"
+                - "exploration_friendly: spread×1.2"
+            
+            - name: "update_belief"
+              description: "LearningEngine이 Outcome 기반 업데이트"
+              input:
+                metric_id: "metric_id"
+                context: "dict"
+                observations: "list[observation]"
+                update_mode: "enum[bayesian,replace]"
+              output:
+                belief_id: "string"
+                prior: "dict"
+                posterior: "dict"
+                delta: "dict"
+                lineage: "lineage_ref"
+              notes:
+                - "Bayesian: Prior × Likelihood → Posterior"
+                - "Replace: 관측값만으로 새 분포"
+                - "누적 관측 시 신뢰도 증가 (n_observations)"
+            
+            - name: "propagate_uncertainty"
+              description: "Monte Carlo 불확실성 전파"
+              input:
+                formula: "string"
+                input_distributions: "dict"
+                n_samples: "int"
+              output:
+                output_distribution: "distribution"
+                sensitivity: "dict"
+              notes:
+                - "Monte Carlo 시뮬레이션 (기본 10,000 샘플)"
+                - "민감도 분석 (분산 기여도)"
+                - "Phase 3: samples는 artifact_store 저장"
+          
+          core_components:
+            - id: "prior_manager"
+              description: "Prior Distribution 저장/조회/생성"
+              storage: "value_store"
+              features:
+                - "Context별 Prior 캐싱 (TTL 1시간)"
+                - "Pattern Benchmark 기반 Prior 생성"
+                - "Uninformative Prior 생성"
+                - "value_store 영속성"
+            
+            - id: "belief_updater"
+              description: "Bayesian Update 로직"
+              methods:
+                - "bayesian_normal_normal"
+                - "direct_replace"
+                - "lognormal_update (Phase 3)"
+                - "beta_binomial_update (Phase 3)"
+              features:
+                - "Conjugate Prior 해석적 업데이트"
+                - "보수적 학습 (천천히 개선)"
+                - "lineage EVD-*/OUT-* 분리"
+            
+            - id: "uncertainty_propagator"
+              description: "불확실성 전파 및 시뮬레이션"
+              evaluator: "eval (Phase 3: asteval)"
+              features:
+                - "Monte Carlo 시뮬레이션"
+                - "민감도 분석"
+                - "Sobol Sequence (Phase 3)"
+          
+          prior_strategies:
+            - id: "pattern_benchmark"
+              description: "Pattern Benchmark 기반 Prior 생성"
+              confidence: 0.5
+              context_similarity_weights:
+                domain_id: 0.4
+                region: 0.3
+                segment: 0.2
+                scale_tier: 0.1
+              notes:
+                - "유사 Pattern Benchmark 가중 평균"
+                - "보수적 확대 (std × 1.5)"
+            
+            - id: "uninformative"
+              description: "매우 넓은 범위의 Uninformative Prior"
+              confidence: 0.1
+              ranges:
+                market_size: "1M ~ 1T (loguniform)"
+                unit_economics: "100 ~ 1M (loguniform)"
+                ratio: "0 ~ 1 (uniform)"
+          
+          update_modes:
+            - id: "bayesian"
+              description: "베이지안 업데이트 (Prior × Likelihood → Posterior)"
+              default: true
+              features:
+                - "Normal-Normal: 해석적"
+                - "관측 누적 시 분산 감소"
+                - "n_observations 기반 신뢰도 증가"
+            
+            - id: "replace"
+              description: "직접 대체 (관측값 기반 새 분포)"
+              features:
+                - "Prior 무시"
+                - "강한 Evidence 있을 때"
+
         policy_engine:
           description: "Evidence-first, Prior-last, 리스크 허용도 등 정책 관리 및 다른 엔진에 제공"
           policies:
@@ -1720,18 +1850,24 @@ cmis:
       artifact:   "ART-"
       memory:     "MEM-"
       project:    "PRJ-"
+      prior:      "PRIOR-"
+      belief:     "BELIEF-"
 
     lineage_schema:
       description: "모든 주요 객체가 공유하는 lineage 스키마"
       fields:
         from_evidence_ids: { type: "list", required: false }
-        from_value_ids: { type: "list",    required: false }
-        from_pattern_ids: { type: "list",  required: false }
-        from_program_id: { type: "string",            required: false }  # Value Program / Reasoning trace
-        engine_ids: { type: "list",      required: false }  # value_engine, pattern_engine 등
-        policy_id: { type: "string",            required: false }
-        created_by_role: { type: "role_id",           required: false }
-        created_at: { type: "datetime",          required: true }
+        from_value_ids: { type: "list", required: false }
+        from_pattern_ids: { type: "list", required: false }
+        from_prior_id: { type: "string", required: false }  # BeliefEngine: 이전 Prior/Belief
+        from_outcome_ids: { type: "list", required: false }  # BeliefEngine: Outcome 기반 업데이트
+        from_program_id: { type: "string", required: false }  # Value Program / Reasoning trace
+        engine_ids: { type: "list", required: false }  # value_engine, pattern_engine, belief_engine 등
+        policy_id: { type: "string", required: false }
+        policy_adjustment: { type: "string", required: false }  # BeliefEngine: Policy 조정 내역
+        context_similarities: { type: "list", required: false }  # BeliefEngine: Pattern Context 유사도
+        created_by_role: { type: "role_id", required: false }
+        created_at: { type: "datetime", required: true }
 
   # ------------------------------------------------------------------
   # 4. Policies – 품질/리스크/모드 정의 (요약)

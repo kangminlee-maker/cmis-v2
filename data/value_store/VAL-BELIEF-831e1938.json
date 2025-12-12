@@ -1,0 +1,33 @@
+{
+  "value_id": "VAL-BELIEF-831e1938",
+  "metric_id": "MET-ARPU",
+  "context": {
+    "domain_id": "test"
+  },
+  "point_estimate": null,
+  "distribution": {
+    "type": "normal",
+    "params": {
+      "mu": 5000.0,
+      "sigma": 0.0
+    }
+  },
+  "quality": {
+    "literal_ratio": 0.0,
+    "spread_ratio": 0.0,
+    "confidence": 0.66
+  },
+  "origin": "learned",
+  "lineage": {
+    "from_evidence_ids": [
+      "EVD-001"
+    ],
+    "from_outcome_ids": [],
+    "from_prior_id": "BELIEF-714c4a37",
+    "engine_ids": [
+      "belief_engine"
+    ],
+    "created_at": "2025-12-12T01:54:39.793292+00:00"
+  },
+  "stored_at": "2025-12-12T01:54:39.793287+00:00"
+}

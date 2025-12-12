@@ -1,14 +1,25 @@
 ---
-**이력**: 2025-12-09 UMIS v9 → CMIS로 브랜드 변경
+**이력**:
+- 2025-12-09: UMIS v9 → CMIS 브랜드 변경
+- 2025-12-12: v3.3 완성 상태 반영 (89% → 100% 예정, BeliefEngine 추가)
+
+**버전**: v3.0 (CMIS v3.3 기준)
+**상태**: Production Ready
+
+**주요 변경**:
 - Universal Market Intelligence → Contextual Market Intelligence
-- v9 핵심 차별점 (Project Context Layer) 반영
+- 9개 엔진 완성 (BeliefEngine 추가)
+- 4단계 루프 완성 (Understand → Discover → Decide → Learn)
+- World Engine v2.0, Strategy Engine v1.0, Learning Engine v1.0 반영
 ---
 
-# UMIS v9 Structure Analysis 워크플로우 다이어그램
+# CMIS v3.3 Structure Analysis 워크플로우 다이어그램
 
-**문서 목적**: v9 Structure Analysis 워크플로우를 시각적으로 표현한 다이어그램 모음
+**문서 목적**: CMIS v3.3 Structure Analysis 워크플로우를 시각적으로 표현한 다이어그램 모음
 
-**참조**: `UMIS_v9_Structure_Analysis_Detailed_Workflow.md`
+**참조**:
+- `CMIS_Architecture_Blueprint_v3.3.md`
+- `BeliefEngine_Design_Enhanced.md`
 
 ---
 
@@ -31,14 +42,16 @@ graph TB
         RM[Reality Monitor]
     end
 
-    subgraph CP[Cognition Plane - Engines]
+    subgraph CP[Cognition Plane - 9 Engines]
         EE[Evidence Engine<br/>외부 데이터 수집]
-        WE[World Engine<br/>R-Graph 구축]
-        PE[Pattern Engine<br/>패턴 매칭/갭 탐지]
+        WE[World Engine v2.0<br/>R-Graph 구축]
+        PE[Pattern Engine v2.0<br/>패턴 매칭/갭 탐지]
         VE[Value Engine<br/>Metric Resolver]
-        SE[Strategy Engine<br/>전략 탐색]
-        LE[Learning Engine<br/>실적 기반 학습]
+        BE[Belief Engine<br/>Prior/Belief 관리]
+        SE[Strategy Engine v1.0<br/>전략 탐색]
+        LE[Learning Engine v1.0<br/>실적 기반 학습]
         POL[Policy Engine<br/>검증 게이트]
+        WF[Workflow CLI<br/>워크플로우 실행]
     end
 
     subgraph SP[Substrate Plane - Graphs & Stores]
@@ -68,11 +81,20 @@ graph TB
     PE --> PG
     VE --> VG
     VE --> VLS
+    BE --> VG
+    SE --> DG
+    LE --> VG
+    LE --> PCS
     
     EE -.Evidence 수집.-> WE
     WE -.구조 제공.-> PE
     WE -.구조 제공.-> VE
     PE -.패턴 제공.-> VE
+    PE -.패턴 제공.-> BE
+    BE -.Prior 제공.-> VE
+    VE -.Metric.-> SE
+    SE -.전략.-> LE
+    LE -.학습.-> BE
     POL -.검증.-> VE
 
     style IP fill:#e1f5ff
@@ -666,7 +688,7 @@ flowchart TB
 
 ---
 
-## 7. Value Engine 내부 구조도 (Metric Resolver)
+## 7. Value Engine 내부 구조도 (Metric Resolver + BeliefEngine)
 
 ```mermaid
 graph TB
@@ -679,7 +701,7 @@ graph TB
     end
     
     subgraph SPEC[Metric Spec 조회]
-        SPEC_LOAD["umis_v9.yaml에서
+        SPEC_LOAD["cmis.yaml에서
         MET-SAM 정의 로드"]
         SPEC_DATA["직접 소스 목록
         파생 경로
@@ -687,24 +709,26 @@ graph TB
         resolution_protocol"]
     end
     
-    subgraph RESOLVER[Metric Resolver]
+    subgraph RESOLVER[Metric Resolver - 4 Stages]
         STAGE1["Stage 1:
         Direct Evidence"]
         STAGE2["Stage 2:
         Derived"]
         STAGE3["Stage 3:
-        Prior/Fusion"]
+        Prior Estimation<br/>⭐ BeliefEngine 호출"]
         STAGE4["Stage 4:
-        Validation"]
+        Fusion & Validation"]
     end
     
     subgraph ENGINES[다른 엔진 호출]
         EE_CALL["Evidence Engine:
         외부 데이터 수집"]
-        WE_CALL["World Engine:
+        WE_CALL["World Engine v2.0:
         R-Graph 쿼리"]
-        PE_CALL["Pattern Engine:
-        패턴 Prior"]
+        PE_CALL["Pattern Engine v2.0:
+        패턴 매칭"]
+        BE_CALL["Belief Engine:
+        Prior Distribution 조회<br/>⭐ 신규"]
         POL_CALL["Policy Engine:
         검증 게이트"]
     end
@@ -742,9 +766,11 @@ graph TB
     RG_READ --> STAGE3
     VG_READ --> STAGE3
     
-    STAGE3 --> PE_CALL
+    STAGE3 --> BE_CALL
+    BE_CALL -.-> PE_CALL
     PE_CALL --> PG_READ
-    PG_READ --> STAGE3
+    PG_READ -.Pattern Benchmark.-> BE_CALL
+    BE_CALL -.Prior Distribution.-> STAGE3
     
     STAGE3 --> STAGE4
     STAGE4 --> POL_CALL
@@ -848,13 +874,17 @@ graph TB
         P14[Phase 14<br/>리포트]
     end
     
-    subgraph COGNITION[Cognition Plane]
+    subgraph COGNITION[Cognition Plane - 9 Engines]
         direction LR
         EE[Evidence<br/>Engine]
-        WE[World<br/>Engine]
-        PE[Pattern<br/>Engine]
+        WE[World<br/>Engine<br/>v2.0]
+        PE[Pattern<br/>Engine<br/>v2.0]
         VE[Value<br/>Engine]
+        BE[Belief<br/>Engine<br/>⭐]
+        SE[Strategy<br/>Engine<br/>v1.0]
+        LE[Learning<br/>Engine<br/>v1.0]
         POL[Policy<br/>Engine]
+        WF[Workflow<br/>CLI]
     end
     
     subgraph SUBSTRATE[Substrate Plane]
@@ -894,11 +924,15 @@ graph TB
     P7 --> VE
     VE --> RG
     VE --> PG
+    VE --> BE
+    BE --> VG
     VE --> VG
     VE --> VLS
     
     P7 --> P8_11
     P8_11 --> VE
+    VE -.Strategy.-> SE
+    SE --> LE
     
     P8_11 --> P12
     P12 --> POL
@@ -920,6 +954,7 @@ graph TB
     style SUBSTRATE fill:#f3e5f5
     style P7 fill:#ffeb3b
     style P13 fill:#ff9800
+    style BE fill:#ffeb3b,stroke:#f57c00,stroke-width:2px
 ```
 
 ---
@@ -998,34 +1033,155 @@ flowchart TD
 
 ---
 
-## 11. 문서 업데이트 요약
+## 11. 4단계 루프 다이어그램 (CMIS 핵심)
 
-**2025-12-05 최신 업데이트**:
+**신규 추가 (2025-12-12)**:
+
+```mermaid
+flowchart LR
+    subgraph UNDERSTAND[1️⃣ Understand]
+        WE[World Engine v2.0<br/>R-Graph 구축]
+        PE_M[Pattern Engine v2.0<br/>패턴 매칭]
+    end
+    
+    subgraph DISCOVER[2️⃣ Discover]
+        PE_G[Pattern Engine v2.0<br/>Gap 탐지]
+        VE_O[Value Engine<br/>기회 Sizing]
+    end
+    
+    subgraph DECIDE[3️⃣ Decide]
+        SE[Strategy Engine v1.0<br/>전략 생성/평가]
+        VE_S[Value Engine<br/>시나리오 시뮬레이션]
+    end
+    
+    subgraph LEARN[4️⃣ Learn]
+        LE[Learning Engine v1.0<br/>Outcome 비교]
+        BE[Belief Engine<br/>Prior 업데이트]
+    end
+    
+    UNDERSTAND --> DISCOVER
+    DISCOVER --> DECIDE
+    DECIDE --> LEARN
+    LEARN -.개선된 Prior.-> UNDERSTAND
+    
+    style UNDERSTAND fill:#e3f2fd
+    style DISCOVER fill:#f1f8e9
+    style DECIDE fill:#fff3e0
+    style LEARN fill:#fce4ec
+    style BE fill:#ffeb3b,stroke:#f57c00,stroke-width:2px
+```
+
+**4단계 루프 설명**:
+1. **Understand** - 시장 구조/패턴 이해 (World + Pattern)
+2. **Discover** - 기회/갭 발굴 (Pattern Gap + Value)
+3. **Decide** - 전략 설계/선택 (Strategy + Value)
+4. **Learn** - 실행 결과 학습 (Learning + Belief) → 다시 Understand로
+
+---
+
+## 12. BeliefEngine 통합 다이어그램 (신규)
+
+**신규 추가 (2025-12-12)**:
+
+```mermaid
+flowchart TD
+    START[ValueEngine<br/>Metric 계산 시작]
+    
+    S1[Stage 1: Direct Evidence]
+    S1_FAIL{Evidence<br/>발견?}
+    
+    S2[Stage 2: Derived]
+    S2_FAIL{계산<br/>가능?}
+    
+    S3[Stage 3: Prior Estimation]
+    
+    subgraph BELIEF[BeliefEngine]
+        BE_START[query_prior_api 호출]
+        BE_PATTERN[Pattern Benchmark 조회]
+        BE_PRIOR[Prior Distribution 생성]
+        BE_CONF[Confidence 계산]
+    end
+    
+    S4[Stage 4: Fusion]
+    
+    OUT[ValueRecord 반환]
+    
+    LEARN[LearningEngine<br/>Outcome 관측]
+    
+    subgraph BELIEF_UPDATE[BeliefEngine Update]
+        BU_START[update_belief_api 호출]
+        BU_BAYES[Bayesian Update]
+        BU_SAVE[업데이트된 Belief 저장]
+    end
+    
+    START --> S1
+    S1 --> S1_FAIL
+    S1_FAIL -->|No| S2
+    S1_FAIL -->|Yes| OUT
+    
+    S2 --> S2_FAIL
+    S2_FAIL -->|No| S3
+    S2_FAIL -->|Yes| S4
+    
+    S3 --> BE_START
+    BE_START --> BE_PATTERN
+    BE_PATTERN --> BE_PRIOR
+    BE_PRIOR --> BE_CONF
+    BE_CONF --> S4
+    
+    S4 --> OUT
+    OUT --> LEARN
+    
+    LEARN --> BU_START
+    BU_START --> BU_BAYES
+    BU_BAYES --> BU_SAVE
+    BU_SAVE -.다음 조회 시<br/>개선된 Prior.-> BE_START
+    
+    style BELIEF fill:#ffeb3b,stroke:#f57c00,stroke-width:2px
+    style BELIEF_UPDATE fill:#ffe0b2,stroke:#f57c00,stroke-width:2px
+    style S3 fill:#fff9c4
+```
+
+---
+
+## 13. 문서 업데이트 요약
+
+**2025-12-12 최신 업데이트** (v3.0):
+- ✅ BeliefEngine 추가 (9번째 엔진)
+- ✅ 4단계 루프 다이어그램 추가 (Understand → Discover → Decide → Learn)
+- ✅ BeliefEngine 통합 다이어그램 추가
+- ✅ ValueEngine 내부 구조 업데이트 (BeliefEngine 연동)
+- ✅ Cognition Plane 9개 엔진 반영
+- ✅ World Engine v2.0, Strategy Engine v1.0, Learning Engine v1.0 버전 표시
+- ✅ Workflow CLI 추가
+
+**2025-12-05 업데이트** (v2.0):
 - ✅ Substrate Plane에 Project Context Store (PRJ-*) 추가
 - ✅ Greenfield vs Brownfield 워크플로우 분기 다이어그램 추가
 - ✅ Brownfield 15-Phase 순서도 추가 (PH00 포함)
 - ✅ Phase 0: Project Context Setup 상세 시퀀스 다이어그램 추가
 
-**다이어그램 목록**:
-1. 전체 아키텍처 (4 Planes + Project Context Store)
+**다이어그램 목록** (총 15개):
+1. 전체 아키텍처 (4 Planes + 9 Engines)
 2. Greenfield vs Brownfield 분기
 3. Greenfield 워크플로우 (14 Phases)
 4. Brownfield 워크플로우 (15 Phases, PH00 포함)
-5. Phase 0: Project Context Setup (신규)
+5. Phase 0: Project Context Setup
 6. Phase 5: 플레이어 식별
-7. Phase 7: 시장규모 추정 (4-Stage Metric Resolver)
+7. Phase 7: 시장규모 추정 (4-Stage Metric Resolver + BeliefEngine)
 8. 데이터 흐름도
 9. Phase 13: 3자 검증 게이트
-10. Value Engine 내부 구조
+10. Value Engine 내부 구조 (BeliefEngine 연동)
 11. 협업 프로토콜
-12. 전체 시스템 통합
+12. 전체 시스템 통합 (9 Engines)
 13. Lineage 추적 흐름
-
-**총 13개 다이어그램** (Greenfield + Brownfield 완전 커버)
+14. **4단계 루프** (신규)
+15. **BeliefEngine 통합** (신규)
 
 ---
 
-**작성일**: 2025-12-05  
-**버전**: v2.0 (Project Context Layer 통합)
+**작성일**: 2025-12-12
+**버전**: v3.0 (CMIS v3.3 기준, BeliefEngine 포함)
+**상태**: Production Ready (9/9 엔진 완성)
 **노트**: 이 다이어그램들은 Mermaid 형식으로 작성되어 GitHub/Markdown 렌더러에서 자동으로 시각화됩니다.
 

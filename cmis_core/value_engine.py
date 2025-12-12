@@ -524,3 +524,106 @@ class ValueEngine:
             quality=quality,
             lineage=lineage,
         )
+    
+    # ========================================
+    # BeliefEngine Integration (Phase 2)
+    # ========================================
+    
+    def _resolve_metric_prior_estimation(
+        self,
+        metric_id: str,
+        context: Dict[str, Any],
+        policy_ref: Optional[str] = None
+    ) -> Optional[ValueRecord]:
+        """Stage 3: Prior Estimation (BeliefEngine 호출)
+        
+        Evidence/Derived 모두 실패했을 때 최후 수단.
+        
+        Args:
+            metric_id: "MET-SAM", etc.
+            context: {...}
+            policy_ref: Policy (allow_prior 확인)
+        
+        Returns:
+            ValueRecord (origin="prior") 또는 None
+        """
+        from cmis_core.belief_engine import BeliefEngine
+        
+        # Policy 확인 (allow_prior)
+        # Phase 2: config에서 policy 로드
+        # 지금은 간단히 reporting_strict면 skip
+        if policy_ref == "reporting_strict":
+            return None
+        
+        # BeliefEngine 호출
+        belief_engine = BeliefEngine()
+        
+        try:
+            prior_result = belief_engine.query_prior_api(
+                metric_id=metric_id,
+                context=context,
+                policy_ref=policy_ref
+            )
+        except Exception:
+            # BeliefEngine 실패 시 None
+            return None
+        
+        # Prior → ValueRecord 변환
+        value_record = ValueRecord(
+            metric_id=metric_id,
+            context=context,
+            point_estimate=None,  # Prior는 분포만
+            distribution=prior_result["distribution"],
+            quality={
+                "status": "prior_estimation",
+                "method": "belief_engine",
+                "literal_ratio": 0.0,  # Prior는 literal 없음
+                "spread_ratio": self._calculate_spread_from_distribution(
+                    prior_result["distribution"]
+                ),
+                "confidence": prior_result["confidence"]
+            },
+            lineage={
+                "from_prior_id": prior_result["prior_id"],
+                "engine_ids": ["belief_engine", "value_engine"],
+                "policy_id": policy_ref,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                **prior_result["lineage"]
+            }
+        )
+        
+        return value_record
+    
+    def _calculate_spread_from_distribution(self, distribution: Dict) -> float:
+        """분포에서 spread_ratio 계산
+        
+        Args:
+            distribution: {"type": "normal", "params": {...}}
+        
+        Returns:
+            spread_ratio (0~1+)
+        """
+        # BeliefRecord._calculate_spread()와 동일 로직
+        dist_type = distribution.get("type", "normal")
+        params = distribution.get("params", {})
+        
+        if dist_type == "normal":
+            mu = params.get("mu", 0)
+            sigma = params.get("sigma", 0)
+            if mu > 0:
+                return sigma / mu
+            return 0.0
+        
+        elif dist_type == "lognormal":
+            return params.get("sigma", 0.5)
+        
+        elif dist_type == "uniform":
+            min_val = params.get("min", 0)
+            max_val = params.get("max", 0)
+            mean = (min_val + max_val) / 2
+            if mean > 0:
+                return (max_val - min_val) / (2 * mean)
+            return 0.0
+        
+        else:
+            return 0.5

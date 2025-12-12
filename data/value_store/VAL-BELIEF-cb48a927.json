@@ -1,0 +1,33 @@
+{
+  "value_id": "VAL-BELIEF-cb48a927",
+  "metric_id": "MET-N_customers",
+  "context": {
+    "domain_id": "test"
+  },
+  "point_estimate": null,
+  "distribution": {
+    "type": "normal",
+    "params": {
+      "mu": 50990.099009900994,
+      "sigma": 497.51859510499463
+    }
+  },
+  "quality": {
+    "literal_ratio": 0.0,
+    "spread_ratio": 0.009757160797204747,
+    "confidence": 0.77
+  },
+  "origin": "learned",
+  "lineage": {
+    "from_evidence_ids": [],
+    "from_outcome_ids": [
+      "OUT-001"
+    ],
+    "from_prior_id": "BELIEF-6bc08d38",
+    "engine_ids": [
+      "belief_engine"
+    ],
+    "created_at": "2025-12-12T01:45:09.753065+00:00"
+  },
+  "stored_at": "2025-12-12T01:45:09.753063+00:00"
+}

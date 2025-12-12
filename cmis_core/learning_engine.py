@@ -423,3 +423,153 @@ class LearningEngine:
     ) -> Optional[ProjectContext]:
         """ProjectContext 로딩"""
         return self.project_contexts.get(project_context_id)
+    
+    # ========================================
+    # BeliefEngine Integration (Phase 2)
+    # ========================================
+    
+    def _should_update_belief(
+        self,
+        metric_id: str,
+        delta: Dict[str, Any]
+    ) -> bool:
+        """Belief 업데이트 필요 여부 판단
+        
+        metrics_spec의 target_convergence 기준 사용.
+        
+        Args:
+            metric_id: "MET-SAM", etc.
+            delta: {"error_pct": 0.15, ...}
+        
+        Returns:
+            True if 업데이트 필요
+        """
+        # 1. metrics_spec에서 target_convergence 조회
+        metric_spec = self._get_metric_spec(metric_id)
+        
+        resolution_protocol = metric_spec.get("resolution_protocol", {})
+        target_convergence = resolution_protocol.get("target_convergence")
+        
+        # 2. 기준 추출
+        if target_convergence:
+            # "±30% 이내 수렴" → 0.3
+            threshold_str = target_convergence.replace("±", "").replace("%", "").replace(" 이내 수렴", "").strip()
+            try:
+                threshold = float(threshold_str) / 100
+            except ValueError:
+                threshold = 0.2  # 기본값
+        else:
+            # 기본값: 20%
+            threshold = 0.2
+        
+        # 3. 오차율 비교
+        error_pct = abs(delta.get("error_pct", 0))
+        
+        return error_pct > threshold
+    
+    def _update_beliefs_from_outcome(
+        self,
+        outcome: Outcome,
+        comparison: Dict[str, Any]
+    ) -> List[str]:
+        """Outcome 기반 Belief 업데이트
+        
+        BeliefEngine.update_belief_api() 호출.
+        
+        Args:
+            outcome: Outcome 레코드
+            comparison: OutcomeComparator 결과
+        
+        Returns:
+            업데이트된 belief_id 리스트
+        """
+        from cmis_core.belief_engine import BeliefEngine
+        
+        belief_engine = BeliefEngine(self.project_root)
+        updated_belief_ids = []
+        
+        for metric_id, delta in comparison.get("deltas", {}).items():
+            # Metric별 기준 판단
+            if not self._should_update_belief(metric_id, delta):
+                continue
+            
+            # Observation 구성
+            observations = [{
+                "value": outcome.metrics.get(metric_id),
+                "weight": 1.0,
+                "source": outcome.outcome_id,
+                "timestamp": outcome.as_of
+            }]
+            
+            # Belief 업데이트
+            try:
+                result = belief_engine.update_belief_api(
+                    metric_id=metric_id,
+                    context=outcome.context,
+                    observations=observations,
+                    update_mode="bayesian"
+                )
+                
+                updated_belief_ids.append(result["belief_id"])
+                
+                # drift_alert 생성 (큰 변화 시)
+                if abs(result["delta"].get("mean_shift", 0)) > 0.5:
+                    self._create_drift_alert(metric_id, result)
+            
+            except Exception as e:
+                # 업데이트 실패 시 로그 (Phase 3: 로깅)
+                pass
+        
+        return updated_belief_ids
+    
+    def _create_drift_alert(
+        self,
+        metric_id: str,
+        belief_update_result: Dict
+    ) -> str:
+        """큰 Belief 변화 시 drift_alert 생성
+        
+        memory_store에 저장.
+        
+        Args:
+            metric_id: "MET-SAM", etc.
+            belief_update_result: update_belief_api() 결과
+        
+        Returns:
+            memory_id
+        """
+        delta = belief_update_result.get("delta", {})
+        
+        # drift_alert 생성
+        alert = {
+            "memory_id": f"MEM-drift-{uuid.uuid4().hex[:8]}",
+            "memory_type": "drift_alert",
+            "related_ids": {
+                "metric_id": metric_id,
+                "belief_id": belief_update_result["belief_id"]
+            },
+            "content": (
+                f"Large belief shift detected for {metric_id}: "
+                f"mean {delta.get('mean_shift_pct', 0):+.1%}, "
+                f"sigma {delta.get('sigma_reduction_pct', 0):+.1%}"
+            ),
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # memory_store에 저장
+        self.memory_store.append(alert)
+        
+        return alert["memory_id"]
+    
+    def _get_metric_spec(self, metric_id: str) -> Dict[str, Any]:
+        """metrics_spec에서 Metric 정의 조회
+        
+        Args:
+            metric_id: "MET-SAM", etc.
+        
+        Returns:
+            metric_spec dict 또는 빈 dict
+        """
+        # cmis.yaml에서 로드 (Phase 2: config 연동)
+        # 지금은 빈 dict
+        return {}

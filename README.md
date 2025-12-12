@@ -1,9 +1,9 @@
 # CMIS - Contextual Market Intelligence System
 
-**버전**: v3.3  
-**상태**: Production Ready ✅  
-**완성도**: 89%  
-**업데이트**: 2025-12-11
+**버전**: v3.5.0
+**상태**: Production Ready ✅
+**완성도**: 100% (9/9 엔진)
+**업데이트**: 2025-12-12
 
 ---
 
@@ -87,7 +87,7 @@ python3 -m cmis_cli opportunity-discovery \
 
 ---
 
-## ✅ 완성 엔진 (8/9) - 89%
+## ✅ 완성 엔진 (9/9) - 100%
 
 ### 1. Evidence Engine v2.2
 
@@ -134,7 +134,19 @@ python3 -m cmis_cli opportunity-discovery \
 
 **역할**: 검색 전략 최적화
 
-### 6. Workflow CLI
+### 6. BeliefEngine v1.0 🆕
+
+**역할**: Prior/Belief 관리 및 불확실성 정량화
+
+**기능**:
+- Prior Distribution 관리 (Pattern Benchmark, Uninformative)
+- Bayesian Update (Normal, Lognormal, Beta, Empirical)
+- Monte Carlo 불확실성 전파 (Sobol Sequence)
+- AST evaluator (안전한 공식 평가)
+- value_store 영속성
+- Policy 통합 (reporting_strict/decision_balanced/exploration_friendly)
+
+### 7. Workflow CLI
 
 **역할**: 명령줄 인터페이스
 
