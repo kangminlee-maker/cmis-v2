@@ -153,38 +153,43 @@ class GapCandidate:
 
 @dataclass
 class ProjectContext:
-    """Project Context (간소화 버전 - Phase 2용)
+    """Project Context (확장 버전 - Phase A + Learning)
     
     실제 구현은 cmis.yaml의 project_context_store 스키마 참조
-    Phase 2에서는 Execution Fit 계산에 필요한 최소 필드만 구현
+    Phase A: Brownfield 지원
+    Learning Phase 2: 버전 관리 추가
     """
     project_context_id: str
     
+    # Version (Learning Phase 2)
+    version: int = 1
+    previous_version_id: Optional[str] = None
+    
     # Scope
-    scope: Dict[str, Any]
-    # {"domain_id": "...", "region": "...", "segment": "..."}
+    scope: Dict[str, Any] = field(default_factory=dict)
     
     # Assets Profile
-    assets_profile: Dict[str, Any]
-    # {
-    #   "capability_traits": [
-    #     {"technology_domain": "AI_ML", "maturity_level": "production_ready"}
-    #   ],
-    #   "channels": [...],
-    #   "brand_assets": {...},
-    #   "organizational_assets": {...}
-    # }
+    assets_profile: Dict[str, Any] = field(default_factory=dict)
+    
+    # Baseline State
+    baseline_state: Dict[str, Any] = field(default_factory=dict)
+    
+    # focal_actor_id
+    focal_actor_id: Optional[str] = None
     
     # Constraints Profile
     constraints_profile: Dict[str, Any] = field(default_factory=dict)
-    # {
-    #   "hard_constraints": [
-    #     {"constraint_id": "...", "type": "financial", "threshold": ...}
-    #   ]
-    # }
     
     # Preference Profile
     preference_profile: Dict[str, Any] = field(default_factory=dict)
+    
+    # Lineage (Learning Phase 2)
+    lineage: Dict[str, Any] = field(default_factory=dict)
+    # {
+    #   "from_outcome_ids": [...],
+    #   "updated_at": "...",
+    #   "updated_by": "learning_engine"
+    # }
 
 
 @dataclass
@@ -452,6 +457,14 @@ class EvidenceRecord:
     metadata: Dict[str, Any] = field(default_factory=dict)
     # 예: {"subject": "...", "year": 2024, "url": "..."}
     
+    # Context (Phase B 추가)
+    context: Dict[str, Any] = field(default_factory=dict)
+    # 예: {"company_name": "...", "domain_id": "...", "region": "..."}
+    
+    # 시간 정보 (Phase B 추가)
+    as_of: Optional[str] = None  # 데이터 기준일
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())  # 수집 시점
+    
     retrieved_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     # Lineage
@@ -695,3 +708,121 @@ class EvidencePolicy:
             allowed_tiers=allowed_tiers,
             best_effort_mode=(policy_id == "exploration_friendly")
         )
+
+
+# ========================================
+# Strategy & Decision (D-Graph)
+# ========================================
+
+@dataclass
+class Goal:
+    """목표 정의 (D-Graph goal 노드)
+    
+    cmis.yaml decision_graph.goal 스키마 기반
+    """
+    goal_id: str
+    name: str
+    description: str = ""
+    
+    # Target Metrics
+    target_metrics: List[Dict[str, Any]] = field(default_factory=list)
+    # [{"metric_id": "MET-Revenue", "operator": ">", "value": 10000000000, "horizon": "3y"}]
+    
+    target_horizon: str = "3y"
+    project_context_id: Optional[str] = None
+    scope: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Strategy:
+    """전략 정의 (D-Graph strategy 노드)"""
+    strategy_id: str
+    name: str
+    description: str = ""
+    
+    pattern_composition: List[str] = field(default_factory=list)
+    action_set: List[Dict[str, Any]] = field(default_factory=list)
+    expected_outcomes: Dict[str, Any] = field(default_factory=dict)
+    
+    execution_fit_score: Optional[float] = None
+    adjusted_score: Optional[float] = None
+    
+    risks: List[Dict[str, Any]] = field(default_factory=list)
+    created_from: str = "pattern_combination"
+    source_patterns: List[str] = field(default_factory=list)
+    lineage: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class PortfolioEvaluation:
+    """Portfolio 평가 결과"""
+    portfolio_id: str
+    strategy_ids: List[str]
+    
+    aggregate_roi: float = 0.0
+    aggregate_risk: float = 0.0
+    combined_score: float = 0.0
+    
+    synergies: List[Dict[str, Any]] = field(default_factory=list)
+    conflicts: List[Dict[str, Any]] = field(default_factory=list)
+    resource_requirements: Dict[str, Any] = field(default_factory=dict)
+    
+    policy_ref: str = "decision_balanced"
+    project_context_id: Optional[str] = None
+    lineage: Dict[str, Any] = field(default_factory=dict)
+
+
+# ========================================
+# Learning & Outcome
+# ========================================
+
+@dataclass
+class Outcome:
+    """실제 실행 결과 (outcome_store)
+    
+    Strategy/Scenario 실행 후 실제 측정된 결과
+    """
+    outcome_id: str
+    
+    # 연결
+    related_strategy_id: Optional[str] = None
+    related_scenario_id: Optional[str] = None
+    project_context_id: Optional[str] = None
+    
+    # 실제 측정 시점
+    as_of: str = ""
+    
+    # 실제 Metric 값
+    metrics: Dict[str, Any] = field(default_factory=dict)
+    # {"MET-Revenue": 12000000000, "MET-N_customers": 150000}
+    
+    # Context
+    context: Dict[str, Any] = field(default_factory=dict)
+    # {"domain_id": "...", "region": "...", "segment": "..."}
+    
+    # Metadata
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class LearningResult:
+    """학습 결과"""
+    learning_id: str
+    outcome_id: str
+    
+    # 비교 결과
+    comparisons: List[Dict[str, Any]] = field(default_factory=list)
+    
+    # 업데이트
+    updates: Dict[str, Any] = field(default_factory=dict)
+    # {
+    #   "pattern_benchmarks": [...],
+    #   "metric_formulas": [...],
+    #   "confidence_adjustments": [...]
+    # }
+    
+    # 학습 품질
+    learning_quality: Dict[str, Any] = field(default_factory=dict)
+    
+    # Lineage
+    lineage: Dict[str, Any] = field(default_factory=dict)

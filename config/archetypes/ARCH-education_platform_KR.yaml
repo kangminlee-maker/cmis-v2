@@ -1,0 +1,99 @@
+---
+# Context Archetype: 한국 교육 플랫폼
+# 2025-12-11: Phase 2 Context Archetype
+
+archetype:
+  archetype_id: "ARCH-education_platform_KR"
+  name: "한국 교육 플랫폼"
+  description: |
+    한국 교육 시장 온라인 플랫폼의 전형적인 특징.
+    성인 교육, K-12 교육, 직업 교육 등을 포함.
+    구독형 + 콘텐츠 판매 혼합 모델이 일반적.
+
+  # 판별 기준
+  criteria:
+    region: "KR"
+    domain:
+      - "education"
+      - "edtech"
+    delivery_channel: "online"
+
+  # Expected Pattern Set
+  expected_patterns:
+    # Core: 거의 항상 나타나야 함
+    core:
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.85
+        rationale: "월정액 수강료 모델이 주류"
+
+      - pattern_id: "PAT-recurring_revenue"
+        weight: 0.8
+        rationale: "반복 수익 중심"
+
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.75
+        rationale: "온라인 콘텐츠 기반, 물리적 자산 최소"
+
+    # Common: 자주 나타남
+    common:
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.7
+        rationale: "무료 체험 후 유료 전환 전략"
+
+      - pattern_id: "PAT-tiered_pricing"
+        weight: 0.65
+        rationale: "초급/중급/고급 단계별 가격"
+
+      - pattern_id: "PAT-network_effects"
+        weight: 0.6
+        rationale: "학습자 커뮤니티 효과"
+
+      - pattern_id: "PAT-marketplace_model"
+        weight: 0.55
+        rationale: "강사-학습자 연결 플랫폼"
+
+      - pattern_id: "PAT-land_and_expand"
+        weight: 0.5
+        rationale: "개인 → 기업 교육 확장"
+
+    # Rare: 가끔 나타남
+    rare:
+      - pattern_id: "PAT-transaction_model"
+        weight: 0.4
+        rationale: "일부 강의는 건당 결제"
+
+      - pattern_id: "PAT-franchise_model"
+        weight: 0.3
+        rationale: "온라인 + 오프라인 학원 연계"
+
+      - pattern_id: "PAT-viral_growth"
+        weight: 0.25
+        rationale: "추천 프로그램 활용"
+
+  # 벤치마크 값
+  typical_metrics:
+    churn_rate:
+      median: 0.10
+      p25: 0.07
+      p75: 0.15
+
+    gross_margin:
+      median: 0.70
+      p25: 0.60
+      p75: 0.80
+
+    ltv_cac_ratio:
+      median: 2.8
+      p25: 2.0
+      p75: 4.0
+
+    revenue_growth_yoy:
+      median: 0.35
+      p25: 0.20
+      p75: 0.60
+
+    completion_rate:
+      median: 0.45
+      p25: 0.30
+      p75: 0.65
+

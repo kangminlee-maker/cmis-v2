@@ -14,6 +14,11 @@ def project_root():
 @pytest.fixture
 def seed_path(project_root):
     """Adult Language seed 파일 경로"""
+    # 새 위치
+    new_path = project_root / "dev" / "examples" / "seeds" / "Adult_Language_Education_KR_reality_seed.yaml"
+    if new_path.exists():
+        return new_path
+    # Fallback
     return project_root / "seeds" / "Adult_Language_Education_KR_reality_seed.yaml"
 
 

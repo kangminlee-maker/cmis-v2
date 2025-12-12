@@ -152,17 +152,17 @@ class TestContextArchetype:
         """Archetype 로딩"""
         library = ContextArchetypeLibrary()
         library.load_all()
-        
+
         archetypes = list(library.archetypes.values())
-        
+
         # 3개 Archetype
         assert len(archetypes) >= 3
-        
+
         archetype_ids = [a.archetype_id for a in archetypes]
         assert "ARCH-digital_service_KR" in archetype_ids
-        assert "ARCH-b2b_saas" in archetype_ids
-        assert "ARCH-platform_global" in archetype_ids
-        
+        assert "ARCH-education_platform_KR" in archetype_ids
+        assert "ARCH-marketplace_global" in archetype_ids
+
         print(f"Loaded {len(archetypes)} archetypes")
     
     def test_archetype_expected_patterns(self):

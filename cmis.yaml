@@ -1,13 +1,17 @@
 ---
 cmis:
   meta:
-    version: "9.0.0-alpha"
-    codename: "Reality-Pattern-Value OS"
+    version: "3.3.0"
+    codename: "Contextual Market Intelligence System"
     description: >
-      Universal Market Intelligence System v9 – 시장/비즈니스 세계를
+      CMIS v3.3 – 시장/비즈니스 세계를
       Reality/Pattern/Value/Decision 그래프로 표현하고,
-      구조 이해·기회 발굴·전략 설계·학습까지 수행하는 OS의 상위 스켈레톤.
-    status: "draft_in_progress"
+      Understand → Discover → Decide → Learn 루프를 통해
+      구조 이해·기회 발굴·전략 설계·학습까지 수행하는 완성된 Market Intelligence OS.
+    status: "production_ready"
+    release_date: "2025-12-11"
+    completion: "89%"
+    engines_completed: "8/9"
     authors:
       - "cmis-architect"
     references:
@@ -577,6 +581,7 @@ cmis:
         project_context_store:
           description: "프로젝트별 사용자/조직 상황 컨텍스트 저장소 (Brownfield/Greenfield 모두 지원)"
           id_prefix: "PRJ-"
+          version_format: "PRJ-{id}-v{N}"
           linked_to:
             - "cmis_project_context_layer_design.md"
             - "CMIS_Project_Context_Philosophy_Alignment.md"
@@ -585,10 +590,18 @@ cmis:
               project_context_id:
                 type: "string"
                 required: true
-                description: "PRJ- 프리픽스를 갖는 고유 ID"
+                description: "PRJ- 프리픽스 또는 PRJ-{id}-v{N} 형식"
+                example: "PRJ-my-company-v2"
 
               version:
                 type: "int"
+                default: 1
+                description: "버전 번호 (LearningEngine에서 자동 증가)"
+              
+              previous_version_id:
+                type: "optional[string]"
+                description: "이전 버전 ID (버전 체인)"
+                example: "PRJ-my-company-v1"
                 default: 1
                 description: "Project Context 버전 (Outcome 반영 시 증가)"
 
@@ -903,36 +916,61 @@ cmis:
 
         world_engine:
           description: "Evidence를 Reality Graph(R-Graph) 스냅샷으로 정규화/업데이트하는 엔진"
+          version: "v2.0"
+          status: "production_ready"
           inputs:
             - "substrate_plane.stores.evidence_store"
           outputs:
             - "substrate_plane.graphs.reality_graph"
           api:
-            - name: "ingest_evidence"
-              description: "새 Evidence를 받아 R-Graph에 반영"
+            - name: "snapshot"
+              description: "특정 시점/컨텍스트 Reality Graph 서브그래프 반환"
+              version: "v2.0"
               input:
-                evidence_ids: "list[evidence_id]"
+                domain_id: "string"
+                region: "string"
+                segment: "optional[string]"
+                as_of: "optional[date]"  # "latest" 가능
+                project_context_id: "optional[project_context_id]"
+                slice_spec: "optional[dict]"  # Phase C: n_hops, include_competitors
+              output:
+                reality_graph_snapshot:
+                  graph: "reality_graph_subgraph"
+                  meta: "dict"
+              features:
+                - "as_of 필터링 (State 최신 버전, MoneyFlow/Event timestamp)"
+                - "segment 필터링 (customer_segment 기반)"
+                - "project_context_id: focal_actor + baseline_state → R-Graph"
+                - "서브그래프 추출 (focal_actor 중심 N-hop)"
+                - "slice_spec 커스터마이즈 (n_hops, edge 타입)"
+            
+            - name: "ingest_evidence"
+              description: "Evidence → R-Graph 자동 변환 및 반영"
+              version: "v2.0"
+              input:
+                domain_id: "string"
+                evidence_list: "list[evidence_record]"
               output:
                 updated_node_ids: "list[node_id]"
-            - name: "snapshot"
-              description: "특정 시점/컨텍스트 Reality Graph 서브그래프 반환 (필요시 EvidenceEngine 호출)"
-              input:
-                as_of: "date"
-                scope: "dict"
-                project_context_id: "project_context_id (optional)"
-              output:
-                graph_slice_ref: "reality_graph_subgraph"
-              notes:
-                - "project_context_id가 주어지면 focal_actor 및 주변 서브그래프를 우선 포함"
-                - "baseline_state 참조 Metric/State를 R-Graph에 반영"
+              features:
+                - "ActorResolver: 중복 방지 (사업자등록번호/증권코드/Fuzzy)"
+                - "EvidenceMapper: 6개 타입 자동 변환"
+                - "Conflict 해결 (최신 우선)"
+                - "Lineage 자동 기록"
             
             - name: "ingest_project_context"
-              description: "Project Context의 baseline/assets 정보를 R-Graph로 투영"
+              description: "ProjectContext → ProjectOverlay 투영"
+              version: "v2.0"
               input:
-                project_context_id: "project_context_id"
+                project_context: "project_context"
               output:
                 focal_actor_id: "actor_id"
                 updated_node_ids: "list[node_id]"
+              features:
+                - "focal_actor 생성/업데이트"
+                - "baseline_state → State 노드 매핑"
+                - "assets_profile → Actor traits 매핑"
+                - "brand/org/data_assets → State 노드"
 
         pattern_engine:
           description: "R/P-Graph 위에서 패턴 인식/조합/갭 탐지를 수행하는 엔진"
@@ -1550,6 +1588,8 @@ cmis:
 
         strategy_engine:
           description: "Goal/Pattern/Reality/Value를 바탕으로 전략/포트폴리오 후보 탐색/평가 엔진"
+          version: "v1.0"
+          status: "production_ready"
           inputs:
             - "substrate_plane.graphs.reality_graph"
             - "substrate_plane.graphs.pattern_graph"
@@ -1559,30 +1599,45 @@ cmis:
           outputs:
             - "strategy_candidates"
           api:
-            - name: "search_strategies"
+            - name: "search_strategies_api"
               description: "Goal/제약을 입력받아 Strategy 후보 세트 생성"
+              version: "v1.0"
               input:
                 goal_id: "goal_id"
-                constraints: "dict"
-                project_context_id: "project_context_id (optional)"
+                constraints: "dict"  # Greenfield: budget, timeline / Brownfield: 무시
+                project_context_id: "optional[project_context_id]"
               output:
-                strategy_set_ref: "strategy_set"
-              notes:
-                - "project_context_id 있으면 constraints_profile.hard_constraints 자동 반영"
-                - "preference_profile 기반 전략 랭킹 조정"
-                - "execution_fit_score 낮은 전략 필터링/하위 랭킹"
+                strategy_set_ref: "string"  # "STSET-{uuid}"
+              features:
+                - "Greenfield: greenfield_constraints (budget, timeline_months) 지원"
+                - "Brownfield: constraints_profile.hard_constraints 자동 반영"
+                - "Pattern → Strategy 변환 (Single, Composition, Gap-based)"
+                - "Execution Fit 계산 (Brownfield만)"
+                - "ROI/Risk 예측 (Pattern Benchmark 기반)"
+                - "Preference 반영 (soft_preferences)"
+              implementation:
+                - "API 레벨 분리 (Public / Orchestration / Core)"
+                - "D-Graph 저장 (strategy 노드 + strategy_uses_pattern edge)"
+                - "Strategy 캐싱 (재사용)"
             
-            - name: "evaluate_portfolio"
+            - name: "evaluate_portfolio_api"
               description: "여러 Strategy를 포트폴리오로 묶어 평가"
+              version: "v1.0"
               input:
                 strategy_ids: "list[strategy_id]"
                 policy_ref: "policy_ref"
-                project_context_id: "project_context_id (optional)"
+                project_context_id: "optional[project_context_id]"
               output:
-                portfolio_eval_ref: "portfolio_evaluation"
-              notes:
-                - "project_context_id 있으면 자원(예산/인력) 경쟁 고려"
-                - "Cannibalization 리스크 평가"
+                portfolio_eval_ref: "string"  # "PORTFOLIO-{uuid}"
+              features:
+                - "Synergy 분석 (Pattern family, composes_with)"
+                - "Conflict 탐지 (conflicts_with, resource)"
+                - "통합 ROI/Risk (Synergy 보너스, Conflict 페널티)"
+                - "Greedy 최적화 (ROI / (1 + Risk))"
+                - "PolicyEngine 통합 (risk_tolerance 반영)"
+              implementation:
+                - "PortfolioOptimizer (Synergy/Conflict 로직)"
+                - "D-Graph 저장 (portfolio_eval 노드)"
 
         learning_engine:
           description: "Outcome과 예상 값을 비교해 Belief/Pattern/Value Graph 업데이트"

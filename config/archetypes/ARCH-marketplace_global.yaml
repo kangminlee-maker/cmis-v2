@@ -1,0 +1,115 @@
+---
+# Context Archetype: 글로벌 마켓플레이스
+# 2025-12-11: Phase 2 Context Archetype
+
+archetype:
+  archetype_id: "ARCH-marketplace_global"
+  name: "글로벌 마켓플레이스"
+  description: |
+    글로벌 시장의 양면/다면 마켓플레이스 플랫폼.
+    공급자-수요자 연결이 핵심 가치.
+    네트워크 효과와 거래 수수료 모델이 일반적.
+
+  # 판별 기준
+  criteria:
+    region:
+      - "Global"
+      - "US"
+      - "EU"
+    domain:
+      - "marketplace"
+      - "platform"
+    delivery_channel: "online"
+
+  # Expected Pattern Set
+  expected_patterns:
+    # Core: 거의 항상 나타나야 함
+    core:
+      - pattern_id: "PAT-marketplace_model"
+        weight: 0.95
+        rationale: "마켓플레이스의 핵심 모델"
+
+      - pattern_id: "PAT-transaction_model"
+        weight: 0.9
+        rationale: "거래 수수료가 주 수익원"
+
+      - pattern_id: "PAT-network_effects"
+        weight: 0.85
+        rationale: "양면 네트워크 효과 필수"
+
+      - pattern_id: "PAT-platform_business_model"
+        weight: 0.8
+        rationale: "플랫폼 비즈니스 모델"
+
+    # Common: 자주 나타남
+    common:
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.7
+        rationale: "중개 모델, 자산 보유 최소"
+
+      - pattern_id: "PAT-viral_growth"
+        weight: 0.65
+        rationale: "공급자/수요자 양측 추천"
+
+      - pattern_id: "PAT-tiered_pricing"
+        weight: 0.6
+        rationale: "판매자 등급별 수수료"
+
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.55
+        rationale: "기본 무료, 프리미엄 유료"
+
+      - pattern_id: "PAT-ecosystem_lock_in"
+        weight: 0.5
+        rationale: "성숙 단계에서 생태계 락인"
+
+    # Rare: 가끔 나타남
+    rare:
+      - pattern_id: "PAT-subscription_model"
+        weight: 0.4
+        rationale: "일부는 구독형 프리미엄 서비스"
+
+      - pattern_id: "PAT-vertical_integration"
+        weight: 0.35
+        rationale: "일부 영역 직접 운영"
+
+      - pattern_id: "PAT-winner_take_all"
+        weight: 0.3
+        rationale: "시장 독점 경향"
+
+      - pattern_id: "PAT-land_and_expand"
+        weight: 0.25
+        rationale: "지역별 확장 전략"
+
+  # 벤치마크 값
+  typical_metrics:
+    take_rate:
+      median: 0.15
+      p25: 0.10
+      p75: 0.25
+
+    gmv_growth_yoy:
+      median: 0.50
+      p25: 0.30
+      p75: 1.00
+
+    gross_margin:
+      median: 0.85
+      p25: 0.75
+      p75: 0.95
+
+    supplier_retention_rate:
+      median: 0.75
+      p25: 0.65
+      p75: 0.85
+
+    buyer_retention_rate:
+      median: 0.60
+      p25: 0.50
+      p75: 0.70
+
+    liquidity_score:
+      median: 0.70
+      p25: 0.50
+      p75: 0.85
+

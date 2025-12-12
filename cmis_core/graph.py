@@ -21,9 +21,22 @@ class InMemoryGraph:
     POC에 필요한 최소 기능만 제공한다.
   """
 
-  def __init__(self) -> None:
+  def __init__(self, nodes: Optional[List[Node]] = None, edges: Optional[List[Edge]] = None) -> None:
+    """
+    Args:
+        nodes: 초기 노드 리스트 (선택)
+        edges: 초기 엣지 리스트 (선택)
+    """
     self.nodes: Dict[str, Node] = {}
     self.edges: List[Edge] = []
+    
+    # 초기 노드/엣지 추가
+    if nodes:
+      for node in nodes:
+        self.nodes[node.id] = node
+    
+    if edges:
+      self.edges = list(edges)
 
   # --- node operations ---
   def upsert_node(self, node_id: str, node_type: str, data: Dict[str, Any] | None = None) -> Node:

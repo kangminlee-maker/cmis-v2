@@ -1,52 +1,90 @@
 ---
-# Context Archetype 1: 한국 디지털 서비스 시장
-# 2025-12-10: Phase 2
+# Context Archetype: 한국 디지털 서비스
+# 2025-12-11: Phase 2 Context Archetype
 
 archetype:
   archetype_id: "ARCH-digital_service_KR"
-  name: "한국 디지털 서비스 시장"
+  name: "한국 디지털 서비스"
   description: |
-    한국의 B2C/B2B 디지털 서비스 시장.
-    SaaS, 플랫폼, 콘텐츠, 교육 등 온라인 서비스.
+    한국 시장 디지털 서비스 업체의 전형적인 특징.
+    온라인 플랫폼, SaaS, 구독 서비스 등을 포함.
+    네트워크 효과와 구독 모델이 일반적.
 
   # 판별 기준
   criteria:
     region: "KR"
-    delivery_channel: "online"
-    resource_kind:
+    domain:
       - "digital_service"
-      - "software_license"
+      - "saas"
+      - "platform"
+    delivery_channel: "online"
 
   # Expected Pattern Set
   expected_patterns:
-    core:  # 90%+ 시장에서 관찰
+    # Core: 거의 항상 나타나야 함 (weight 0.8+)
+    core:
       - pattern_id: "PAT-subscription_model"
-        weight: 0.90
-        rationale: "대부분의 디지털 서비스가 구독형"
+        weight: 0.9
+        rationale: "디지털 서비스는 대부분 구독형 수익 모델"
 
       - pattern_id: "PAT-recurring_revenue"
         weight: 0.85
         rationale: "반복 수익 구조가 핵심"
 
-    common:  # 50-90% 시장에서 관찰
-      - pattern_id: "PAT-freemium_model"
-        weight: 0.70
-        rationale: "무료 체험 → 유료 전환 흔함"
-
       - pattern_id: "PAT-network_effects"
-        weight: 0.60
-        rationale: "플랫폼/커뮤니티 요소"
+        weight: 0.75
+        rationale: "플랫폼 특성상 네트워크 효과 중요"
+
+    # Common: 자주 나타남 (weight 0.5-0.8)
+    common:
+      - pattern_id: "PAT-freemium_model"
+        weight: 0.7
+        rationale: "한국 시장에서 freemium 전략 흔함"
 
       - pattern_id: "PAT-tiered_pricing"
-        weight: 0.50
-        rationale: "Basic/Pro/Enterprise 등급"
+        weight: 0.65
+        rationale: "다양한 고객층 대응"
 
-    rare:  # 10-50% 시장에서 관찰 (기회)
-      - pattern_id: "PAT-platform_business_model"
-        weight: 0.30
-        rationale: "양면/다면 시장 (드물지만 강력)"
+      - pattern_id: "PAT-asset_light_model"
+        weight: 0.6
+        rationale: "디지털 서비스는 자산 경량 모델"
 
+      - pattern_id: "PAT-viral_growth"
+        weight: 0.55
+        rationale: "바이럴 마케팅 활용"
+
+    # Rare: 가끔 나타남 (weight 0.2-0.5)
+    rare:
       - pattern_id: "PAT-marketplace_model"
-        weight: 0.20
-        rationale: "중개 모델 (특정 영역)"
+        weight: 0.4
+        rationale: "일부 플랫폼은 마켓플레이스 모델"
 
+      - pattern_id: "PAT-transaction_model"
+        weight: 0.3
+        rationale: "거래 기반 수익 모델 (구독과 병행)"
+
+      - pattern_id: "PAT-ecosystem_lock_in"
+        weight: 0.25
+        rationale: "성숙한 플랫폼의 경우"
+
+  # 벤치마크 값 (이 archetype의 전형적인 지표)
+  typical_metrics:
+    churn_rate:
+      median: 0.05
+      p25: 0.03
+      p75: 0.08
+
+    gross_margin:
+      median: 0.75
+      p25: 0.65
+      p75: 0.85
+
+    ltv_cac_ratio:
+      median: 3.5
+      p25: 2.5
+      p75: 5.0
+
+    revenue_growth_yoy:
+      median: 0.40
+      p25: 0.25
+      p75: 0.80
