@@ -1,7 +1,24 @@
 ---
 schema_version: 1
-description: "Regression suite for CMIS eval harness (placeholder)."
+description: "Regression suite for CMIS eval harness (Phase 1)."
 
 regression_suite:
-  tests: []
+  defaults:
+    interface_id: "eval_harness"
+    policy_id: "exploration_friendly"
+    budgets:
+      max_iterations: 5
+      max_time_sec: 30
+    thresholds:
+      require_success: true
+      max_avg_prior_ratio: 1.0
+      max_policy_failure_rate: 1.0
+      min_evidence_hit_rate: 0.0
+
+  tests:
+    - id: "canary-adult-language-kr"
+      query: "한국 어학 시장 분석"
+      context:
+        domain_id: "Adult_Language_Education_KR"
+        region: "KR"
 

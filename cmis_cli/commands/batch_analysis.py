@@ -92,7 +92,7 @@ def cmd_batch_analysis(args):
     config_path = Path(args.config)
 
     if not config_path.exists():
-        print(f"❌ Config 파일 없음: {config_path}")
+        print(f"[ERROR] Config 파일 없음: {config_path}")
         return
 
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -101,7 +101,7 @@ def cmd_batch_analysis(args):
     jobs = config.get("jobs", [])
 
     if not jobs:
-        print("❌ Jobs 없음")
+        print("[ERROR] Jobs 없음")
         return
 
     print(f"총 {len(jobs)}개 작업")
@@ -129,14 +129,14 @@ def cmd_batch_analysis(args):
                         if completeness == "full":
                             print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} ✓ (완료)")
                         elif completeness == "partial":
-                            print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} ⚠️  (부분 완료)")
+                            print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} [WARN] (부분 완료)")
                         else:
                             print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} ✓")
                     else:
-                        print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} ❌ (실패)")
+                        print(f"[{len(results)}/{len(jobs)}] Job {job_idx+1} [FAIL] (실패)")
 
                 except Exception as e:
-                    print(f"[{len(results)+1}/{len(jobs)}] Job {job_idx+1} ❌ (예외: {e})")
+                    print(f"[{len(results)+1}/{len(jobs)}] Job {job_idx+1} [FAIL] (예외: {e})")
     else:
         # 순차 실행
         for i, job in enumerate(jobs):
@@ -147,7 +147,7 @@ def cmd_batch_analysis(args):
             if result["status"] == "completed":
                 print(f"  ✓ 완료 ({result.get('completeness', 'full')})")
             else:
-                print(f"  ❌ 실패")
+                print("  [FAIL] 실패")
 
     print()
     print("=" * 60)
@@ -166,7 +166,7 @@ def cmd_batch_analysis(args):
     print(f"  ✓ 완료: {len(completed)}개")
     print(f"    - Full: {len(full)}개")
     print(f"    - Partial: {len(partial)}개")
-    print(f"  ❌ 실패: {len(failed)}개")
+    print(f"  [FAIL] 실패: {len(failed)}개")
     print()
 
     # 결과 저장
@@ -182,6 +182,6 @@ def cmd_batch_analysis(args):
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(result, f, ensure_ascii=False, indent=2, default=str)
 
-        print(f"✅ 결과 저장: {output_dir}")
+        print(f"[OK] 결과 저장: {output_dir}")
 
 

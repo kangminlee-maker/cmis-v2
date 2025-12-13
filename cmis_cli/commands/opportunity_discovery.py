@@ -121,7 +121,7 @@ def cmd_opportunity_discovery(args):
             }
 
             json.dump(output_result, f, ensure_ascii=False, indent=2)
-        print(f"✅ 결과 저장: {output_path}")
+        print(f"[OK] 결과 저장: {output_path}")
 
 
 

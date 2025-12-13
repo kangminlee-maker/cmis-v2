@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Optional
+from datetime import datetime, timezone
 import time
 
 from cmis_core.config import CMISConfig
@@ -29,16 +30,26 @@ from cmis_core.evidence.google_search_source import GoogleSearchSource
 from .task import Task, TaskType
 
 
-def build_default_source_registry(enable_stub_source: bool = False) -> SourceRegistry:
+def build_default_source_registry(config: CMISConfig, enable_stub_source: bool = False) -> SourceRegistry:
     """기본 SourceRegistry 구성 (가능한 소스는 등록, 불가능하면 스킵).
 
     Args:
+        config: CMISConfig (tool_and_resource_registry 기반 제약 반영)
         enable_stub_source: 테스트/개발용 stub source를 추가할지 여부
     """
     registry = SourceRegistry()
 
+    tool_ids = set(config.list_tool_ids() or [])
+    allow_http_fetch = ("http_fetch" in tool_ids) or (not tool_ids)
+    allow_web_search = ("web_search" in tool_ids) or (not tool_ids)
+
     # Optional: stub source (테스트용)
     if enable_stub_source:
+        # Stub-only 모드: 외부 네트워크/API 호출을 피하기 위해 네트워크 소스를 비활성화합니다.
+        # (Cursor Agent Interface v2 테스트/회귀 러너에서 재현성을 우선합니다.)
+        allow_http_fetch = False
+        allow_web_search = False
+
         from cmis_core.evidence.sources import StubSource
 
         stub = StubSource(
@@ -49,24 +60,26 @@ def build_default_source_registry(enable_stub_source: bool = False) -> SourceReg
         registry.register_source(stub.source_id, stub.source_tier.value, stub)
 
     # Official: KOSIS/ECOS/WorldBank (키 없으면 constructor에서 실패할 수 있음)
-    for ctor, tier in [
-        (lambda: KOSISSource(), SourceTier.OFFICIAL),
-        (lambda: ECOSSource(), SourceTier.OFFICIAL),
-        (lambda: WorldBankSource(), SourceTier.OFFICIAL),
-    ]:
-        try:
-            src = ctor()
-            registry.register_source(src.source_id, tier.value, src)
-        except Exception:
-            # 환경(API key 등) 미설정 시 graceful skip
-            continue
+    if allow_http_fetch:
+        for ctor, tier in [
+            (lambda: KOSISSource(), SourceTier.OFFICIAL),
+            (lambda: ECOSSource(), SourceTier.OFFICIAL),
+            (lambda: WorldBankSource(), SourceTier.OFFICIAL),
+        ]:
+            try:
+                src = ctor()
+                registry.register_source(src.source_id, tier.value, src)
+            except Exception:
+                # 환경(API key 등) 미설정 시 graceful skip
+                continue
 
     # Web: Google Search (선택)
-    try:
-        gs = GoogleSearchSource()
-        registry.register_source(gs.source_id, gs.source_tier.value, gs)
-    except Exception:
-        pass
+    if allow_web_search:
+        try:
+            gs = GoogleSearchSource()
+            registry.register_source(gs.source_id, gs.source_tier.value, gs)
+        except Exception:
+            pass
 
     return registry
 
@@ -97,7 +110,7 @@ class TaskExecutor:
         self.world_engine = world_engine or WorldEngine(project_root=self.project_root)
 
         if evidence_engine is None:
-            registry = build_default_source_registry(enable_stub_source=enable_stub_source)
+            registry = build_default_source_registry(self.config, enable_stub_source=enable_stub_source)
             evidence_store = create_evidence_store(backend_type="memory")
             evidence_engine = EvidenceEngine(self.config, registry, evidence_store=evidence_store)
         self.evidence_engine = evidence_engine
@@ -146,11 +159,13 @@ class TaskExecutor:
                 for r in b.records:
                     evidence_ids.append(r.evidence_id)
 
+            tool_calls = self._summarize_tool_calls_from_evidence_multi(evidence_multi)
             return {
                 "task_type": task.task_type.value,
                 "target_metrics": metric_ids,
                 "evidence_ids": evidence_ids,
                 "evidence_summary": evidence_multi.get_evidence_bundle_summary(),
+                "tool_calls": tool_calls,
                 "time_sec": time.time() - start,
             }
 
@@ -166,6 +181,7 @@ class TaskExecutor:
                 use_cache=True,
             )
             evidence_summary = evidence_multi.get_evidence_bundle_summary()
+            tool_calls = self._summarize_tool_calls_from_evidence_multi(evidence_multi)
 
             # 2) Graph snapshot 확보 (없어도 되지만, derived/fallback에 필요)
             snapshot = self._get_snapshot(run_context)
@@ -193,6 +209,7 @@ class TaskExecutor:
                 "metric_eval": (None if metric_eval is None else asdict(metric_eval)),
                 "policy_check": (None if policy_check is None else policy_check.to_dict()),
                 "evidence_summary": evidence_summary,
+                "tool_calls": tool_calls,
                 "value_program": value_program,
                 "time_sec": time.time() - start,
             }
@@ -228,4 +245,55 @@ class TaskExecutor:
             as_of=str(as_of),
             project_context_id=(None if project_context_id is None else str(project_context_id)),
         )
+
+    def _tool_safety(self, tool_id: str) -> Optional[str]:
+        tool = None
+        if hasattr(self.config, "get_tool"):
+            tool = self.config.get_tool(tool_id)
+        if isinstance(tool, dict) and tool.get("safety"):
+            return str(tool.get("safety"))
+        return None
+
+    @staticmethod
+    def _map_source_to_tool_id(source_id: str) -> str:
+        sid = str(source_id or "")
+        if sid == "GoogleSearch":
+            return "web_search"
+        if sid == "STUB":
+            return "python_runtime"
+        return "http_fetch"
+
+    def _summarize_tool_calls_from_evidence_multi(self, evidence_multi: Any) -> list[Dict[str, Any]]:
+        """Evidence 결과로부터 tool call 요약을 생성합니다 (Phase 1 best-effort)."""
+        bundles = getattr(evidence_multi, "bundles", None)
+        if not isinstance(bundles, dict):
+            return []
+
+        counts: Dict[tuple[str, str, str], int] = {}
+        for b in bundles.values():
+            records = getattr(b, "records", None)
+            if not isinstance(records, list):
+                continue
+            for r in records:
+                source_id = str(getattr(r, "source_id", "") or "")
+                source_tier = str(getattr(r, "source_tier", "") or "")
+                tool_id = self._map_source_to_tool_id(source_id)
+                key = (tool_id, source_id, source_tier)
+                counts[key] = counts.get(key, 0) + 1
+
+        ts = datetime.now(timezone.utc).isoformat()
+        out: list[Dict[str, Any]] = []
+        for (tool_id, source_id, source_tier), n in sorted(counts.items(), key=lambda x: (x[0][0], x[0][1], x[0][2])):
+            out.append(
+                {
+                    "ts": ts,
+                    "tool_id": tool_id,
+                    "source_id": source_id,
+                    "source_tier": source_tier,
+                    "count": n,
+                    "safety": self._tool_safety(tool_id),
+                }
+            )
+
+        return out[:20]
 

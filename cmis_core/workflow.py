@@ -176,7 +176,7 @@ class WorkflowOrchestrator:
             execution_time=execution_time,
         )
 
-        print(f"\n✅ structure_analysis 완료 ({execution_time:.2f}초)")
+        print(f"\n[OK] structure_analysis 완료 ({execution_time:.2f}초)")
 
         return result
 
@@ -303,7 +303,7 @@ class WorkflowOrchestrator:
             "completeness": "full"  # Phase 1: 항상 full
         }
 
-        print(f"\n✅ opportunity_discovery 완료 ({execution_time:.2f}초)")
+        print(f"\n[OK] opportunity_discovery 완료 ({execution_time:.2f}초)")
 
         return result
 

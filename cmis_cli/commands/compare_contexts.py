@@ -199,7 +199,7 @@ def cmd_compare_contexts(args):
         with open(args.output, 'w', encoding='utf-8') as f:
             json.dump(comparison, f, ensure_ascii=False, indent=2, default=str)
 
-        print(f"✅ 비교 결과 저장: {args.output}")
+        print(f"[OK] 비교 결과 저장: {args.output}")
 
 
 

@@ -101,12 +101,12 @@ policy_pack:
       prior_limited:
         allow_prior: true
         max_prior_ratio: 0.3
-        allowed_prior_types: ["pattern_benchmark", "learned_belief"]
+        allowed_prior_types: ["pattern_benchmark", "learned_belief", "uninformative"]
 
       prior_free:
         allow_prior: true
         max_prior_ratio: 0.7
-        allowed_prior_types: ["pattern_benchmark", "learned_belief", "llm_estimate"]
+        allowed_prior_types: ["pattern_benchmark", "learned_belief", "llm_estimate", "uninformative"]
 
     convergence_profiles:
       conv_default:

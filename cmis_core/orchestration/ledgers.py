@@ -194,10 +194,201 @@ class Ledgers:
         self.progress_ledger.diff_reports.append(dict(diff_report))
         self.progress_ledger.touch()
 
+    def record_project_insights_from_diff(self, diff_report: Dict[str, Any]) -> None:
+        """Diff report를 기반으로 ProjectLedger의 evidence_plan/open_questions를 보강합니다.
+
+        목적:
+        - Verifier/Replanner가 발견한 결손(누락/lineage/consistency/policy)을
+          프로젝트 단위 working-memory(ledger)에 남겨 UX/재실행에서 활용하도록 합니다.
+
+        원칙:
+        - best-effort (Phase 1): 타입이 예상과 다르면 fail-open(무시)합니다.
+        - idempotent: 동일한 항목/질문은 중복 추가하지 않습니다.
+        """
+        if not isinstance(diff_report, dict):
+            return
+
+        # -------- evidence_plan normalize --------
+        plan = self.project_ledger.evidence_plan
+        if not isinstance(plan, dict):
+            plan = {}
+
+        items = plan.get("items")
+        if not isinstance(items, list):
+            items = []
+
+        existing_keys = set()
+        for it in items:
+            if isinstance(it, dict):
+                existing_keys.add((it.get("kind"), it.get("metric_id"), it.get("reason")))
+
+        def add_item(item: Dict[str, Any]) -> None:
+            if not isinstance(item, dict):
+                return
+            key = (item.get("kind"), item.get("metric_id"), item.get("reason"))
+            if key in existing_keys:
+                return
+            items.append(item)
+            existing_keys.add(key)
+
+        # -------- open_questions normalize --------
+        questions = self.project_ledger.open_questions
+        if not isinstance(questions, list):
+            questions = []
+
+        def add_question(q: str) -> None:
+            q = str(q or "").strip()
+            if not q:
+                return
+            if q in questions:
+                return
+            questions.append(q)
+
+        # -------- diff parsing --------
+        missing_metrics = list(diff_report.get("missing_metrics") or [])
+        missing_values = list(diff_report.get("missing_values") or [])
+        failed_policy_metrics = list(diff_report.get("failed_policy_metrics") or [])
+        lineage_missing_metrics = list(diff_report.get("lineage_missing_metrics") or [])
+        consistency_issues = list(diff_report.get("consistency_issues") or [])
+
+        for mid in missing_metrics:
+            metric_id = str(mid)
+            add_item({"kind": "compute_metric", "metric_id": metric_id, "reason": "missing_metric"})
+            add_question(f"{metric_id}: metric 엔트리가 없습니다. 정의/산출식/데이터 소스를 확인해야 합니다.")
+
+        for mid in missing_values:
+            metric_id = str(mid)
+            add_item({"kind": "compute_metric", "metric_id": metric_id, "reason": "missing_value"})
+            add_question(f"{metric_id}: 값(point_estimate/distribution)이 없습니다. 계산을 위한 evidence 수집/재계산이 필요합니다.")
+
+        for mid in lineage_missing_metrics:
+            metric_id = str(mid)
+            add_item({"kind": "collect_evidence", "metric_id": metric_id, "reason": "evidence_lineage_missing"})
+            add_item({"kind": "compute_metric", "metric_id": metric_id, "reason": "evidence_lineage_missing"})
+            add_question(f"{metric_id}: value_record.lineage가 비어 있습니다(from_evidence_ids/from_value_ids). 근거(evidence/value) 연결이 필요합니다.")
+
+        for mid in failed_policy_metrics:
+            metric_id = str(mid)
+            add_item({"kind": "collect_evidence", "metric_id": metric_id, "reason": "policy_failed"})
+            add_item({"kind": "compute_metric", "metric_id": metric_id, "reason": "policy_failed"})
+            add_question(f"{metric_id}: policy gate 실패. violations/근거 및 remediation을 확인해야 합니다.")
+
+        for it in consistency_issues:
+            if not isinstance(it, dict):
+                continue
+            metric_id = str(it.get("metric_id") or "")
+            issue = str(it.get("issue") or "unknown")
+            if not metric_id:
+                continue
+            add_item({"kind": "compute_metric", "metric_id": metric_id, "reason": f"consistency:{issue}"})
+            add_question(f"{metric_id}: consistency issue({issue}). point_estimate와 distribution 범위를 점검/재계산해야 합니다.")
+
+        plan.setdefault("generated_by", "kernel_rules_v1")
+        plan["items"] = items
+        plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+        self.project_ledger.evidence_plan = plan
+        self.project_ledger.open_questions = questions
+
     def set_next_step_suggestion(self, suggestion: Dict[str, Any]) -> None:
         """UI/재계획 참고용 next step 제안"""
         self.progress_ledger.next_step_suggestion = dict(suggestion)
         self.progress_ledger.touch()
+
+    def _refresh_goal_graph_metric_status(self, metric_id: str) -> None:
+        """goal_graph 내 metric 노드의 상태를 현재 metrics 엔트리로부터 갱신합니다."""
+        g = self.project_ledger.goal_graph
+        if not isinstance(g, dict):
+            return
+        nodes = g.get("nodes")
+        if not isinstance(nodes, list):
+            return
+
+        metric_id = str(metric_id or "")
+        if not metric_id:
+            return
+
+        node: Optional[Dict[str, Any]] = None
+        for n in nodes:
+            if isinstance(n, dict) and str(n.get("id")) == metric_id and n.get("type") == "metric":
+                node = n
+                break
+        if node is None:
+            node = {"id": metric_id, "type": "metric", "data": {"metric_id": metric_id}}
+            nodes.append(node)
+
+        data = node.get("data")
+        if not isinstance(data, dict):
+            data = {}
+            node["data"] = data
+
+        entry = self.project_ledger.metrics.get(metric_id, {}) or {}
+        vr = entry.get("value_record") or {}
+        pc = entry.get("policy_check") or {}
+
+        exists = metric_id in self.project_ledger.metrics
+        value_present = (vr.get("point_estimate") is not None) or (vr.get("distribution") is not None)
+        policy_passed = bool(pc.get("passed", False)) if isinstance(pc, dict) else False
+        satisfied = bool(exists and value_present and policy_passed)
+
+        data["metric_id"] = metric_id
+        data["exists"] = exists
+        data["value_present"] = value_present
+        data["policy_passed"] = policy_passed
+        data["satisfied"] = satisfied
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+        g["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    def _refresh_goal_graph_goal_summary(self) -> None:
+        """goal_graph의 goal 노드 completion 요약을 갱신합니다."""
+        g = self.project_ledger.goal_graph
+        if not isinstance(g, dict):
+            return
+        nodes = g.get("nodes")
+        if not isinstance(nodes, list):
+            return
+
+        goal_node: Optional[Dict[str, Any]] = None
+        for n in nodes:
+            if isinstance(n, dict) and n.get("type") == "goal":
+                goal_node = n
+                break
+        if goal_node is None:
+            return
+
+        gdata = goal_node.get("data")
+        if not isinstance(gdata, dict):
+            gdata = {}
+            goal_node["data"] = gdata
+
+        required_metrics: List[str] = []
+        plan = self.project_ledger.evidence_plan
+        if isinstance(plan, dict) and isinstance(plan.get("required_metrics"), list):
+            required_metrics = [str(x) for x in (plan.get("required_metrics") or [])]
+        elif isinstance(gdata.get("required_metrics"), list):
+            required_metrics = [str(x) for x in (gdata.get("required_metrics") or [])]
+        else:
+            required_metrics = [
+                str(n.get("id"))
+                for n in nodes
+                if isinstance(n, dict) and n.get("type") == "metric" and n.get("id")
+            ]
+
+        metric_satisfied: Dict[str, bool] = {}
+        for n in nodes:
+            if not isinstance(n, dict) or n.get("type") != "metric":
+                continue
+            mid = str(n.get("id") or "")
+            data = n.get("data") or {}
+            if mid and isinstance(data, dict):
+                metric_satisfied[mid] = bool(data.get("satisfied", False))
+
+        satisfied = sum(1 for mid in required_metrics if metric_satisfied.get(mid, False))
+        total = len(required_metrics)
+        ratio = float(satisfied) / float(total) if total else 0.0
+
+        gdata["completion"] = {"satisfied": satisfied, "total": total, "ratio": ratio}
+        g["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     def apply_task_result(self, task: Task, result: Dict[str, Any]) -> None:
         """Task 결과를 Ledgers에 반영"""
@@ -222,6 +413,8 @@ class Ledgers:
                     "policy_check": result.get("policy_check"),
                     "evidence_summary": result.get("evidence_summary"),
                 }
+                self._refresh_goal_graph_metric_status(str(metric_id))
+                self._refresh_goal_graph_goal_summary()
 
         # Budget update (best-effort)
         time_sec = result.get("time_sec")

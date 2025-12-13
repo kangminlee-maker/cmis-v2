@@ -33,6 +33,7 @@ from cmis_cli.commands import (
     cmd_cursor_ask,
     cmd_run_explain,
     cmd_run_open,
+    cmd_eval_run,
 )
 
 
@@ -172,6 +173,21 @@ def main():
     validate_parser.add_argument('--check-registry', dest='check_registry', action='store_true')
     validate_parser.add_argument('--check-all', dest='check_all', action='store_true')
 
+    # ========== eval-run ==========
+    eval_parser = subparsers.add_parser(
+        "eval-run",
+        help="Run eval harness (regression/canary)"
+    )
+    eval_parser.add_argument("--suite", default="eval/regression_suite.yaml", help="Regression suite YAML")
+    eval_parser.add_argument("--canary", default="eval/canary_domains.yaml", help="Canary domains YAML (optional)")
+    eval_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+    eval_parser.add_argument(
+        "--enable-stub-source",
+        dest="enable_stub_source",
+        action="store_true",
+        help="외부 API 없이 stub source만 사용",
+    )
+
     # ========== cursor ==========
     cursor_parser = subparsers.add_parser(
         "cursor",
@@ -256,6 +272,8 @@ def main():
         cmd_cache_manage(args)
     elif args.command == 'config-validate':
         cmd_config_validate(args)
+    elif args.command == "eval-run":
+        cmd_eval_run(args)
     elif args.command == "cursor":
         if args.cursor_command == "init":
             cmd_cursor_init(args)

@@ -12,7 +12,7 @@ from .graph import InMemoryGraph
 from .types import MetricRequest, ValueRecord
 from .config import CMISConfig
 from .evidence_engine import EvidenceEngine, SourceRegistry
-from .policy_engine import MetricEval
+from .policy_engine import MetricEval, PolicyEngine
 
 
 class ValueEngine:
@@ -92,6 +92,9 @@ class ValueEngine:
         results = []
         evidence_bundles = {}
         metric_evals = []
+        prior_decisions: List[Dict[str, Any]] = []
+
+        policy_engine_v2 = PolicyEngine(project_root=self.config.project_root)
 
         # 1. EvidenceEngine 호출 (옵션)
         if use_evidence_engine:
@@ -166,6 +169,21 @@ class ValueEngine:
                     status="not_implemented"
                 )
 
+            # 2.3 Prior (BeliefEngine) - 최후 수단
+            if (record.point_estimate is None) and (record.distribution is None):
+                prior_record, prior_decision = self._resolve_metric_prior_estimation_with_decision(
+                    req.metric_id,
+                    req.context,
+                    policy_ref=policy_ref,
+                    policy_engine=policy_engine_v2,
+                )
+                if prior_decision:
+                    prior_decisions.append(dict(prior_decision))
+                    if isinstance(record.lineage, dict):
+                        record.lineage["prior_decision"] = dict(prior_decision)
+                if prior_record is not None:
+                    record = prior_record
+
             results.append(record)
 
             # MetricEval 생성 (derived/r-graph-based)
@@ -181,6 +199,7 @@ class ValueEngine:
             "evidence_metrics": list(evidence_bundles.keys()),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "metric_ids": [r.metric_id for r in results],
+            "prior_decisions": prior_decisions,
         }
 
         return results, value_program, metric_evals
@@ -606,66 +625,118 @@ class ValueEngine:
         self,
         metric_id: str,
         context: Dict[str, Any],
-        policy_ref: Optional[str] = None
+        policy_ref: Optional[str] = None,
     ) -> Optional[ValueRecord]:
-        """Stage 3: Prior Estimation (BeliefEngine 호출)
+        """Stage 3: Prior Estimation (BeliefEngine 호출).
 
-        Evidence/Derived 모두 실패했을 때 최후 수단.
+        테스트/외부 호출 호환을 위해 ValueRecord만 반환합니다.
+        정책 근거/채택 여부는 `_resolve_metric_prior_estimation_with_decision()`을 사용하세요.
+        """
+        vr, _ = self._resolve_metric_prior_estimation_with_decision(
+            metric_id,
+            context,
+            policy_ref=policy_ref,
+            policy_engine=None,
+        )
+        return vr
 
-        Args:
-            metric_id: "MET-SAM", etc.
-            context: {...}
-            policy_ref: Policy (allow_prior 확인)
+    def _resolve_metric_prior_estimation_with_decision(
+        self,
+        metric_id: str,
+        context: Dict[str, Any],
+        *,
+        policy_ref: Optional[str] = None,
+        policy_engine: Optional[PolicyEngine] = None,
+    ) -> tuple[Optional[ValueRecord], Dict[str, Any]]:
+        """Stage 3: Prior Estimation (BeliefEngine 호출).
+
+        원칙:
+        - Evidence-first, Prior-last: evidence/graph 기반 계산이 모두 실패했을 때만 사용합니다.
+        - Prior 채택/기각은 정책 근거와 함께 기록되어야 합니다(Phase 1: lineage/value_program).
 
         Returns:
-            ValueRecord (origin="prior") 또는 None
+            (prior_value_record_or_none, prior_decision_dict)
         """
         from cmis_core.belief_engine import BeliefEngine
 
-        # Policy 확인 (allow_prior)
-        # Phase 2: config에서 policy 로드
-        # 지금은 간단히 reporting_strict면 skip
-        if policy_ref == "reporting_strict":
-            return None
+        pid = str(policy_ref or "decision_balanced")
+        pe = policy_engine or PolicyEngine(project_root=self.config.project_root)
+        prior_policy = pe.get_prior_policy(pid)
 
-        # BeliefEngine 호출
-        belief_engine = BeliefEngine()
+        decision: Dict[str, Any] = {
+            "metric_id": str(metric_id),
+            "policy_id": pid,
+            "allow_prior": bool(prior_policy.allow_prior),
+            "max_prior_ratio": float(prior_policy.max_prior_ratio),
+            "allowed_prior_types": list(prior_policy.allowed_prior_types),
+            "adopted": False,
+            "reason": "policy_disallows_prior",
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+
+        if not prior_policy.allow_prior:
+            return None, decision
+
+        belief_engine = BeliefEngine(project_root=self.config.project_root)
 
         try:
             prior_result = belief_engine.query_prior_api(
                 metric_id=metric_id,
                 context=context,
-                policy_ref=policy_ref
+                policy_ref=pid,
             )
-        except Exception:
-            # BeliefEngine 실패 시 None
-            return None
+        except Exception as e:
+            decision["reason"] = "belief_engine_error"
+            decision["error"] = str(e)
+            return None, decision
 
-        # Prior → ValueRecord 변환
+        dist = prior_result.get("distribution") or {}
+        if not isinstance(dist, dict) or not dist:
+            decision["reason"] = "empty_distribution"
+            return None, decision
+
+        prior_id = str(prior_result.get("prior_id") or "")
+        distribution_ref = str(prior_result.get("distribution_ref") or (f"VAL-{prior_id}" if prior_id else ""))
+        prior_type = str(prior_result.get("source") or "unknown")
+
+        decision.update(
+            {
+                "adopted": True,
+                "reason": "evidence_and_fallback_failed",
+                "prior_id": prior_id,
+                "distribution_ref": distribution_ref,
+                "prior_type": prior_type,
+            }
+        )
+
         value_record = ValueRecord(
             metric_id=metric_id,
             context=context,
             point_estimate=None,  # Prior는 분포만
-            distribution=prior_result["distribution"],
+            distribution=dist,
+            distribution_ref=(distribution_ref or None),
             quality={
                 "status": "prior_estimation",
                 "method": "belief_engine",
                 "literal_ratio": 0.0,  # Prior는 literal 없음
-                "spread_ratio": self._calculate_spread_from_distribution(
-                    prior_result["distribution"]
-                ),
-                "confidence": prior_result["confidence"]
+                "spread_ratio": self._calculate_spread_from_distribution(dist),
+                "confidence": float(prior_result.get("confidence") or 0.0),
+                "prior_ratio": 1.0,
+                "prior_type": prior_type,
+                "is_estimate": True,
             },
             lineage={
-                "from_prior_id": prior_result["prior_id"],
+                "from_prior_id": prior_id,
+                "distribution_ref": distribution_ref,
                 "engine_ids": ["belief_engine", "value_engine"],
-                "policy_id": policy_ref,
+                "policy_id": pid,
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                **prior_result["lineage"]
-            }
+                "prior_decision": dict(decision),
+                **(prior_result.get("lineage") or {}),
+            },
         )
 
-        return value_record
+        return value_record, decision
 
     def _calculate_spread_from_distribution(self, distribution: Dict) -> float:
         """분포에서 spread_ratio 계산

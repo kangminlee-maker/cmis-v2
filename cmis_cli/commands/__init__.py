@@ -24,6 +24,7 @@ from .run import (
     cmd_run_explain,
     cmd_run_open,
 )
+from .eval_run import cmd_eval_run
 
 __all__ = [
     "cmd_structure_analysis",
@@ -41,6 +42,7 @@ __all__ = [
     "cmd_cursor_ask",
     "cmd_run_explain",
     "cmd_run_open",
+    "cmd_eval_run",
 ]
 
 

@@ -385,7 +385,7 @@ class TestPatternEngineV2Phase2:
         assert isinstance(gaps, list)
 
         print(f"Matches: {len(matches)}, Gaps: {len(gaps)}")
-        print("Workflow optimization: precomputed reuse ✅")
+        print("Workflow optimization: precomputed reuse")
 
     def test_end_to_end_greenfield(self):
         """E2E: Greenfield 분석"""

@@ -54,6 +54,7 @@ class ValueRecord:
     context: Dict[str, Any]
     point_estimate: Optional[float] = None
     distribution: Optional[Dict[str, Any]] = None  # {"min": ..., "max": ...}
+    distribution_ref: Optional[str] = None  # prior 분포 참조 (예: "VAL-PRIOR-xxxx")
     quality: Dict[str, Any] = field(default_factory=dict)
     # quality 예: {"status": "ok", "method": "direct", "literal_ratio": 1.0}
     lineage: Dict[str, Any] = field(default_factory=dict)

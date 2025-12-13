@@ -72,7 +72,7 @@ def cmd_workflow_run(args):
     print()
 
     if "error" in result:
-        print(f"❌ 오류: {result['error']}")
+        print(f"[ERROR] 오류: {result['error']}")
         if "available" in result:
             print(f"사용 가능: {result['available']}")
         return
@@ -85,7 +85,7 @@ def cmd_workflow_run(args):
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
-        print(f"\n✅ 결과 저장: {args.output}")
+        print(f"\n[OK] 결과 저장: {args.output}")
 
 
 

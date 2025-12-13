@@ -85,6 +85,7 @@ class CMISConfig:
         self.patterns: Dict[str, PatternSpec] = self._index_patterns()
         self.data_sources: Dict[str, Dict] = self._index_data_sources()
         self.policies: Dict[str, Dict] = self._index_policies()
+        self.tool_and_resource_registry: Dict[str, Any] = self._index_tool_and_resource_registry()
 
         # Environment 설정
         self.env = Settings()
@@ -177,6 +178,15 @@ class CMISConfig:
         except KeyError:
             return {"quality_profiles": {}}
 
+    def _index_tool_and_resource_registry(self) -> Dict[str, Any]:
+        """Tool/Resource registry 인덱싱 (cmis.yaml contract)."""
+        try:
+            orch = (self.cmis.get("planes", {}) or {}).get("orchestration_plane", {}) or {}
+            reg = orch.get("tool_and_resource_registry", {}) or {}
+            return reg if isinstance(reg, dict) else {}
+        except Exception:
+            return {}
+
     # --- 편의 메서드 ---
 
     def get_metric_spec(self, metric_id: str) -> Optional[MetricSpec]:
@@ -190,6 +200,27 @@ class CMISConfig:
     def get_data_source(self, source_id: str) -> Optional[Dict]:
         """Data Source 조회"""
         return self.data_sources.get(source_id)
+
+    def list_tool_ids(self) -> List[str]:
+        """등록된 Tool ID 목록 반환 (없으면 빈 리스트)."""
+        tools = self.tool_and_resource_registry.get("tools", []) or []
+        if not isinstance(tools, list):
+            return []
+        ids: List[str] = []
+        for t in tools:
+            if isinstance(t, dict) and t.get("id"):
+                ids.append(str(t.get("id")))
+        return ids
+
+    def get_tool(self, tool_id: str) -> Optional[Dict[str, Any]]:
+        """Tool registry entry 조회."""
+        tools = self.tool_and_resource_registry.get("tools", []) or []
+        if not isinstance(tools, list):
+            return None
+        for t in tools:
+            if isinstance(t, dict) and str(t.get("id")) == str(tool_id):
+                return t
+        return None
 
 
 # 싱글톤 패턴 (선택적)

@@ -170,7 +170,9 @@ class OrchestrationKernel:
         emit_decision("goal_created", {"goal_id": goal.goal_id, "workflow_hint": goal.workflow_hint, "required_metrics": goal.required_metrics})
 
         # ProjectLedger: goal/scope/constraints/evidence plan (Phase 1 best-effort)
+        predicate_node_id = f"PRED-{goal.goal_id}"
         project_ledger.goal_graph = {
+            "schema_version": 1,
             "nodes": [
                 {
                     "id": goal.goal_id,
@@ -181,10 +183,45 @@ class OrchestrationKernel:
                         "workflow_hint": goal.workflow_hint,
                         "usage": goal.usage,
                         "required_metrics": list(goal.required_metrics),
+                        "completion": {"satisfied": 0, "total": len(goal.required_metrics), "ratio": 0.0},
                     },
                 }
+            ]
+            + [
+                {
+                    "id": predicate_node_id,
+                    "type": "predicate",
+                    "data": {
+                        "predicate_type": goal.predicate.predicate_type.value,
+                        "conditions": [
+                            {"type": c.type.value, "params": dict(c.params)}
+                            for c in goal.predicate.conditions
+                        ],
+                    },
+                }
+            ]
+            + [
+                {
+                    "id": str(mid),
+                    "type": "metric",
+                    "data": {
+                        "metric_id": str(mid),
+                        "exists": False,
+                        "value_present": False,
+                        "policy_passed": False,
+                        "satisfied": False,
+                    },
+                }
+                for mid in goal.required_metrics
             ],
-            "edges": [],
+            "edges": [
+                {"from": goal.goal_id, "to": predicate_node_id, "type": "requires"},
+                *[
+                    {"from": predicate_node_id, "to": str(mid), "type": "requires"}
+                    for mid in goal.required_metrics
+                ],
+            ],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         project_ledger.success_predicates = [
             {
@@ -197,7 +234,12 @@ class OrchestrationKernel:
         ]
         project_ledger.scope = dict(request.context)
         project_ledger.constraints = {"budgets": dict(request.budgets), "run_mode": request.run_mode}
-        project_ledger.evidence_plan = {"required_metrics": list(goal.required_metrics)}
+        project_ledger.evidence_plan = {
+            "generated_by": "kernel_rules_v1",
+            "required_metrics": list(goal.required_metrics),
+            "items": [],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
         # Initial tasks: run workflow first (hint), then compute required metrics if needed
         queue = TaskQueue()
@@ -237,6 +279,7 @@ class OrchestrationKernel:
 
                 emit_decision("diff_detected", dict(last_verification.diff_report))
                 ledgers.record_diff_report(last_verification.diff_report)
+                ledgers.record_project_insights_from_diff(last_verification.diff_report)
 
                 # 2) Replan -> enqueue tasks
                 replan = self.replanner.generate_tasks(last_verification.diff_report)
@@ -304,6 +347,22 @@ class OrchestrationKernel:
                 )
                 progress_ledger.last_engine_calls = progress_ledger.last_engine_calls[-10:]
                 progress_ledger.touch()
+
+                tool_calls = result.get("tool_calls") or []
+                if isinstance(tool_calls, list):
+                    for tc in tool_calls:
+                        if isinstance(tc, dict):
+                            progress_ledger.last_tool_calls.append(dict(tc))
+                    progress_ledger.last_tool_calls = progress_ledger.last_tool_calls[-20:]
+                    progress_ledger.touch()
+
+                value_program = result.get("value_program") or {}
+                if isinstance(value_program, dict):
+                    prior_decisions = value_program.get("prior_decisions") or []
+                    if isinstance(prior_decisions, list):
+                        for d in prior_decisions:
+                            if isinstance(d, dict):
+                                emit_decision("prior_decision", d)
 
                 task.mark_completed()
                 ledgers.mark_task_status(task, TaskStatus.COMPLETED)

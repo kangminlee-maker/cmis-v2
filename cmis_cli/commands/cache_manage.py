@@ -73,7 +73,7 @@ def cmd_cache_manage(args):
                 import shutil
                 shutil.rmtree(cache_dir)
                 cache_dir.mkdir(parents=True, exist_ok=True)
-                print(f"  ✅ 클리어됨: {cache_dir}")
+                print(f"  [OK] 클리어됨: {cache_dir}")
             else:
                 print(f"  (캐시 없음)")
 

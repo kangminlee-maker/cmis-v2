@@ -295,6 +295,6 @@ class TestIntegration:
         strategy = RetryStrategy(max_attempts=2)
         assert strategy.max_attempts == 2
 
-        print("All 8 features integrated ✅")
+        print("All 8 features integrated")
 
 

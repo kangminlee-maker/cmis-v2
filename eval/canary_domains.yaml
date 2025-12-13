@@ -1,6 +1,7 @@
 ---
 schema_version: 1
-description: "Canary domains for CMIS eval harness (placeholder)."
+description: "Canary domains for CMIS eval harness (Phase 1)."
 
-canary_domains: []
+canary_domains:
+  - "Adult_Language_Education_KR"
 

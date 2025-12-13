@@ -31,7 +31,7 @@ def cmd_report_generate(args):
     input_path = Path(args.input)
 
     if not input_path.exists():
-        print(f"❌ 입력 파일 없음: {input_path}")
+        print(f"[ERROR] 입력 파일 없음: {input_path}")
         return
 
     # 결과 로딩
@@ -59,7 +59,7 @@ def cmd_report_generate(args):
                 with open(output_path, 'w', encoding='utf-8') as f:
                     f.write(markdown)
 
-                print(f"✅ Markdown 저장: {output_path}")
+                print(f"[OK] Markdown 저장: {output_path}")
 
             elif args.format == "html":
                 # Markdown → HTML
@@ -70,10 +70,10 @@ def cmd_report_generate(args):
                     with open(output_path, 'w', encoding='utf-8') as f:
                         f.write(f"<html><body>{html}</body></html>")
 
-                    print(f"✅ HTML 저장: {output_path}")
+                    print(f"[OK] HTML 저장: {output_path}")
 
                 except ImportError:
-                    print("⚠️  markdown2 필요: pip install markdown2")
+                    print("[WARN] markdown2 필요: pip install markdown2")
                     print("Markdown 저장...")
 
                     with open(output_path, 'w', encoding='utf-8') as f:
@@ -82,6 +82,6 @@ def cmd_report_generate(args):
             # Console 출력
             print(markdown)
     else:
-        print(f"❌ 알 수 없는 템플릿: {args.template}")
+        print(f"[ERROR] 알 수 없는 템플릿: {args.template}")
 
 

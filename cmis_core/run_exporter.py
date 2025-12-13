@@ -159,9 +159,23 @@ class RunExporter:
                 vr = entry.get("value_record") or {}
                 pe = vr.get("point_estimate")
                 dist = vr.get("distribution")
+                dist_ref = vr.get("distribution_ref")
+                quality = vr.get("quality") or {}
+                if not isinstance(quality, dict):
+                    quality = {}
+                lineage = vr.get("lineage") or {}
+                if not isinstance(lineage, dict):
+                    lineage = {}
+                is_estimate = bool(
+                    quality.get("is_estimate")
+                    or (quality.get("status") == "prior_estimation")
+                    or (lineage.get("from_prior_id") is not None)
+                )
                 pc = entry.get("policy_check") or {}
                 passed = pc.get("passed")
-                lines.append(f"- {metric_id}: point={pe} dist={dist} policy_passed={passed}")
+                tag = " (추정)" if is_estimate else ""
+                ref_part = f" dist_ref={dist_ref}" if dist_ref else ""
+                lines.append(f"- {metric_id}{tag}:{ref_part} point={pe} dist={dist} policy_passed={passed}")
 
         lines.append("")
         lines.append("## Refs")

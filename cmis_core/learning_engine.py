@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from .types import Outcome, LearningResult, Strategy, FocalActorContext
@@ -147,6 +147,55 @@ class LearningEngine:
                 "accuracy_avg": self._calculate_avg_accuracy(learning_results)
             }
         }
+
+    # ========================================
+    # BeliefEngine integration helpers (Phase 2)
+    # ========================================
+
+    def _should_update_belief(self, metric_id: str, delta: Dict[str, Any]) -> bool:
+        """Belief 업데이트 필요 여부 판단 (간단 규칙).
+
+        Phase 2 최소 규칙:
+        - error_pct가 target_convergence(기본 20%)를 초과하면 업데이트 대상으로 간주합니다.
+        """
+        try:
+            error_pct = float((delta or {}).get("error_pct", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            error_pct = 0.0
+
+        # Phase 2: metrics_spec/정책 기반으로 발전 (현재는 기본값만)
+        target_convergence = 0.20
+        return error_pct >= target_convergence
+
+    def _create_drift_alert(self, metric_id: str, belief_update_result: Dict[str, Any]) -> str:
+        """Drift alert를 memory_store에 기록합니다."""
+        memory_id = f"MEM-drift-{uuid.uuid4().hex[:8]}"
+        delta = (belief_update_result or {}).get("delta") or {}
+
+        mean_shift_pct = delta.get("mean_shift_pct")
+        try:
+            pct = float(mean_shift_pct) if mean_shift_pct is not None else None
+        except (TypeError, ValueError):
+            pct = None
+
+        if pct is None:
+            pct_str = str(mean_shift_pct)
+        else:
+            pct_str = f"{pct:+.1%}"
+
+        alert = {
+            "memory_id": memory_id,
+            "memory_type": "drift_alert",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "content": f"Belief drift detected: metric={metric_id}, mean_shift_pct={pct_str}",
+            "related_ids": {
+                "metric_id": metric_id,
+                "belief_id": (belief_update_result or {}).get("belief_id"),
+            },
+        }
+
+        self.memory_store.append(alert)
+        return memory_id
 
     def _learn_from_strategy_outcome(
         self,

@@ -112,7 +112,7 @@ def cmd_structure_analysis(args):
         output_path = Path(args.output)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(result.to_dict(), f, ensure_ascii=False, indent=2)
-        print(f"✅ 결과 저장: {output_path}")
+        print(f"[OK] 결과 저장: {output_path}")
 
 
 
