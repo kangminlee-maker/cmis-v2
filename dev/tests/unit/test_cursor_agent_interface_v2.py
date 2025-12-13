@@ -119,3 +119,4 @@ def test_run_store_and_exporter_smoke(project_root: Path, tmp_path: Path, monkey
     run_store.close()
     ledger_store.close()
 
+

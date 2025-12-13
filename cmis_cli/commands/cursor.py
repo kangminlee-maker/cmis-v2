@@ -285,7 +285,7 @@ def cmd_cursor_ask(args) -> None:
     print(f"iterations: {result.iterations}")
 
     # Guardian scoreboard (minimal)
-    progress = (result.ledgers.get("progress_ledger") or {})
+    progress = ((result.ledgers or {}).get("progress_ledger") or {})
     budgets_used = (progress.get("budgets") or {})
     stall = (progress.get("stall_counters") or {})
     replans = progress.get("replanning_count")

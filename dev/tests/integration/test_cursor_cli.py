@@ -54,3 +54,4 @@ def test_cursor_ask_creates_run_folder(project_root: Path) -> None:
         assert (run_dir / "results.md").exists()
         assert (run_dir / "request.yaml").exists()
 
+

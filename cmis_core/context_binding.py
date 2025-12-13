@@ -43,10 +43,19 @@ class FocalActorContextBinding:
 
     @classmethod
     def from_record(cls, record: FocalActorContext) -> "FocalActorContextBinding":
+        raw_version = getattr(record, "version", None)
+        if raw_version is None:
+            version = 1
+        else:
+            try:
+                version = int(raw_version)
+            except (TypeError, ValueError):
+                version = 1
+
         return cls(
             context_id=record.project_context_id,
             focal_actor_id=record.focal_actor_id,
-            version=int(getattr(record, "version", 1) or 1),
+            version=version,
             scope=dict(record.scope or {}),
             baseline_state=dict(record.baseline_state or {}),
             assets_profile=dict(record.assets_profile or {}),

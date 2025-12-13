@@ -55,23 +55,23 @@ def main():
     )
     workflow_subparsers = workflow_parser.add_subparsers(dest='workflow_command')
 
-    run_parser = workflow_subparsers.add_parser(
+    workflow_run_parser = workflow_subparsers.add_parser(
         'run',
         help='Run canonical workflow'
     )
-    run_parser.add_argument(
+    workflow_run_parser.add_argument(
         'workflow_id',
         help='Workflow ID (structure_analysis, opportunity_discovery)'
     )
-    run_parser.add_argument(
+    workflow_run_parser.add_argument(
         '--input',
         action='append',
         help='Input key=value (예: --input domain_id=Test)'
     )
-    run_parser.add_argument('--role', help='Role override')
-    run_parser.add_argument('--policy', help='Policy override')
-    run_parser.add_argument('--output', help='출력 파일')
-    run_parser.add_argument('--dry-run', action='store_true', help='실행 계획만 출력')
+    workflow_run_parser.add_argument('--role', help='Role override')
+    workflow_run_parser.add_argument('--policy', help='Policy override')
+    workflow_run_parser.add_argument('--output', help='출력 파일')
+    workflow_run_parser.add_argument('--dry-run', action='store_true', help='실행 계획만 출력')
 
     # ========== structure-analysis ==========
     sa_parser = subparsers.add_parser(
@@ -222,8 +222,8 @@ def main():
     cursor_ask_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
 
     # ========== run ==========
-    run_parser = subparsers.add_parser("run", help="Run inspection helpers (Cursor-friendly)")
-    run_subparsers = run_parser.add_subparsers(dest="run_command")
+    run_group_parser = subparsers.add_parser("run", help="Run inspection helpers (Cursor-friendly)")
+    run_subparsers = run_group_parser.add_subparsers(dest="run_command")
 
     run_explain_parser = run_subparsers.add_parser("explain", help="Explain decisions for a run")
     run_explain_parser.add_argument("run_id", help="RUN-... ID")
@@ -275,7 +275,7 @@ def main():
         elif args.run_command == "open":
             cmd_run_open(args)
         else:
-            run_parser.print_help()
+            run_group_parser.print_help()
     else:
         parser.print_help()
 

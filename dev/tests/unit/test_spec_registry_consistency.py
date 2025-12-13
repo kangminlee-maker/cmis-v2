@@ -56,3 +56,4 @@ def test_config_validate_registry_passes():
 
     assert proc.returncode == 0, stderr
     assert "Overall: PASS" in stdout
+
