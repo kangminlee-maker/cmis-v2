@@ -9,11 +9,28 @@
 
 ```
 cmis/
-├─ cmis.yaml                    # CMIS 메인 설정 (v3.5.0)
-├─ cmis_contracts-and-registry_km.yaml  # Contracts + Registry (v3.6.0 설계)
+├─ cmis.yaml                    # Contracts + Registry (v3.6.0)
+│
+├─ schemas/                     # 타입 시스템 (데이터 구조)
+│  ├─ ledgers.yaml
+│  ├─ ontology.yaml (생성 예정)
+│  └─ *_graph.yaml (4개, 생성 예정)
+│
+├─ libraries/                   # 도메인 지식/데이터
+│  ├─ patterns/ (23개)
+│  ├─ domains/
+│  ├─ domain_registry.yaml
+│  ├─ pattern_library.yaml (생성 예정)
+│  └─ metrics_spec.yaml (생성 예정)
+│
+├─ config/                      # 런타임 설정
+│  ├─ policies.yaml
+│  ├─ workflows.yaml
+│  ├─ archetypes/ (6개)
+│  └─ sources/
+│
 ├─ cmis_core/                   # Core 엔진
 ├─ cmis_cli/                    # CLI 인터페이스
-├─ config/                      # 설정 파일
 ├─ requirements.txt             # Python 의존성
 ├─ README.md                    # 프로젝트 README
 ├─ CHANGELOG.md                 # 변경 이력

@@ -79,12 +79,16 @@ cmis:
         value_graph: "schemas/value_graph.yaml"
         decision_graph: "schemas/decision_graph.yaml"
     libraries:
-      pattern_library: "config/pattern_library.yaml"
-      metrics_spec: "config/metrics_spec.yaml"
-      domain_registry: "config/domain_registry.yaml"
+      pattern_library: "libraries/patterns/"
+      metrics_spec: "libraries/metrics_spec.yaml"
+      domain_registry: "libraries/domain_registry.yaml"
+      prompts: "libraries/prompt_library.yaml"
+    
+    config:
       policies: "config/policies.yaml"
       workflows: "config/workflows.yaml"
-      prompts: "config/prompts.yaml"
+      archetypes: "config/archetypes/"
+      sources: "config/sources/"
 
   registries:
     metric_sets:
