@@ -29,3 +29,7 @@ Thumbs.db
 dev/temp/
 *.bak
 output/*.json
+
+# CMIS v3.5 specific
+data/artifacts/
+data/value_store/

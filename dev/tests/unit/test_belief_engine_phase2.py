@@ -512,3 +512,4 @@ def test_cache_ttl():
     belief = manager.get_prior("MET-test", {"domain_id": "cache_test"})
     assert belief is not None
     assert belief.distribution["params"]["mu"] == 1000
+

@@ -1,0 +1,158 @@
+---
+# CMIS Ledgers Schema
+# 2-Ledger 구조 (Magentic-One 기반, CMIS 적응)
+
+ledgers:
+  project_ledger:
+    description: "프로젝트/시장 분석의 상태 참조 (문제 공간 작업기억)"
+    alias: "Task Ledger (Magentic-One 용어)"
+    purpose: "Substrate(Evidence/Value/Graph) 참조 집합"
+    stored_in: "substrate_plane (Stores + Graphs)"
+    
+    fields:
+      # Facts (확정된 사실)
+      facts:
+        type: "dict"
+        description: "확정 사실 (domain_id, region, 기본 가정)"
+        example:
+          domain_id: "Adult_Language_Education_KR"
+          region: "KR"
+          market_definition: "..."
+      
+      # Assumptions (가정)
+      assumptions:
+        type: "list"
+        description: "명시적 가정"
+        example:
+          - "TAM 성장률 연 5% 가정"
+          - "온라인 전환 지속 가정"
+      
+      # Evidence 참조
+      evidence_refs:
+        type: "list[evidence_id]"
+        description: "수집된 Evidence 목록"
+        example: ["EVD-001", "EVD-002", "EVD-003"]
+      
+      # Derived Metrics
+      derived_metrics:
+        type: "dict[metric_id, value_record_ref]"
+        description: "계산된 Metric 참조"
+        example:
+          MET-TAM: "VAL-tam-001"
+          MET-SAM: "VAL-sam-002"
+      
+      # Gaps (부족한 것)
+      gaps:
+        type: "list"
+        description: "아직 해결 안 된 것"
+        example:
+          - metric_id: "MET-SOM"
+            reason: "Evidence 부족"
+      
+      # Artifacts (산출물)
+      artifacts:
+        type: "list[artifact_id]"
+        description: "생성된 산출물"
+        example: ["ART-market-size-001", "ART-player-list-002"]
+      
+      # Goal References
+      goals:
+        type: "list[goal_id]"
+        description: "프로젝트 목표 (D-Graph)"
+        example: ["GOL-market-size-001", "GOL-entry-strategy-002"]
+  
+  progress_ledger:
+    description: "실행 프로세스의 제어 상태 (프로세스 제어판)"
+    purpose: "실행 단계/상태/재시도/스톨 감지 기록"
+    stored_in: "memory_store.run_store"
+    
+    fields:
+      # Run 식별
+      run_id:
+        type: "run_id"
+        description: "실행 단위 ID"
+        example: "RUN-20251213-abc123"
+      
+      # Workflow
+      workflow_id:
+        type: "workflow_id"
+        description: "실행 중인 workflow"
+        example: "structure_analysis"
+      
+      # Role & Policy
+      role_id:
+        type: "role_id"
+        description: "실행 역할"
+        example: "structure_analyst"
+      
+      policy_ref:
+        type: "policy_ref"
+        description: "적용 정책"
+        example: "reporting_strict"
+      
+      # Steps (실행 단계)
+      steps:
+        type: "list[step_record]"
+        description: "실행 단계 이력"
+        schema:
+          step_id: "string"
+          call: "string"  # "world_engine.snapshot"
+          status: "pending | running | completed | failed"
+          started_at: "datetime"
+          completed_at: "datetime (optional)"
+          result_ref: "string (optional)"
+          error: "string (optional)"
+      
+      # Stall 감지
+      stall_counters:
+        type: "dict[string, int]"
+        description: "Stall 카운터"
+        example:
+          evidence_collection: 2
+          metric_calculation: 0
+      
+      # Loop 감지
+      loop_flags:
+        type: "dict[string, bool]"
+        description: "순환 감지"
+        example:
+          query_loop: false
+          task_loop: false
+      
+      # Budget
+      budgets:
+        type: "dict"
+        description: "예산 사용"
+        fields:
+          time_spent_sec: "int"
+          llm_calls: "int"
+          max_time_sec: "int"
+          max_llm_calls: "int"
+      
+      # Replanning
+      replanning_count:
+        type: "int"
+        description: "재계획 횟수"
+        default: 0
+      
+      replanning_log:
+        type: "list[replan_record]"
+        description: "재계획 이력"
+        schema:
+          timestamp: "datetime"
+          trigger: "string"
+          old_plan: "list[step]"
+          new_plan: "list[step]"
+          reasoning: "string"
+      
+      # Next Action
+      next_action:
+        type: "enum"
+        values: ["continue", "replan", "stop", "retry"]
+        description: "다음 행동"
+      
+      # Status
+      overall_status:
+        type: "enum"
+        values: ["running", "completed", "failed", "stalled"]
+        description: "전체 상태"

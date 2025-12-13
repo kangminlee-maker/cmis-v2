@@ -336,3 +336,4 @@ def test_ast_evaluator_error_handling():
             "Y = X + Z",
             {"X": 100}  # Z 없음
         )
+

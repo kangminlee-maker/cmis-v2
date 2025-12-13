@@ -1,0 +1,90 @@
+---
+# CMIS Policy Definitions
+
+policies:
+  modes:
+    reporting_strict:
+      description: "공식/Evidence 중심, Prior 최소 사용"
+      quality_profile:
+        min_literal_ratio: 0.7
+        max_spread_ratio: 0.3
+        allow_prior: false
+      
+      validation_gates:
+        evidence_quality: "strict"
+        convergence_threshold: 0.2  # ±20%
+        min_sources: 2
+      
+      use_cases:
+        - "공식 보고서"
+        - "이사회 보고"
+        - "감사용 분석"
+    
+    decision_balanced:
+      description: "Evidence 우선, 필요 시 Prior 제한적 허용"
+      quality_profile:
+        min_literal_ratio: 0.5
+        max_spread_ratio: 0.5
+        allow_prior: true
+      
+      validation_gates:
+        evidence_quality: "balanced"
+        convergence_threshold: 0.3  # ±30%
+        min_sources: 1
+      
+      use_cases:
+        - "전략 수립"
+        - "투자 의사결정"
+        - "ROI 분석"
+    
+    exploration_friendly:
+      description: "기회 탐색용, Prior/패턴 활용 허용"
+      quality_profile:
+        min_literal_ratio: 0.3
+        max_spread_ratio: 0.7
+        allow_prior: true
+      
+      validation_gates:
+        evidence_quality: "permissive"
+        convergence_threshold: 0.5  # ±50%
+        min_sources: 0  # Evidence 없어도 가능
+      
+      use_cases:
+        - "초기 시장 탐색"
+        - "Opportunity Discovery"
+        - "Rough Sizing"
+  
+  quality_gates:
+    strict:
+      description: "엄격한 품질 기준"
+      min_confidence: 0.8
+      require_official_sources: true
+      max_prior_ratio: 0.0
+    
+    balanced:
+      description: "균형잡힌 품질 기준"
+      min_confidence: 0.6
+      require_official_sources: false
+      max_prior_ratio: 0.3
+    
+    permissive:
+      description: "탐색용 품질 기준"
+      min_confidence: 0.3
+      require_official_sources: false
+      max_prior_ratio: 0.7
+  
+  convergence_rules:
+    default_threshold: 0.3  # ±30%
+    
+    metric_specific:
+      MET-TAM:
+        threshold: 0.3
+        methods_required: 2  # 최소 2가지 방법 수렴
+      
+      MET-SAM:
+        threshold: 0.3
+        methods_required: 2
+      
+      MET-Revenue:
+        threshold: 0.2
+        methods_required: 1

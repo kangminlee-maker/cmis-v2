@@ -1,225 +1,228 @@
-# dev/ 폴더 구조 가이드
+# CMIS 프로젝트 구조
 
-**작성일**: 2025-12-09  
-**최종 업데이트**: 2025-12-11 (CMIS v3.3 완성)
-
----
-
-## 개요
-
-dev/ 폴더는 CMIS 개발과 관련된 모든 자료를 담습니다.  
-프로덕션 루트는 **실행에 필요한 최소 파일만** 유지합니다.
-
-**프로덕션 루트** (7개):
-- cmis.yaml, cmis_core/, cmis_cli/, config/
-- requirements.txt, README.md, env.example
-
-**Note**: seeds/는 dev/examples/seeds/로 이동 (선택적)
-
-**개발 (dev/)**: 테스트, 문서, 검증, 예시, 참조, 이력 등
+**업데이트**: 2025-12-13
+**버전**: v3.6.0
 
 ---
 
-## 현재 구조 (2025-12-11 최종)
+## 📁 루트 구조
+
+```
+cmis/
+├─ cmis.yaml                    # CMIS 메인 설정 (v3.5.0)
+├─ cmis_contracts-and-registry_km.yaml  # Contracts + Registry (v3.6.0 설계)
+├─ cmis_core/                   # Core 엔진
+├─ cmis_cli/                    # CLI 인터페이스
+├─ config/                      # 설정 파일
+├─ requirements.txt             # Python 의존성
+├─ README.md                    # 프로젝트 README
+├─ CHANGELOG.md                 # 변경 이력
+├─ env.example                  # 환경 변수 예시
+└─ dev/                         # 개발 전용
+```
+
+---
+
+## 🔧 cmis_core/ (엔진)
+
+```
+cmis_core/
+├─ belief_engine.py             # BeliefEngine (v1.0)
+├─ prior_manager.py
+├─ belief_updater.py
+├─ uncertainty_propagator.py
+├─ world_engine.py              # World Engine (v2.0)
+├─ pattern_engine_v2.py         # Pattern Engine (v2.0)
+├─ value_engine.py              # Value Engine
+├─ strategy_engine.py           # Strategy Engine (v1.0)
+├─ learning_engine.py           # Learning Engine (v1.0)
+├─ evidence_engine.py           # Evidence Engine
+├─ policy_engine.py             # Policy Engine
+├─ workflow.py                  # WorkflowOrchestrator
+├─ config.py                    # Config 로더
+├─ graph.py                     # Graph 구조
+└─ types.py                     # 공통 타입
+```
+
+**총 9개 엔진 (100% 완성)**
+
+---
+
+## 💻 cmis_cli/ (CLI)
+
+```
+cmis_cli/
+├─ __main__.py                  # CLI 진입점
+├─ commands/                    # 명령어 (8개)
+│  ├─ structure_analysis.py
+│  ├─ opportunity_discovery.py
+│  ├─ compare_contexts.py
+│  ├─ workflow_run.py
+│  ├─ batch_analysis.py
+│  ├─ report_generate.py
+│  ├─ cache_manage.py
+│  └─ config_validate.py
+└─ formatters/                  # 출력 포맷
+   ├─ json_formatter.py
+   └─ markdown_formatter.py
+```
+
+---
+
+## ⚙️ config/ (설정)
+
+```
+config/
+├─ archetypes/                  # Context Archetype (6개)
+│  ├─ ARCH-digital_service_KR.yaml
+│  ├─ ARCH-education_platform_KR.yaml
+│  └─ ...
+└─ (미래) 외부 모듈
+   ├─ policies.yaml
+   ├─ workflows.yaml
+   ├─ metrics_spec.yaml
+   └─ pattern_library.yaml
+```
+
+---
+
+## 📚 dev/ (개발 전용)
 
 ```
 dev/
-├── tests/                    # 기능 테스트 (pytest) - 370개 ✅
-│   ├── unit/                 # 단위 테스트 (200개)
-│   │   ├── test_graph.py
-│   │   ├── test_world_engine*.py (4개)
-│   │   ├── test_value_engine.py
-│   │   ├── test_pattern_engine*.py (3개)
-│   │   ├── test_strategy_engine*.py (3개)
-│   │   ├── test_learning_engine*.py (3개)
-│   │   ├── test_workflow_cli*.py (2개)
-│   │   ├── test_evidence_*.py (3개)
-│   │   └── test_*.py (기타)
-│   ├── integration/          # 통합 테스트 (150개)
-│   │   ├── test_workflow.py
-│   │   ├── test_pattern_engine_e2e.py
-│   │   ├── test_real_api_sources.py
-│   │   └── test_*.py (기타)
-│   ├── e2e/                  # E2E 테스트 (20개)
-│   │   └── test_e2e_structure_analysis.py
-│   └── conftest.py           # pytest fixtures
+├─ docs/                        # 문서
+│  ├─ architecture/             # 아키텍처 설계 (18개)
+│  ├─ user_guide/               # 사용자 가이드
+│  ├─ analysis/                 # 분석 문서
+│  └─ implementation/           # 구현 문서
 │
-├── validation/               # 시스템 검증 ✅ (이동 완료)
-│   ├── validate_yaml_integrity.py
-│   ├── validate_codebase.py
-│   └── fix_yaml.py
+├─ tests/                       # 테스트
+│  ├─ unit/                     # 단위 테스트 (420+개)
+│  ├─ integration/              # 통합 테스트
+│  └─ conftest.py
 │
-├── examples/                 # 사용 예시
-│   ├── project_context_examples.yaml (3 시나리오)
-│   └── seeds/                # Reality seed (테스트/데모용)
-│       └── Adult_Language_Education_KR_reality_seed.yaml
+├─ session_summary/             # 세션 요약
+│  ├─ 20251211/
+│  ├─ 20251212/
+│  └─ *.md
 │
-├── v7_reference/             # v7 (UMIS) 참조 자료
-│   ├── code/
-│   ├── docs/
-│   ├── outputs/
-│   └── README.md
+├─ deprecated/                  # 구버전 보관
+│  └─ docs/
+│     └─ architecture_v3.3_and_earlier/  (25개)
 │
-├── deprecated/               # 구버전 보관 ✅ (신규)
-│   └── docs/
-│       └── architecture/     # 구버전 설계 문서 (13개)
+├─ examples/                    # 예시
+│  └─ seeds/                    # 샘플 데이터
 │
-├── docs/
-│   ├── architecture/         # 아키텍처 (13개) ✅ 정리 완료
-│   │   ├── README.md (인덱스)
-│   │   ├── CMIS_Architecture_Blueprint_v3.3.md
-│   │   ├── CMIS_Implementation_Status_v3.3.md
-│   │   ├── CMIS_Roadmap_v3.3.md
-│   │   ├── cmis_philosophy_concept.md
-│   │   ├── cmis_project_context_layer_design.md
-│   │   ├── PatternEngine_Design_Final.md
-│   │   ├── StrategyEngine_Design_Enhanced.md
-│   │   ├── LearningEngine_Design_Enhanced.md
-│   │   ├── World_Engine_Enhanced_Design.md
-│   │   ├── Workflow_CLI_Design_Enhanced.md
-│   │   ├── Search_Strategy_Design_v2.md
-│   │   └── CMIS_LLM_Infrastructure_*.md (2개)
-│   ├── analysis/             # 분석
-│   └── implementation/       # 구현
+├─ validation/                  # 검증 스크립트
 │
-├── session_summary/          # 개발 세션 이력
-│   ├── 20251210/             # 2025-12-10 세션 (20개)
-│   ├── 20251211/             # 2025-12-11 세션 (25개) ✅
-│   ├── INDEX.md
-│   └── README.md
-│
-└── STRUCTURE.md              # 이 문서
+└─ STRUCTURE.md (본 문서)
 ```
 
 ---
 
-## Test vs Validation (명확화)
+## 📖 문서 구조 (dev/docs/)
 
-### tests/ (기능 테스트)
-**목적**: 개발 중 지속적 기능 검증
-**도구**: pytest
-**실행**: 코드 변경 시마다
-**현황**: 370/375 passed (98.7%)
+### architecture/ (18개 - Active)
 
-### validation/ (시스템 검증)
-**목적**: 배포 전 시스템 전체 무결성 확인
-**도구**: 커스텀 스크립트
-**실행**: 배포 전, PR 전
+**핵심 (4개)**:
+- cmis_philosophy_concept.md (철학)
+- CMIS_Architecture_Blueprint_v3.4_km.md (전체 아키텍처)
+- CMIS_Orchestration_Kernel_Design.md (Reconcile Loop)
+- Blueprint_v3.4_Review.md (검토 문서)
 
-**위치 변경**: ✅
-- Before: `dev/scripts/validation/`
-- After: `dev/validation/`
+**엔진별 (7개)**:
+- BeliefEngine_Design_Enhanced.md
+- World_Engine_Enhanced_Design.md
+- PatternEngine_Design_Final.md
+- StrategyEngine_Design_Enhanced.md
+- LearningEngine_Design_Enhanced.md
+- Workflow_CLI_Design_Enhanced.md
+- Search_Strategy_Design_v2.md
 
----
-
-## 프로덕션 루트 (8개)
-
-```
-/Users/kangmin/v9_dev/
-├── cmis.yaml              # 1. 메인 스키마
-├── cmis_core/             # 2. Core 엔진 (25개 .py)
-├── cmis_cli/              # 3. CLI (3개 폴더, 8개 명령어)
-├── config/                # 4. 설정 YAML
-│   ├── patterns/          # 23개 Pattern
-│   ├── archetypes/        # 6개 Archetype
-│   ├── sources/           # Data source 설정
-│   └── *.yaml             # 기타 설정
-├── requirements.txt       # 5. 의존성
-├── README.md              # 6. 메인 문서
-└── env.example            # 7. 환경변수 템플릿
-
-Note: seeds/는 dev/examples/seeds/로 이동 (선택적)
-```
+**보조 (7개)**:
+- BeliefEngine 관련 3개
+- StrategyEngine 관련 2개
+- cmis_project_context_layer_design.md
+- README.md
 
 ---
 
-## 실행 방법
+### deprecated/docs/architecture_v3.3_and_earlier/ (25개)
 
-### 개발 중 테스트
+**v3.3 문서**: Blueprint, Implementation Status, Roadmap
+
+**구버전 엔진 설계**: World v1-v2, Pattern v1.1, Strategy v1, Learning v1, Workflow v1
+
+**Orchestration 설계 진화**:
+- CMIS_Cursor_Agent_Interface_Design.md (v1.1)
+- CMIS_Adaptive_Execution_Design.md (v2.0)
+→ CMIS_Orchestration_Kernel_Design.md (v3.0, 최신)
+
+**검토/분석**: Philosophy Review, Blueprint Review 등
+
+---
+
+## 🗂️ 데이터 구조
+
+```
+data/                           # 런타임 데이터 (.gitignore)
+├─ value_store/                 # ValueRecord 영속화
+├─ artifacts/                   # Monte Carlo samples 등
+├─ cache/                       # 캐시 (선택적)
+└─ graphs/                      # Graph 백엔드 (선택적)
+```
+
+---
+
+## 🔄 버전 관리 규칙
+
+### Architecture 문서
+
+**버전 업그레이드 시** (예: v3.4 → v3.5):
+
 ```bash
-# 전체 테스트
-pytest
+# 1. 신규 문서 작성
+vi dev/docs/architecture/CMIS_Architecture_Blueprint_v3.5.md
 
-# 특정 엔진
-pytest dev/tests/unit/test_world_engine*.py
-pytest dev/tests/unit/test_strategy_engine*.py
+# 2. 구버전 이동
+mkdir dev/deprecated/docs/architecture_v3.4
+mv dev/docs/architecture/*_v3.4*.md dev/deprecated/docs/architecture_v3.4/
 
-# 빠른 확인
-pytest -q
+# 3. README 업데이트
+vi dev/docs/architecture/README.md
 ```
 
-### 배포 전 검증
-```bash
-# YAML 무결성
-python3 dev/validation/validate_yaml_integrity.py
+**폴더명 = Deprecated 문서 버전**
 
-# 전체 코드베이스
-python3 dev/validation/validate_codebase.py
+**현재**:
+- Active: v3.4 및 최신
+- Deprecated: architecture_v3.3_and_earlier/
 
-# 테스트 + 검증
-pytest && python3 dev/validation/validate_codebase.py
+---
+
+## 📊 코드 통계 (v3.6.0)
+
 ```
-
-### CLI 사용
-```bash
-# 시장 분석
-python3 -m cmis_cli structure-analysis --domain ... --region ...
-
-# 기회 발굴
-python3 -m cmis_cli opportunity-discovery --domain ... --top-n 5
-
-# 일괄 분석
-python3 -m cmis_cli batch-analysis --config batch.yaml --parallel
-
-# 설정 검증
-python3 -m cmis_cli config-validate --check-all
+Core 엔진:        ~15,000줄
+CLI:              ~2,500줄
+Tests:            ~8,000줄 (420+개)
+Documentation:    ~35,000줄
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total:           ~60,000줄
 ```
 
 ---
 
-## 파일 분류 기준
+## 🎯 핵심 원칙
 
-### 프로덕션 루트
-- ✅ 실행 필수 (cmis.yaml, cmis_core/, config/, seeds/)
-- ✅ 사용자 직접 접근 (README.md, env.example)
-- ✅ 의존성/설정 (requirements.txt, pytest.ini)
-
-### dev/
-- ✅ 테스트 (tests/)
-- ✅ 검증 스크립트 (validation/)
-- ✅ 문서 (docs/)
-- ✅ 예시 (examples/)
-- ✅ 참조 (v7_reference/)
-- ✅ 세션 이력 (session_summary/)
-- ✅ Deprecated (deprecated/)
+1. **프로덕션 루트는 최소화** (8개 항목만)
+2. **dev/ 아래에 모든 개발 자료**
+3. **문서는 버전별 폴더로 정리**
+4. **테스트는 Phase별/엔진별 분리**
+5. **Deprecated는 명확한 버전 폴더**
 
 ---
 
-## 체크리스트
-
-### 개발 중
-- [x] pytest 실행 (매 커밋)
-- [x] 새 기능 추가 시 test 작성
-- [x] Legacy 코멘트 제거
-- [x] CMIS 브랜드 통일
-
-### 배포 전
-- [x] pytest 370/375 통과
-- [ ] validate_yaml_integrity.py 통과
-- [x] 프로덕션 루트 깔끔 (8개만)
-- [x] README.md 업데이트
-- [x] 문서 정리 (deprecated 이동)
-
-### 완성 (2025-12-11)
-- [x] World Engine v2.0
-- [x] Workflow CLI (8개 명령어)
-- [x] Strategy Engine v1.0
-- [x] Learning Engine v1.0
-- [x] 4단계 루프 완성
-- [x] 문서 정리
-
----
-
-**작성**: 2025-12-09  
-**업데이트**: 2025-12-11  
-**상태**: CMIS v3.3 완성 ✅
+**작성**: 2025-12-13
+**버전**: v3.6.0
+**상태**: 정리 완료 ✅

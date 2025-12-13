@@ -697,3 +697,4 @@ learning_engine.update_from_outcomes_api(outcome_ids)
 **작성**: 2025-12-12
 **버전**: v1.0
 **문의**: CMIS Team
+

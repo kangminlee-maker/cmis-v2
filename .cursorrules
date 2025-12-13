@@ -1,27 +1,84 @@
 # CMIS - Contextual Market Intelligence System
-# 2025-12-09: UMIS → CMIS 브랜드 전환
 
-## 파일 위치 (핵심!)
+## 핵심 규칙
 
-프로덕션 루트 (8개만): cmis.yaml, cmis_core/, cmis_cli/, config/, seeds/, requirements.txt, README.md, env.example
+**프로덕션 루트**: cmis.yaml, cmis_core/, cmis_cli/, config/, requirements.txt, README.md, env.example
 
-dev/:
-- tests/{unit,integration,e2e}/ - 테스트
-- scripts/validation/ - 검증
-- docs/{architecture,analysis,implementation}/ - 문서
-- examples/ - 예시
-- temp/ - 임시
+**금지**: 루트에 test_*.py, example_*.py 생성 금지
 
-## 금지 ❌
+**Import**: `import cmis_core` (not umis_v9_core)
 
-루트에 test_*.py, example_*.py 생성 금지
-UMIS, umis_v9 사용 금지 (→ CMIS, cmis)
-v1, v2, POC 표시 금지
+**타입**: Type hints + Docstrings 필수
 
-## 규칙 ✅
+---
 
-import cmis_core (not umis_v9_core)
-YAML 루트: cmis:
-Type hints + docstrings 필수
+## 파일 위치
 
-상세: dev/STRUCTURE.md
+```
+cmis/
+├─ cmis_core/          # 엔진 (9개, 100% 완성)
+├─ cmis_cli/           # CLI 인터페이스
+├─ config/             # 설정
+├─ dev/
+│  ├─ docs/           # 문서
+│  ├─ tests/          # 테스트
+│  ├─ deprecated/     # 구버전
+│  └─ examples/       # 예시
+└─ data/              # 런타임 (.gitignore)
+```
+
+---
+
+## Architecture 문서 버전 관리
+
+**업그레이드 시** (예: v3.4 → v3.5):
+
+1. 신규: `*_v3.5.md` 작성
+2. 이동: `*_v3.4.md` → `dev/deprecated/docs/architecture_v3.4/`
+3. 업데이트: `dev/docs/architecture/README.md`
+
+**폴더명** = Deprecated 문서 버전
+
+**현재**: Active (v3.4+), Deprecated (v3.3_and_earlier)
+
+---
+
+## CMIS 철학 (enforced)
+
+1. **Evidence-first, Prior-last**
+2. **Substrate = SSoT** (Stores + Graphs + Lineage)
+3. **Model → Number** (구조 먼저, 숫자 나중)
+4. **Graph-of-Graphs** (R/P/V/D 분리)
+5. **Objective-Oriented** (목표 중심, 프로세스 동적)
+6. **Agent = Persona + Workflow** (엔진 아님)
+
+상세: `dev/docs/architecture/cmis_philosophy_concept.md`
+
+---
+
+## Orchestration (v3.6.0 설계)
+
+**패턴**: Reconcile Loop (Kubernetes)
+
+**구조**:
+- GoalGraph (D-Graph 활용)
+- TaskQueue
+- Ledgers (Task + Progress, 2개 고정)
+- Verifier (Predicate → Diff)
+- Replanner (부분 재계획)
+
+**LLM**: PlanPatch 제안자 (검증 후 적용)
+
+상세: `dev/docs/architecture/CMIS_Orchestration_Kernel_Design.md`
+
+---
+
+## 빠른 참조
+
+**철학**: `dev/docs/architecture/cmis_philosophy_concept.md`
+
+**Blueprint**: `dev/docs/architecture/CMIS_Architecture_Blueprint_v3.4_km.md`
+
+**Orchestration**: `dev/docs/architecture/CMIS_Orchestration_Kernel_Design.md`
+
+**구조**: `dev/STRUCTURE.md`

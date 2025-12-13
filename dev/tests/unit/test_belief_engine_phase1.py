@@ -526,3 +526,4 @@ def test_beliefrecord_spread_calculation():
     
     spread_uniform = belief_uniform._calculate_spread()
     assert spread_uniform == 1.0  # (max-min)/(2*mean) = 100/(2*50)
+

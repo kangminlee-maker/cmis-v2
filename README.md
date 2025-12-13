@@ -1,9 +1,9 @@
 # CMIS - Contextual Market Intelligence System
 
-**버전**: v3.5.0
-**상태**: Production Ready ✅
-**완성도**: 100% (9/9 엔진)
-**업데이트**: 2025-12-12
+**버전**: v3.6.0
+**상태**: Blueprint (Orchestration Kernel 설계)
+**완성도**: 100% (9/9 엔진) + Orchestration 설계
+**업데이트**: 2025-12-13
 
 ---
 
