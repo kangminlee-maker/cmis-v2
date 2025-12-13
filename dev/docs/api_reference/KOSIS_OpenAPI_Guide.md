@@ -363,7 +363,7 @@ df.to_csv('kosis_data.csv', encoding='cp949')
 ```python
 class KOSISSource(BaseDataSource):
     """KOSIS API Source"""
-    
+
     STAT_TABLES = {
         "population": {
             "orgId": "101",
@@ -371,7 +371,7 @@ class KOSISSource(BaseDataSource):
             "name": "주민등록인구"
         }
     }
-    
+
     def _fetch_stat_data(self, org_id, tbl_id, context):
         params = {
             'method': 'getList',
@@ -386,17 +386,17 @@ class KOSISSource(BaseDataSource):
             'prdSe': 'Y',
             'loadGubun': '2',      # 필수!
         }
-        
+
         if context.get('year'):
             params['startPrdDe'] = str(context['year'])
             params['endPrdDe'] = str(context['year'])
-        
+
         # API 호출
         response = requests.get(self.base_url, params=params)
-        
+
         # JavaScript JSON 파싱
         data = self._parse_javascript_json(response.text)
-        
+
         return data
 ```
 
@@ -428,11 +428,11 @@ def _build_params(context, stat_table):
     # region → objL1
     if context.get('area') == '서울':
         objL1 = '11+'
-    
+
     # gender → objL2
     if context.get('gender') == '남성':
         objL2 = '1'
-    
+
     return params
 ```
 
@@ -450,3 +450,5 @@ def _build_params(context, stat_table):
 **작성**: 2025-12-10
 **검증**: 2024년 전국 인구 (51,217,221명)
 **형식**: JSON (JavaScript JSON 파싱)
+
+

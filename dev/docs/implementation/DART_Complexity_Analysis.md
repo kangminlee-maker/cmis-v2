@@ -53,7 +53,7 @@ API 응답: "원" 단위로 추정
 # 1. XML 섹션 파싱
 def extract_sga_total_from_section(section_text):
     """XML에서 판매비와관리비 추출
-    
+
     복잡성:
     - HTML 태그 파싱
     - 단위 찾기 (백만원/천원/억원)
@@ -64,7 +64,7 @@ def extract_sga_total_from_section(section_text):
 # 2. OFS/CFS 자동 판별
 def validate_ofs_cfs(client, corp_code, year, xml_section):
     """OFS vs CFS 자동 판별
-    
+
     프로세스:
     1. XML에서 합계 추출
     2. API OFS 조회
@@ -125,19 +125,19 @@ else:
 def fetch_company_revenue(company_name, year):
     # 1. 기업 코드
     corp_code = get_corp_code(company_name)
-    
+
     # 2. 재무제표 (OFS 고정)
     financials = get_financials(corp_code, year, 'OFS')
-    
+
     # 3. 매출액 추출
     revenue_items = [
         item for item in financials
         if '매출액' in item.get('account_nm', '')
     ]
-    
+
     # 4. 금액 (원 단위 그대로)
     revenue = float(revenue_items[0].get('thstrm_amount'))
-    
+
     return Evidence(...)
 ```
 
@@ -373,3 +373,5 @@ Corp_code: 00307222
 **작성**: 2025-12-09
 **상태**: DART 분석 완료
 **권장**: v1 유지, v2 선택 개선
+
+

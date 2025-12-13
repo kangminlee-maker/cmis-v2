@@ -1,7 +1,7 @@
 # Blueprint v3.4 & Contracts-Registry 검토
 
 **작성일**: 2025-12-12
-**대상**: 
+**대상**:
 - CMIS_Architecture_Blueprint_v3.4_km.md
 - cmis_contracts-and-registry_km.yaml
 **검토자**: CMIS Architect
@@ -40,7 +40,7 @@ cmis:
   patterns: (200줄)
   workflows: (100줄)
   policies: (50줄)
-  
+
 총 1,800+ 줄
 ```
 
@@ -57,7 +57,7 @@ cmis:
       pattern_library: "config/pattern_library.yaml"
       metrics_spec: "config/metrics_spec.yaml"
       policies: "config/policies.yaml"
-  
+
   registries:
     metric_sets: (참조만)
     policy_modes: (참조만)
@@ -81,26 +81,26 @@ cmis:
 ```yaml
 orchestration_plane:
   ledgers:
-    task_ledger:
+    project_ledger:
       description: "문제공간 작업기억 (Project Ledger)"
       stored_in: "substrate_plane (Evidence/Value/Graph)"
       fields: [facts, evidence, metrics, gaps, artifacts]
-    
+
     progress_ledger:
       description: "프로세스 제어판 (Progress Ledger)"
       stored_in: "memory_store.run_store"
       fields: [run_id, steps, stall_count, policy, budget]
-  
+
   workflow_runner:
     description: "Canonical workflows 실행기"
-    
+
   verifier:
     description: "Goal Predicate 검증 + Diff Report"
     policy_integration: true
-  
+
   replanner:
     description: "부분 재계획 (브랜치 단위)"
-  
+
   run_audit_log:
     description: "모든 실행 기록 (재현/감사)"
 ```
@@ -150,13 +150,13 @@ philosophy:
 # cmis_contracts-and-registry_km.yaml
 orchestration_plane:
   ledgers:
-    task_ledger:  # ✅
+    project_ledger:  # ✅
       description: "문제공간 작업기억 (Project Ledger)"  # ⚠️ 혼용
 ```
 
 **수정**:
 ```yaml
-task_ledger:
+project_ledger:
   description: "문제공간 작업기억"
   aliases: ["project_ledger"]  # 별칭으로 정리
 ```
@@ -213,7 +213,7 @@ orchestration_plane:
   description: >
     Desired State (Goal Predicates) ↔ Observed State (Ledgers) 비교
     → Diff Report → Task Generation → Execute → 반복
-  
+
   reconcile_components:
     - "verifier (Desired vs Observed)"
     - "diff_reporter"
@@ -231,18 +231,18 @@ orchestration_plane:
 orchestration_plane:
   llm_integration:
     role: "PlanPatch 제안자 (결정권자 ❌)"
-    
+
     plan_patch_schema:
       required_fields:
         - "patch_type"  # add_task | remove_task | modify_goal
         - "changes"
         - "reasoning"
-      
+
       validation:
         - "schema_check"
         - "policy_check"
         - "resource_check"
-      
+
       approval:
         - "kernel validates"
         - "kernel applies"
@@ -259,12 +259,12 @@ orchestration_plane:
 orchestration_plane:
   governor:
     description: "예산/루프/품질 제어"
-    
+
     budgets:
       max_time_sec: 300
       max_iterations: 20
       max_llm_calls: 20
-    
+
     controls:
       stall_threshold: 2
       loop_detection: true
@@ -318,7 +318,7 @@ orchestration_plane:
 |------------|---------------|------|
 | GoalGraph | D-Graph goal 노드 | ✅ |
 | TaskGraph | orchestration_plane.workflow_runner | ✅ |
-| TaskLedger | orchestration_plane.ledgers.task_ledger | ✅ |
+| ProjectLedger | orchestration_plane.ledgers.project_ledger | ✅ |
 | ProgressLedger | orchestration_plane.ledgers.progress_ledger | ✅ |
 | Verifier | orchestration_plane.verifier | ✅ |
 | Replanner | orchestration_plane.replanner | ✅ |
@@ -348,7 +348,7 @@ orchestration_plane:
   verifier: ✅ (Diff Report)
   replanner: ✅ (Task Generation)
   workflow_runner: ✅ (Execute)
-  
+
   # 추가 필요:
   # - reconcile_loop (명시적)
   # - goal_predicates (템플릿)
@@ -365,12 +365,12 @@ orchestration_plane:
 ```yaml
 orchestration_plane:
   description: "Objective-Oriented Orchestration (Reconcile Loop)"
-  
+
   # 추가
   execution_model:
     pattern: "reconcile_loop"
     description: "Desired (Goal) ↔ Observed (Ledgers) → Diff → Tasks"
-  
+
   # 추가
   goal_predicates:
     description: "검증 가능한 성공 조건"
@@ -378,42 +378,42 @@ orchestration_plane:
       market_size:
         requires_metrics: ["MET-TAM", "MET-SAM"]
         min_evidence_quality: "policy:min_literal_ratio"
-      
+
       entry_strategy:
         requires_artifacts: ["strategy_portfolio"]
         min_strategies: 5
         constraints_satisfied: true
-  
+
   # 추가
   llm_integration:
     role: "PlanPatch 제안자"
-    
+
     plan_patch_schema:
       fields:
         - "patch_type"
         - "changes"
         - "reasoning"
-      
+
       validation_sequence:
         - "schema_check"
         - "policy_check"
         - "resource_check"
         - "apply"
         - "log"
-  
+
   # 추가
   governor:
     description: "예산/루프/품질 제어"
-    
+
     budgets:
       max_time_sec: 300
       max_iterations: 20
       max_llm_calls: 20
-    
+
     stall_detection:
       stall_threshold: 2
       action: "propose_replan or stop"
-    
+
     quality_gates:
       source: "policy_engine"
 ```
@@ -429,7 +429,7 @@ orchestration_plane:
 1. **schemas/ledgers.yaml** (⭐⭐⭐)
    ```yaml
    ledgers:
-     task_ledger:
+     project_ledger:
        fields:
          - facts
          - assumptions
@@ -437,7 +437,7 @@ orchestration_plane:
          - derived_metrics
          - gaps
          - artifacts
-     
+
      progress_ledger:
        fields:
          - run_id
@@ -456,7 +456,7 @@ orchestration_plane:
          min_literal_ratio: 0.7
          max_spread_ratio: 0.3
          allow_prior: false
-       
+
        decision_balanced:
          min_literal_ratio: 0.5
          max_spread_ratio: 0.5
@@ -531,7 +531,7 @@ LLM이 제안하는 변경 사항 구조.
 ✅ Evidence-first가 ValueEngine + Policy로 강제되는가?
 ✅ Evidence/Value/Graph가 재현 가능한 저장 구조를 갖는가?
 ✅ Agent(Role)가 엔진 로직을 숨기지 않고 workflow를 표준화하는가?
-✅ Greenfield/Brownfield가 ProjectContext 유무로 일관되는가?
+✅ Greenfield/Brownfield가 FocalActorContext 유무로 일관되는가?
 ✅ Progress Ledger가 남아 재실행/부분 재실행이 가능한가?
 ✅ 모든 결과가 lineage로 추적 가능한가?
 ```

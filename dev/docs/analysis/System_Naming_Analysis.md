@@ -296,3 +296,5 @@ UMIS v9 - Contextual Market Intelligence
 
 **작성일**: 2025-12-05
 
+
+

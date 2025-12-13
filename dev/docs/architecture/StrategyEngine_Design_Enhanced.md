@@ -35,7 +35,7 @@
                           ▼
 ┌──────────────────────────────────────────────────────────┐
 │           Orchestration Layer                             │
-│  - D-Graph/ProjectContext 로딩                           │
+│  - D-Graph/FocalActorContext 로딩                           │
 │  - World/Pattern/Value Engine 호출                       │
 │  - Core 함수 호출                                         │
 │  - D-Graph 저장                                          │
@@ -78,23 +78,23 @@ strategy_engine:
 ```python
 class StrategyEngine:
     """Strategy Engine - D-Graph 중심 전략 설계 엔진"""
-    
+
     def __init__(self, project_root: Optional[Path] = None):
         self.project_root = project_root or Path(__file__).parent.parent
-        
+
         # Engines
         self.world_engine = WorldEngine(project_root)
         self.pattern_engine_v2 = PatternEngineV2()
         self.value_engine = ValueEngine()
-        
+
         # D-Graph (decision_graph)
         self.d_graph = InMemoryGraph()  # Phase 1: 인메모리
-        
+
         # Core 컴포넌트
         self.generator = StrategyGenerator(self.pattern_engine_v2)
         self.evaluator = StrategyEvaluator(self.value_engine)
         self.optimizer = PortfolioOptimizer()
-    
+
     def search_strategies_api(
         self,
         goal_id: str,
@@ -103,55 +103,55 @@ class StrategyEngine:
     ) -> str:
         """
         Public API (cmis.yaml 대응)
-        
+
         프로세스:
         1. D-Graph에서 Goal 로딩
-        2. ProjectContext 로딩 (있으면)
+        2. FocalActorContext 로딩 (있으면)
         3. World/Pattern Engine 호출
         4. Core search_strategies() 호출
         5. Strategy 노드를 D-Graph에 저장
         6. strategy_set_ref 반환
-        
+
         Args:
             goal_id: Goal ID (D-Graph에서 조회)
             constraints: 추가 제약 (Greenfield에서 사용)
-            project_context_id: ProjectContext ID (Brownfield)
-        
+            project_context_id: FocalActorContext ID (Brownfield)
+
         Returns:
             strategy_set_ref: "STSET-{timestamp}"
         """
         # 1. Goal 로딩 (D-Graph)
         goal = self._load_goal_from_d_graph(goal_id)
-        
-        # 2. ProjectContext 로딩 (있으면)
+
+        # 2. FocalActorContext 로딩 (있으면)
         project_context = None
         if project_context_id:
             project_context = self._load_project_context(project_context_id)
-        
+
         # 3. World/Pattern Engine 호출
         # Goal의 scope에서 domain_id, region 추출
         scope = self._extract_scope_from_goal(goal)
-        
+
         snapshot = self.world_engine.snapshot(
             domain_id=scope["domain_id"],
             region=scope["region"],
             project_context_id=project_context_id
         )
-        
+
         matches = self.pattern_engine_v2.match_patterns(
             snapshot.graph,
             project_context_id=project_context_id
         )
-        
+
         gaps = self.pattern_engine_v2.discover_gaps(
             snapshot.graph,
             project_context_id=project_context_id,
             precomputed_matches=matches
         )
-        
+
         # 4. Core 함수 호출
         greenfield_constraints = constraints if not project_context else None
-        
+
         strategies = self.search_strategies_core(
             goal=goal,
             reality_snapshot=snapshot,
@@ -160,14 +160,14 @@ class StrategyEngine:
             project_context=project_context,
             greenfield_constraints=greenfield_constraints
         )
-        
+
         # 5. D-Graph에 저장
         strategy_set_ref = self._save_strategies_to_d_graph(
             strategies,
             goal_id,
             project_context_id
         )
-        
+
         return strategy_set_ref
 ```
 
@@ -198,20 +198,20 @@ def evaluate_portfolio_api(
 ) -> str:
     """
     Public API (cmis.yaml 대응)
-    
+
     프로세스:
     1. D-Graph에서 Strategy 노드 로딩
-    2. ProjectContext 로딩 (있으면)
+    2. FocalActorContext 로딩 (있으면)
     3. policy_ref 해석
     4. Core evaluate_portfolio() 호출
     5. PortfolioEvaluation을 D-Graph에 저장
     6. portfolio_eval_ref 반환
-    
+
     Args:
         strategy_ids: Strategy ID 리스트
         policy_ref: Policy mode
-        project_context_id: ProjectContext ID
-    
+        project_context_id: FocalActorContext ID
+
     Returns:
         portfolio_eval_ref: "PEVAL-{timestamp}"
     """
@@ -220,29 +220,29 @@ def evaluate_portfolio_api(
         self._load_strategy_from_d_graph(sid)
         for sid in strategy_ids
     ]
-    
-    # 2. ProjectContext 로딩
+
+    # 2. FocalActorContext 로딩
     project_context = None
     if project_context_id:
         project_context = self._load_project_context(project_context_id)
-    
+
     # 3. Policy 해석
     policy_params = self._resolve_policy(policy_ref)
-    
+
     # 4. Core 함수
     portfolio_eval = self.evaluate_portfolio_core(
         strategies=strategies,
         project_context=project_context,
         policy_params=policy_params
     )
-    
+
     # 5. D-Graph 저장
     portfolio_eval_ref = self._save_portfolio_eval_to_d_graph(
         portfolio_eval,
         strategy_ids,
         project_context_id
     )
-    
+
     return portfolio_eval_ref
 ```
 
@@ -259,12 +259,12 @@ def search_strategies_core(
     reality_snapshot: RealityGraphSnapshot,
     pattern_matches: List[PatternMatch],
     gaps: List[GapCandidate],
-    project_context: Optional[ProjectContext] = None,
+    project_context: Optional[FocalActorContext] = None,
     greenfield_constraints: Optional[Dict[str, Any]] = None
 ) -> List[Strategy]:
     """
     Core 전략 탐색 (내부 함수)
-    
+
     이 함수는 Public API에서만 호출됨
     테스트/실험 시 직접 호출 가능
     """
@@ -274,7 +274,7 @@ def search_strategies_core(
         gaps=gaps,
         goal=goal
     )
-    
+
     # 2. Constraint 필터링
     if project_context:
         # Brownfield
@@ -288,7 +288,7 @@ def search_strategies_core(
             strategies,
             greenfield_constraints
         )
-    
+
     # 3. StrategyEvaluator로 평가
     for strategy in strategies:
         # Execution Fit
@@ -299,21 +299,21 @@ def search_strategies_core(
             )
         else:
             strategy.execution_fit_score = None
-        
+
         # ROI/Outcomes (ValueEngine 연동)
         strategy.expected_outcomes = self.evaluator.predict_outcomes(
             strategy,
             baseline_state=project_context.baseline_state if project_context else {},
             value_engine=self.value_engine
         )
-        
+
         # Risk
         strategy.risks = self.evaluator.assess_risks(
             strategy,
             project_context,
             pattern_matches
         )
-    
+
     # 4. Preference 반영 (Brownfield)
     if project_context and project_context.preference_profile:
         for strategy in strategies:
@@ -321,7 +321,7 @@ def search_strategies_core(
                 strategy,
                 project_context.preference_profile
             )
-    
+
     # 5. 정렬
     if project_context:
         # Brownfield: Execution Fit × adjusted_score
@@ -335,7 +335,7 @@ def search_strategies_core(
             key=lambda s: s.expected_outcomes.get("roi", 0),
             reverse=True
         )
-    
+
     return strategies
 ```
 
@@ -449,7 +449,7 @@ for metric_id, value in strategy.expected_outcomes.items():
 class StrategyEvaluator:
     def __init__(self, value_engine: ValueEngine):
         self.value_engine = value_engine
-    
+
     def predict_outcomes(
         self,
         strategy: Strategy,
@@ -458,7 +458,7 @@ class StrategyEvaluator:
     ) -> Dict[str, Any]:
         """
         ValueEngine 연동 ROI 예측
-        
+
         프로세스:
         1. Pattern Benchmark → ValueEngine Prior
         2. ValueEngine.evaluate_metrics() 호출
@@ -466,10 +466,10 @@ class StrategyEvaluator:
         """
         # 1. Pattern Benchmark 추출
         pattern_priors = {}
-        
+
         for pattern_id in strategy.pattern_composition:
             pattern = pattern_library.get(pattern_id)
-            
+
             for metric_id in pattern.benchmark_metrics:
                 bounds = pattern.quantitative_bounds.get(metric_id)
                 if bounds:
@@ -483,21 +483,21 @@ class StrategyEvaluator:
                         "method": "pattern_benchmark",
                         "confidence": 0.6
                     }
-        
+
         # 2. ValueEngine 호출 (Phase 2)
         # value_records = value_engine.evaluate_metrics(
         #     graph=reality_snapshot.graph,
         #     metric_requests=[...],
         #     priors=pattern_priors  # Pattern Prior 전달
         # )
-        
+
         # Phase 1: 간단한 계산
         outcomes = self._simple_roi_calculation(
             strategy,
             baseline_state,
             pattern_priors
         )
-        
+
         # Lineage 추가
         outcomes["lineage"] = {
             "method": "pattern_benchmark_projection",
@@ -505,7 +505,7 @@ class StrategyEvaluator:
             "confidence": 0.6,
             "engine": "strategy_engine_phase1"
         }
-        
+
         return outcomes
 ```
 
@@ -524,7 +524,7 @@ project_context_store:
         dimension: "budget|timeline|..."  # 추가
         threshold: <value>
         description: "..."
-    
+
     soft_preferences:
       - dimension: "risk_appetite|prefer_patterns|..."
         value: <any>
@@ -542,41 +542,41 @@ def _filter_by_brownfield_constraints(
     """
     filtered = []
     hard_constraints = constraints_profile.get("hard_constraints", [])
-    
+
     for strategy in strategies:
         violates = False
-        
+
         for constraint in hard_constraints:
             ctype = constraint["type"]
             dimension = constraint.get("dimension", "")
             threshold = constraint.get("threshold")
-            
+
             # financial + budget
             if ctype == "financial" and "budget" in dimension:
                 required = strategy.expected_outcomes.get("required_investment", 0)
                 if required > threshold:
                     violates = True
                     break
-            
+
             # temporal + timeline
             elif ctype == "temporal" and "timeline" in dimension:
                 required = strategy.expected_outcomes.get("required_timeline_months", 36)
                 if required > threshold:
                     violates = True
                     break
-            
+
             # organizational + team_size
             elif ctype == "organizational" and "team" in dimension:
                 required = strategy.expected_outcomes.get("required_team_size", 10)
                 if required > threshold:
                     violates = True
                     break
-            
+
             # ... 기타
-        
+
         if not violates:
             filtered.append(strategy)
-    
+
     return filtered
 ```
 
@@ -596,27 +596,27 @@ greenfield_constraints = {
 def _normalize_greenfield_constraints(constraints: Dict) -> Dict:
     """
     Greenfield constraints → constraints_profile 형식
-    
+
     내부 통일: 모두 constraints_profile 형식으로 처리
     """
     hard_constraints = []
-    
+
     if "budget" in constraints:
         hard_constraints.append({
             "type": "financial",
             "dimension": "budget",
             "threshold": constraints["budget"]
         })
-    
+
     if "timeline_months" in constraints:
         hard_constraints.append({
             "type": "temporal",
             "dimension": "timeline_months",
             "threshold": constraints["timeline_months"]
         })
-    
+
     # ...
-    
+
     return {"hard_constraints": hard_constraints}
 ```
 
@@ -636,7 +636,7 @@ def _normalize_greenfield_constraints(constraints: Dict) -> Dict:
 def _resolve_policy(self, policy_ref: str) -> Dict[str, Any]:
     """
     policy_ref → 파라미터
-    
+
     Returns:
         policy_params: {
             "risk_tolerance": 0.0~1.0,
@@ -676,7 +676,7 @@ def _resolve_policy(self, policy_ref: str) -> Dict[str, Any]:
 def evaluate_portfolio_core(
     self,
     strategies: List[Strategy],
-    project_context: Optional[ProjectContext],
+    project_context: Optional[FocalActorContext],
     policy_params: Dict[str, Any]
 ) -> PortfolioEvaluation:
     """
@@ -684,17 +684,17 @@ def evaluate_portfolio_core(
     """
     # Risk tolerance 반영
     risk_tolerance = policy_params["risk_tolerance"]
-    
+
     # 고위험 전략 필터링/페널티
     for strategy in strategies:
         risk_score = len(strategy.risks) / 10
-        
+
         if risk_score > risk_tolerance:
             # exploration_friendly면 허용, reporting_strict면 제외
             if policy_params["prior_usage"] == "minimal":
                 # 제외 또는 큰 페널티
                 strategy.adjusted_score *= 0.5
-    
+
     # ...
 ```
 
@@ -711,7 +711,7 @@ preference_profile:
     - dimension: "prefer_patterns"
       value: ["PAT-subscription_model"]
       weight: 0.8
-    
+
     - dimension: "risk_appetite"
       value: "medium"
       weight: 1.0
@@ -728,33 +728,33 @@ def _adjust_by_preferences(
     project_context_store 스키마 기준
     """
     score = strategy.execution_fit_score or 0.5
-    
+
     soft_preferences = preference_profile.get("soft_preferences", [])
-    
+
     for pref in soft_preferences:
         dimension = pref["dimension"]
         value = pref["value"]
         weight = pref.get("weight", 0.5)
-        
+
         if dimension == "prefer_patterns":
             for pattern_id in strategy.pattern_composition:
                 if pattern_id in value:
                     score += 0.1 * weight
-        
+
         elif dimension == "avoid_patterns":
             for pattern_id in strategy.pattern_composition:
                 if pattern_id in value:
                     score -= 0.2 * weight
-        
+
         elif dimension == "risk_appetite":
             risk_level = value  # "low"|"medium"|"high"
             strategy_risk = len(strategy.risks) / 10
-            
+
             if risk_level == "low" and strategy_risk > 0.3:
                 score -= 0.15 * weight
             elif risk_level == "high" and strategy_risk < 0.2:
                 score += 0.1 * weight
-    
+
     return max(0.0, min(1.0, score))
 ```
 
@@ -796,7 +796,7 @@ def search_strategies_api(
         max_strategies = 10
         policy_ref = "decision_balanced"
         evaluation_depth = "deep"
-    
+
     # ...
 ```
 
@@ -961,3 +961,5 @@ def search_strategies_api(
 **상태**: 설계 완료 (Enhanced) ✅
 **기반**: 피드백 7개 완전 반영
 **다음**: Phase 1 구현 착수
+
+

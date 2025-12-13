@@ -304,7 +304,7 @@ for tier in [1, 2, 3]:
     for source in tier_sources:
         evidence = source.fetch(request)  # ← DART, KOSIS 등
         bundle.add_evidence(evidence)
-        
+
         if sufficient(bundle):
             return bundle  # Early Return
 
@@ -512,4 +512,6 @@ dev/session_summary/
 **완료일**: 2025-12-09
 **버전**: v1.0.0
 **승인**: ✅ Production Ready
+
+
 

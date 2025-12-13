@@ -136,10 +136,10 @@ if start_year and end_year:
 if is_timeseries:
     # 연도별로 그룹화하여 합계만 추출
     year_data = {}
-    
+
     for item in data:
         prd_de = item.get('PRD_DE', '')
-        
+
         # 첫 번째 항목만 사용 (합계)
         if prd_de and prd_de not in year_data:
             value = float(item.get('DT', '').replace(',', ''))
@@ -148,7 +148,7 @@ if is_timeseries:
                 'value': value,
                 'unit': item.get('UNIT_NM', '')
             }
-    
+
     return [year_data[year] for year in sorted(year_data.keys())]
 ```
 
@@ -169,21 +169,21 @@ def _parse_javascript_json(self, text: str) -> Any:
     # 1. 빈 응답 체크
     if not text or not text.strip():
         raise SourceNotAvailableError("Empty response from KOSIS API")
-    
+
     # 2. JSON 변환
     text_fixed = re.sub(r'([{,])(\w+):', r'\1"\2":', text)
     result = json.loads(text_fixed)
-    
+
     # 3. 빈 결과 체크
     if isinstance(result, list) and len(result) == 0:
         return []
-    
+
     # 4. 에러 응답 체크
     if isinstance(result, dict):
         if 'err' in result and result.get('err') != '0':
             err_msg = result.get('errMsg', 'Unknown error')
             raise SourceNotAvailableError(f"KOSIS API error: {err_msg}")
-    
+
     return result
 ```
 
@@ -433,4 +433,6 @@ print(f"가구 수: {record.value:,.0f}")
 **작업자**: CMIS Development Team
 **검증**: 22/23 테스트 통과 (95.7%)
 **상태**: Production Ready
+
+
 

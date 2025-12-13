@@ -1,7 +1,7 @@
 # PatternEngine 하드코딩 전수 검토
 
-**작성일**: 2025-12-10  
-**목적**: PatternEngine 하드코딩 식별  
+**작성일**: 2025-12-10
+**목적**: PatternEngine 하드코딩 식별
 **범위**: PatternEngine 전체 (9개 파일 + 27개 YAML)
 
 ---
@@ -38,7 +38,7 @@
 def calculate_structure_fit(pattern, trait_result, structure_result):
     trait_score = calculate_trait_score(...)
     structure_score = ...
-    
+
     # 가중치 하드코딩
     final_score = (trait_score * 0.6) + (structure_score * 0.4)
 ```
@@ -60,7 +60,7 @@ execution_fit:
   asset_weight: 0.2
 ```
 
-**우선순위**: ⭐⭐ (중간)  
+**우선순위**: ⭐⭐ (중간)
 **이유**: 가중치는 실험적 조정이 필요할 수 있음
 
 ---
@@ -228,7 +228,7 @@ optional_bonus: 0.1
 - A/B 테스트 용이
 - 도메인별 다른 가중치 가능
 
-**우선순위**: ⭐⭐ (낮음-중간)  
+**우선순위**: ⭐⭐ (낮음-중간)
 **예상**: 1일
 
 ---
@@ -248,13 +248,13 @@ class GapDiscoverer:
     # 클래스 상수
     LEVEL_ORDER = {"core": 3, "common": 2, "rare": 1}
     FEASIBILITY_ORDER = {"high": 3, "medium": 2, "low": 1}
-    
+
     def _sort_gaps(self, gaps):
         # 재사용
         gaps.sort(key=lambda g: self.LEVEL_ORDER.get(g.expected_level))
 ```
 
-**우선순위**: ⭐ (낮음)  
+**우선순위**: ⭐ (낮음)
 **예상**: 0.5일
 
 ---
@@ -263,7 +263,7 @@ class GapDiscoverer:
 
 ### Evidence Engine
 
-**Before**: 8개 하드코딩  
+**Before**: 8개 하드코딩
 **After**: 0개 (모두 YAML화) ✅
 
 **평가**: 완전 개선됨
@@ -272,8 +272,8 @@ class GapDiscoverer:
 
 ### PatternEngine
 
-**하드코딩**: 5개 (매직 넘버/순서)  
-**YAML 기반**: 27개 파일  
+**하드코딩**: 5개 (매직 넘버/순서)
+**YAML 기반**: 27개 파일
 
 **평가**: 이미 우수, 선택적 개선만 필요
 
@@ -323,5 +323,7 @@ class GapDiscoverer:
 
 ---
 
-**작성**: 2025-12-10  
+**작성**: 2025-12-10
 **결론**: PatternEngine 즉시 개선 불필요, 현재 상태 양호
+
+

@@ -1,7 +1,7 @@
 # 검색 전략 설계 v2.0 (피드백 반영)
 
-**작성일**: 2025-12-10  
-**버전**: v2.0 (SearchPlanner 중심)  
+**작성일**: 2025-12-10
+**버전**: v2.0 (SearchPlanner 중심)
 **기반**: Search_Query_Enhancement_Strategy.md + 피드백
 
 ---
@@ -58,23 +58,23 @@ QueryLearner
 @dataclass
 class SearchContext:
     """검색 Context (통합 모델)"""
-    
+
     # 기본
     domain_id: str
     region: str
     metric_id: str
     year: int
-    
+
     # 언어 (다국어 검색)
     language: str  # "ko", "en", "auto"
-    
+
     # 정책
     policy_mode: str  # "reporting_strict", "decision_balanced", "exploration_friendly"
-    
+
     # 선택적
     data_source_id: Optional[str] = None
     segment: Optional[str] = None
-    
+
     # Budget
     max_queries: int = 5
     max_total_time: int = 30  # seconds
@@ -140,34 +140,34 @@ plan = SearchPlan(
 ```python
 class SearchPlanner:
     """검색 계획 수립
-    
+
     역할:
     - Metric/DataSource/Policy 기반 SearchPlan 생성
     - 언어 결정
     - Budget 할당
     """
-    
+
     def __init__(self, config: CMISConfig):
         self.config = config
         self.strategy_spec = self._load_search_strategy_spec()
-    
+
     def build_plan(
         self,
         metric_request: MetricRequest,
         policy_ref: str
     ) -> SearchPlan:
         """SearchPlan 생성
-        
+
         Args:
             metric_request: Metric 요청
             policy_ref: 정책
-        
+
         Returns:
             SearchPlan
         """
         metric_id = metric_request.metric_id
         context_dict = metric_request.context
-        
+
         # 1. SearchContext 생성
         search_context = SearchContext(
             domain_id=context_dict.get("domain_id", ""),
@@ -177,17 +177,17 @@ class SearchPlanner:
             language=self._determine_language(context_dict),
             policy_mode=policy_ref
         )
-        
+
         # 2. MetricSpec 조회
         metric_spec = self.config.metrics.get(metric_id)
-        
+
         if not metric_spec:
             # Fallback
             return self._create_generic_plan(search_context)
-        
+
         # 3. direct_evidence_sources 기반 SearchStep 생성
         steps = []
-        
+
         for source_id in metric_spec.direct_evidence_sources:
             step = self._create_search_step(
                 source_id,
@@ -196,20 +196,20 @@ class SearchPlanner:
                 policy_ref
             )
             steps.append(step)
-        
+
         # 4. Policy 기반 조정
         steps = self._adjust_by_policy(steps, policy_ref)
-        
+
         return SearchPlan(
             metric_id=metric_id,
             context=search_context,
             steps=steps
         )
-    
+
     def _determine_language(self, context):
         """언어 결정 (다국어 전략)"""
         region = context.get("region", "")
-        
+
         # 한국: ko 우선
         if region in ["KR", "한국"]:
             return "auto"  # ko + en 모두
@@ -217,7 +217,7 @@ class SearchPlanner:
             return "auto"  # ja + en
         else:
             return "en"
-    
+
     def _create_search_step(
         self,
         source_id: str,
@@ -226,22 +226,22 @@ class SearchPlanner:
         policy_ref: str
     ) -> SearchStep:
         """Source별 SearchStep 생성"""
-        
+
         # SearchStrategySpec 조회
         strategy = self.strategy_spec.get(metric_id, {}).get(source_id, {})
-        
+
         # Policy 기반 LLM 사용 여부
         use_llm = (
             policy_ref in ["exploration_friendly", "decision_balanced"] and
             source_id in ["GenericWebSearch", "Academic_Papers"]
         )
-        
+
         # 언어 결정
         if context.language == "auto" and source_id == "GenericWebSearch":
             languages = ["ko", "en"]  # 다국어
         else:
             languages = ["en"]
-        
+
         return SearchStep(
             data_source_id=source_id,
             base_query_template=strategy.get("template", "{domain} {region} {metric} {year}"),
@@ -251,7 +251,7 @@ class SearchPlanner:
             timeout_sec=30,
             priority=1
         )
-    
+
     def _adjust_by_policy(self, steps, policy_ref):
         """Policy 기반 조정"""
         if policy_ref == "reporting_strict":
@@ -259,12 +259,12 @@ class SearchPlanner:
             for step in steps:
                 step.num_queries = min(step.num_queries, 2)
                 step.use_llm_query = False
-        
+
         elif policy_ref == "exploration_friendly":
             # 쿼리 수 증가, LLM 적극 활용
             for step in steps:
                 step.num_queries = min(step.num_queries * 2, 10)
-        
+
         return steps
 ```
 
@@ -275,31 +275,31 @@ class SearchPlanner:
 ```python
 class SearchExecutor:
     """SearchPlan 실행
-    
+
     역할:
     - SearchStep 순차 실행
     - QueryExpansionEngine/LLMQueryGenerator 조율
     - Raw 결과 수집
     """
-    
+
     def __init__(self):
         self.query_expansion = QueryExpansionEngine()
         self.llm_generator = LLMQueryGenerator()
-    
+
     def execute(
         self,
         plan: SearchPlan
     ) -> List[RawSearchResult]:
         """SearchPlan 실행
-        
+
         Args:
             plan: SearchPlan
-        
+
         Returns:
             RawSearchResult 리스트
         """
         all_results = []
-        
+
         for step in plan.steps:
             # 1. 쿼리 생성
             if step.use_llm_query:
@@ -319,7 +319,7 @@ class SearchExecutor:
                         year=plan.context.year
                     )]
                 }
-            
+
             # 2. 언어별 검색 실행
             for lang, lang_queries in queries.items():
                 for query in lang_queries:
@@ -330,16 +330,16 @@ class SearchExecutor:
                             step.data_source_id,
                             step.timeout_sec
                         )
-                        
+
                         if result:
                             all_results.append(result)
-                    
+
                     except Exception as e:
                         print(f"Query failed: {query} - {e}")
                         continue
-        
+
         return all_results
-    
+
     def _execute_single_query(
         self,
         query: str,
@@ -359,46 +359,46 @@ class SearchExecutor:
 ```python
 class EvidenceBuilder:
     """Raw 검색 결과 → EvidenceRecord 변환
-    
+
     역할:
     - 숫자 추출
     - 품질 평가
     - EvidenceRecord 조립
     """
-    
+
     def from_search_results(
         self,
         raw_results: List[RawSearchResult],
         metric_request: MetricRequest
     ) -> List[EvidenceRecord]:
         """RawSearchResult → EvidenceRecord
-        
+
         Args:
             raw_results: 검색 결과들
             metric_request: Metric 요청
-        
+
         Returns:
             EvidenceRecord 리스트
         """
         evidence_records = []
-        
+
         for result in raw_results:
             # 1. 숫자 추출
             numbers = self.extract_numbers(result.content)
-            
+
             if not numbers:
                 continue
-            
+
             # 2. 품질 평가
             quality = self.evaluate_quality(
                 result,
                 numbers,
                 metric_request
             )
-            
+
             # 3. Consensus
             value, confidence = self.calculate_consensus(numbers)
-            
+
             # 4. EvidenceRecord 생성
             record = EvidenceRecord(
                 evidence_id=f"EVD-Search-{uuid.uuid4().hex[:8]}",
@@ -413,9 +413,9 @@ class EvidenceBuilder:
                     "hints": self._extract_hints(result, numbers)
                 }
             )
-            
+
             evidence_records.append(record)
-        
+
         return evidence_records
 ```
 
@@ -428,25 +428,25 @@ class EvidenceBuilder:
 class QueryResultQuality:
     """쿼리 결과 품질 평가"""
     score: float  # 0.0 ~ 1.0
-    
+
     # 기본 지표
     has_numbers: bool
     num_numbers: int
     year_match: bool
-    
+
     # Source
     source_tier: str
     source_id: str
-    
+
     # 언어
     language: str
     query: str
-    
+
     # 평가 상세
     metric_relevance: float  # LLM 평가
     temporal_relevance: float  # 연도 일치도
     numeric_confidence: float  # 숫자 신뢰도
-    
+
     # 메타
     notes: Dict[str, Any] = field(default_factory=dict)
 ```
@@ -467,26 +467,26 @@ strategies:
         use_llm: false
         num_queries: 1
         languages: [en]
-      
+
       GenericWebSearch:
         template: "{domain} {region} market size {year}"
         use_llm: true  # LLM 확장
         num_queries: 5
         languages: [ko, en]  # 다국어
-      
+
       Academic_Papers:
         template: "{domain} market analysis {year}"
         use_llm: true
         num_queries: 3
         languages: [en]
-  
+
   MET-Revenue:
     per_source:
       KR_DART_filings:
         template: "{company_name} {year} revenue"
         use_llm: false
         num_queries: 1
-      
+
       GenericWebSearch:
         template: "{domain} {region} revenue {year}"
         use_llm: true
@@ -499,12 +499,12 @@ policy_defaults:
     max_queries_per_metric: 3
     use_llm: false
     max_time: 10
-  
+
   decision_balanced:
     max_queries_per_metric: 5
     use_llm: true
     max_time: 20
-  
+
   exploration_friendly:
     max_queries_per_metric: 10
     use_llm: true
@@ -518,12 +518,12 @@ policy_defaults:
 ```python
 class QueryLearner:
     """쿼리 성능 학습
-    
+
     memory_store 활용:
     - query_trace → 쿼리 성능 기록
     - 학습 결과 → SearchStrategySpec 업데이트
     """
-    
+
     def record_query_result(
         self,
         query: str,
@@ -534,7 +534,7 @@ class QueryLearner:
         quality: QueryResultQuality
     ):
         """쿼리 결과 기록 (memory_store)"""
-        
+
         memory_record = {
             "memory_type": "query_trace",
             "related_ids": {
@@ -549,10 +549,10 @@ class QueryLearner:
                 "timestamp": datetime.now().isoformat()
             }
         }
-        
+
         # memory_store에 저장
         self.memory_store.save(memory_record)
-    
+
     def learn_patterns(
         self,
         metric_id: str,
@@ -560,12 +560,12 @@ class QueryLearner:
         lookback_days: int = 30
     ) -> Dict[str, Any]:
         """성공 패턴 학습
-        
+
         Args:
             metric_id: Metric ID
             domain: Domain
             lookback_days: 학습 기간
-        
+
         Returns:
             {
                 "best_language": "ko",
@@ -579,7 +579,7 @@ class QueryLearner:
             related_metric_id=metric_id,
             since=lookback_days
         )
-        
+
         # 패턴 분석
         # ...
 ```
@@ -598,19 +598,19 @@ def fetch_for_metrics(metric_requests, policy_ref):
        - data_sources 참조
        - policy 반영
        - 언어 결정
-    
+
     2. SearchExecutor → SearchPlan 실행
        - QueryExpansionEngine (동의어, 순서)
        - LLMQueryGenerator (동적 생성, 다국어)
        - 언어별 병렬 검색
        - RawSearchResults 수집
-    
+
     3. EvidenceBuilder → EvidenceRecord 조립
        - 숫자 추출
        - QueryResultQuality 평가
        - Hints 저장
        - EvidenceRecord 생성
-    
+
     4. QueryLearner → 성능 기록
        - memory_store에 query_trace 저장
        - 주기적 학습 → SearchStrategySpec 개선
@@ -687,6 +687,8 @@ EvidenceEngine
 
 ---
 
-**작성**: 2025-12-10  
-**결론**: SearchPlanner 중심 재설계 완료  
+**작성**: 2025-12-10
+**결론**: SearchPlanner 중심 재설계 완료
 **다음**: Phase 1 구현 착수?
+
+

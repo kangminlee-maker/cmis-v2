@@ -1,0 +1,28 @@
+---
+schema_version: 1
+description: "CMIS ontology schema (traits/capabilities/node types). Placeholder v1."
+
+ontology:
+  node_types:
+    actor:
+      description: "Economic actor (company, consumer, government, etc.)"
+      trait_namespace: "actor.traits"
+    money_flow:
+      description: "Money flow between actors"
+      trait_namespace: "money_flow.traits"
+    state:
+      description: "Market/environment state"
+      trait_namespace: "state.properties"
+
+  capability_taxonomy: {}
+
+  trait_keys:
+    actor:
+      required: []
+      optional: []
+    money_flow:
+      required: []
+      optional: []
+    state:
+      required: []
+      optional: []

@@ -1,7 +1,7 @@
 # CMIS v3.3 구현 현황
 
-**업데이트**: 2025-12-11  
-**버전**: v3.3  
+**업데이트**: 2025-12-11
+**버전**: v3.3
 **완성도**: 89%
 
 ---
@@ -157,7 +157,7 @@ cmis config-validate
 **구현 완료** (2025-12-11):
 - Outcome vs 예측 비교
 - Pattern Benchmark 학습 (Context별)
-- ProjectContext 업데이트 (버전 관리)
+- FocalActorContext 업데이트 (버전 관리)
 - Metric Belief 조정
 - Outlier 감지
 - memory_store 통합

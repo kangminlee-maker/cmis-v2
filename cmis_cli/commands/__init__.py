@@ -13,6 +13,17 @@ from .batch_analysis import cmd_batch_analysis
 from .report_generate import cmd_report_generate
 from .cache_manage import cmd_cache_manage
 from .config_validate import cmd_config_validate
+from .cursor import (
+    cmd_cursor_init,
+    cmd_cursor_doctor,
+    cmd_cursor_manifest,
+    cmd_cursor_bootstrap,
+    cmd_cursor_ask,
+)
+from .run import (
+    cmd_run_explain,
+    cmd_run_open,
+)
 
 __all__ = [
     "cmd_structure_analysis",
@@ -22,6 +33,15 @@ __all__ = [
     "cmd_batch_analysis",
     "cmd_report_generate",
     "cmd_cache_manage",
-    "cmd_config_validate"
+    "cmd_config_validate",
+    "cmd_cursor_init",
+    "cmd_cursor_doctor",
+    "cmd_cursor_manifest",
+    "cmd_cursor_bootstrap",
+    "cmd_cursor_ask",
+    "cmd_run_explain",
+    "cmd_run_open",
 ]
+
+
 

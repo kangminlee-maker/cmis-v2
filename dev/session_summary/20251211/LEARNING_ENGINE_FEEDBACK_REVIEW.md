@@ -65,14 +65,14 @@ class OutcomeComparator:
         for metric_id, spec in metrics_spec.items():
             convergence = spec["resolution_protocol"]["target_convergence"]
             # "±30%" → 0.3
-    
+
     def is_within_bounds(self, metric_id, delta_pct, policy_mode):
         """
         Metric + Policy 고려
         """
         metric_tolerance = self.metric_tolerances[metric_id]
         policy_threshold = self.policy_thresholds[policy_mode]
-        
+
         tolerance = min(metric_tolerance, policy_threshold)
         return abs(delta_pct) <= tolerance
 ```
@@ -128,10 +128,10 @@ def update_pattern_benchmark(
         context["region"],
         context.get("segment", "all")
     )
-    
+
     # Context별 Benchmark
     benchmark["by_context"][context_key] = updated
-    
+
     # Global도 함께 업데이트
 ```
 
@@ -153,7 +153,7 @@ def update_pattern_benchmark(
 
 ---
 
-### 5. ProjectContext 버전 관리 (상) ✅
+### 5. FocalActorContext 버전 관리 (상) ✅
 
 **피드백**:
 - project_context_store는 버전 관리
@@ -161,7 +161,7 @@ def update_pattern_benchmark(
 
 **반영**:
 ```python
-updated_context = ProjectContext(
+updated_context = FocalActorContext(
     project_context_id=f"{old.project_context_id}-v{next_version}",
     version=old.version + 1,  # 버전 증가
     previous_version_id=old.project_context_id,
@@ -228,9 +228,9 @@ def _save_learning_summary(learning_results):
     for result in learning_results:
         # Drift 감지
         has_drift = any(abs(c["delta_pct"]) > 0.5 for c in result.comparisons)
-        
+
         memory_type = "drift_alert" if has_drift else "pattern_note"
-        
+
         # memory_store 저장 (Phase 2)
         # memory_store.save(
         #     memory_id=f"MEM-{result.learning_id}",
@@ -277,7 +277,7 @@ class LearningPolicy:
         "metric_formula": 5,
         "belief_adjustment": 10
     }
-    
+
     learning_rate = {
         "pattern_benchmark": 0.2,  # alpha = 0.8
         "metric_formula": 0.3,
@@ -375,3 +375,5 @@ class LearningPolicy:
 **상태**: 피드백 검토 및 반영 완료 ✅
 **결과**: Enhanced Design v1.1
 **다음**: Phase 1 구현
+
+

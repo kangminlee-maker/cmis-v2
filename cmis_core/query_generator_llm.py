@@ -14,14 +14,14 @@ from .llm.service import LLMService
 
 class LLMQueryGenerator:
     """LLM 기반 동적 쿼리 생성
-    
+
     핵심:
     - Dictionary 아님 (무한 확장)
     - Context 이해
     - 다국어 지원 (한/영/일/중)
     - 도메인 적응
     """
-    
+
     def __init__(self, llm_service: LLMService = None):
         """
         Args:
@@ -29,9 +29,9 @@ class LLMQueryGenerator:
         """
         if llm_service is None:
             llm_service = LLMService()
-        
+
         self.llm_service = llm_service
-    
+
     def generate_multilingual_queries(
         self,
         context: SearchContext,
@@ -39,12 +39,12 @@ class LLMQueryGenerator:
         num_per_language: int = 3
     ) -> Dict[str, List[str]]:
         """다국어 쿼리 동적 생성
-        
+
         Args:
             context: SearchContext
             languages: 생성할 언어 리스트 (None이면 auto)
             num_per_language: 언어당 쿼리 개수
-        
+
         Returns:
             {
                 "ko": ["쿼리1", "쿼리2", ...],
@@ -54,24 +54,24 @@ class LLMQueryGenerator:
         # 언어 결정
         if languages is None:
             languages = self._determine_languages(context)
-        
+
         # 언어별 쿼리 생성
         queries = {}
-        
+
         for lang in languages:
             queries[lang] = self._generate_for_language(
                 context,
                 lang,
                 num_per_language
             )
-        
+
         return queries
-    
+
     def _determine_languages(self, context: SearchContext) -> List[str]:
         """Context에서 언어 결정"""
         if context.language != "auto":
             return [context.language]
-        
+
         # Region 기반
         if context.region in ["KR", "한국"]:
             return ["ko", "en"]  # 한국어 + 영어
@@ -81,7 +81,7 @@ class LLMQueryGenerator:
             return ["zh", "en"]
         else:
             return ["en"]
-    
+
     def _generate_for_language(
         self,
         context: SearchContext,
@@ -89,18 +89,18 @@ class LLMQueryGenerator:
         num_queries: int
     ) -> List[str]:
         """특정 언어로 쿼리 생성
-        
+
         Args:
             context: SearchContext
             language: "ko", "en", "ja", "zh"
             num_queries: 생성할 개수
-        
+
         Returns:
             쿼리 리스트
         """
         # 프롬프트 구성
         prompt = self._build_prompt(context, language, num_queries)
-        
+
         # LLM 호출
         try:
             response = self.llm_service.call_structured(
@@ -122,14 +122,14 @@ class LLMQueryGenerator:
                     }
                 }
             )
-            
+
             return [q["query"] for q in response.get("queries", [])]
-        
+
         except Exception as e:
             print(f"LLM query generation failed: {e}")
             # Fallback: 기본 쿼리
             return [self._build_fallback_query(context, language)]
-    
+
     def _build_prompt(
         self,
         context: SearchContext,
@@ -137,7 +137,7 @@ class LLMQueryGenerator:
         num_queries: int
     ) -> str:
         """프롬프트 구성 (언어별)"""
-        
+
         if language == "ko":
             return f"""
 한국 시장 리서치를 위한 최적의 검색 쿼리를 {num_queries}개 생성하세요.
@@ -170,7 +170,7 @@ JSON 형식으로 반환:
   ]
 }}
 """
-        
+
         elif language == "en":
             return f"""
 Generate {num_queries} optimal search queries for market research.
@@ -203,15 +203,17 @@ Return as JSON:
   ]
 }}
 """
-        
+
         else:
             # 기타 언어 (ja, zh 등)
             return f"Generate {num_queries} search queries for {context.metric_id} in {context.domain_id}, {context.region}, {context.year}"
-    
+
     def _build_fallback_query(self, context: SearchContext, language: str) -> str:
         """Fallback 쿼리 (LLM 실패 시)"""
-        
+
         if language == "ko":
             return f"{context.domain_id} {context.region} 시장 규모 {context.year}"
         else:
             return f"{context.domain_id} {context.region} market size {context.year}"
+
+

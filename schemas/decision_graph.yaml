@@ -1,0 +1,10 @@
+---
+schema_version: 1
+description: "Decision Graph (D-Graph) schema. Placeholder v1."
+
+graph:
+  id: "D"
+  name: "Decision Graph"
+  ontology_ref: "schemas/ontology.yaml"
+  node_types: []
+  edge_types: []

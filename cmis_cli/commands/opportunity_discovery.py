@@ -18,7 +18,7 @@ from cmis_core.workflow import WorkflowOrchestrator
 
 def cmd_opportunity_discovery(args):
     """opportunity-discovery 명령 실행
-    
+
     Args:
         args: Argparse args
     """
@@ -33,14 +33,14 @@ def cmd_opportunity_discovery(args):
         print(f"Policy: {args.policy or 'exploration_friendly (default)'}")
         print()
         return
-    
+
     print("=" * 60)
     print("CMIS - Opportunity Discovery")
     print("=" * 60)
     print()
-    
+
     orchestrator = WorkflowOrchestrator()
-    
+
     result = orchestrator.run_opportunity_discovery(
         domain_id=args.domain,
         region=args.region,
@@ -49,30 +49,30 @@ def cmd_opportunity_discovery(args):
         top_n=args.top_n,
         min_feasibility=args.min_feasibility
     )
-    
+
     print()
     print("=" * 60)
     print("결과")
     print("=" * 60)
     print()
-    
+
     # Meta
     print(f"도메인: {result['meta']['domain_id']}")
     print(f"지역:   {result['meta']['region']}")
     print()
-    
+
     # Matched Patterns
     print(f"[매칭된 패턴] ({len(result['matched_patterns'])}개)")
     for pm in result['matched_patterns'][:5]:  # 상위 5개
         print(f"  ✓ {pm.pattern_id} (적합도: {pm.combined_score:.2f})")
     print()
-    
+
     # Gaps
     print(f"[발견된 기회] ({result['total_gaps']}개 중 상위 {result['top_n']}개)")
     for i, gap_info in enumerate(result['gaps'], 1):
         gap = gap_info['gap']
         pattern = gap_info['pattern']
-        
+
         print(f"{i}. {gap.pattern_id}")
         if pattern:
             print(f"   {pattern.description}")
@@ -80,16 +80,16 @@ def cmd_opportunity_discovery(args):
         print(f"   Feasibility: {gap.feasibility}")
         if gap.execution_fit_score is not None:
             print(f"   Execution Fit: {gap.execution_fit_score:.2f}")
-        
+
         # Benchmarks
         if gap_info['benchmarks']:
             print(f"   Benchmarks: {', '.join(gap_info['benchmarks'].keys())}")
         print()
-    
+
     # 실행 시간
     print(f"실행 시간: {result['meta']['execution_time']:.2f}초")
     print()
-    
+
     # JSON 저장
     if args.output:
         output_path = Path(args.output)
@@ -119,7 +119,9 @@ def cmd_opportunity_discovery(args):
                 "total_gaps": result["total_gaps"],
                 "completeness": result["completeness"]
             }
-            
+
             json.dump(output_result, f, ensure_ascii=False, indent=2)
         print(f"✅ 결과 저장: {output_path}")
+
+
 

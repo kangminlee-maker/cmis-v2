@@ -1,7 +1,7 @@
 # CMIS v3.3 아키텍처 블루프린트
 
-**버전**: v3.3  
-**업데이트**: 2025-12-11  
+**버전**: v3.3
+**업데이트**: 2025-12-11
 **상태**: Production Ready
 
 ---
@@ -164,7 +164,7 @@ CMIS (Contextual Market Intelligence System)는 **시장/비즈니스 세계를 
 **기능**:
 - Outcome vs 예측 비교
 - Pattern Benchmark 학습 (Context별)
-- ProjectContext 업데이트 (버전 관리)
+- FocalActorContext 업데이트 (버전 관리)
 - Metric Belief 조정
 - Outlier 감지
 
@@ -207,12 +207,12 @@ CMIS (Contextual Market Intelligence System)는 **시장/비즈니스 세계를 
 
 **Greenfield**:
 - '나' 없이 시장 전체를 neutral하게 분석
-- ProjectContext 없음
+- FocalActorContext 없음
 - 최소 제약 (자본, 시간)만 입력 가능
 
 **Brownfield**:
 - '나'(focal_actor) 관점에서 분석
-- ProjectContext 있음 (baseline_state, assets_profile, constraints)
+- FocalActorContext 있음 (baseline_state, assets_profile, constraints)
 - 실행 가능한 전략만
 
 ### 3.2 모든 엔진에서 지원
@@ -220,7 +220,7 @@ CMIS (Contextual Market Intelligence System)는 **시장/비즈니스 세계를 
 - World Engine: `project_context_id` 옵션
 - Pattern Engine: Execution Fit 계산
 - Strategy Engine: `greenfield_constraints` vs `project_context`
-- Learning Engine: ProjectContext 업데이트
+- Learning Engine: FocalActorContext 업데이트
 
 ---
 
@@ -264,7 +264,7 @@ Outcome (실제 결과)
    Learning Engine
          ↓
 Pattern Benchmark 업데이트
-ProjectContext 업데이트
+FocalActorContext 업데이트
          ↓
    (Understand로 돌아감)
 ```

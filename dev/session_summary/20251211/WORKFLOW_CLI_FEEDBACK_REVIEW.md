@@ -10,7 +10,7 @@
 
 Workflow CLI 설계에 대한 7개 주요 피드백을 검토하고 모두 반영했습니다.
 
-**결론**: 
+**결론**:
 - 기존 구조는 CMIS 철학과 잘 맞음
 - 대수술 불필요, 설계 레벨 보강으로 충분
 - Enhanced 버전 작성 완료
@@ -35,7 +35,7 @@ class WorkflowOrchestrator:
         self.workflows = load_canonical_workflows()  # YAML 로딩
         self.role_registry = load_role_plane()
         self.policy_engine = PolicyEngine()
-    
+
     def run_workflow(
         workflow_id: str,
         inputs: Dict,
@@ -617,4 +617,6 @@ cmis structure-analyst  # → 기본 워크플로우
 **상태**: 피드백 검토 및 반영 완료 ✅
 **결과**: Enhanced Design v1.1
 **다음**: Phase 1 구현 또는 StrategyEngine 설계
+
+
 

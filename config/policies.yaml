@@ -1,90 +1,200 @@
 ---
-# CMIS Policy Definitions
+# CMIS Policy Pack v2
+# - Declarative routing: role/usage -> mode_id
+# - Profiles: evidence/value/prior/convergence/orchestration
+# - Modes: profile composition + gate list
+#
+# NOTE:
+# - spread_ratio: Value uncertainty ratio (0~1)
+# - convergence_ratio: multi-method disagreement ratio (0~1), required when methods_required > 1
 
-policies:
+policy_pack:
+  schema_version: 2
+  pack_version: "2.1.0"
+  last_updated: "2025-12-13"
+  description: "CMIS Policy Pack v2 (routing + profiles + gates)"
+
+  changelog:
+    - version: "2.1.0"
+      date: "2025-12-13"
+      changes:
+        - "Add pack_version and changelog"
+        - "Add metric_specific overrides to value_profiles"
+        - "Add orchestration_profiles for kernel integration"
+
+    - version: "2.0.0"
+      date: "2025-12-10"
+      changes:
+        - "Redesign to profile-based structure"
+        - "Add suggested_actions to violations"
+        - "Separate routing/profiles/modes"
+
+  routing:
+    by_usage:
+      reporting: reporting_strict
+      decision: decision_balanced
+      exploration: exploration_friendly
+    by_role:
+      structure_analyst: reporting_strict
+      opportunity_designer: exploration_friendly
+      strategy_architect: decision_balanced
+      numerical_modeler: reporting_strict
+      reality_monitor: reporting_strict
+    fallback: decision_balanced
+
+  profiles:
+    evidence_profiles:
+      evidence_strict:
+        min_sources: 2
+        require_official_sources: true
+        allowed_source_tiers: ["official", "curated", "commercial"]
+        max_age_days: 365
+        allow_web: false
+
+      evidence_balanced:
+        min_sources: 1
+        require_official_sources: false
+        allowed_source_tiers: ["official", "curated", "commercial", "web"]
+        max_age_days: 730
+        allow_web: true
+
+      evidence_permissive:
+        min_sources: 0
+        require_official_sources: false
+        allowed_source_tiers: ["official", "curated", "commercial", "web"]
+        max_age_days: 3650
+        allow_web: true
+
+    value_profiles:
+      value_strict:
+        min_literal_ratio: 0.7
+        max_spread_ratio: 0.3
+        min_confidence: 0.8
+        metric_specific:
+          MET-Revenue:
+            min_literal_ratio: 0.9
+            max_spread_ratio: 0.2
+          MET-TAM:
+            min_literal_ratio: 0.8
+            max_spread_ratio: 0.25
+
+      value_balanced:
+        min_literal_ratio: 0.5
+        max_spread_ratio: 0.5
+        min_confidence: 0.6
+        metric_specific:
+          MET-Revenue:
+            min_literal_ratio: 0.7
+            max_spread_ratio: 0.3
+
+      value_permissive:
+        min_literal_ratio: 0.3
+        max_spread_ratio: 0.7
+        min_confidence: 0.3
+
+    prior_profiles:
+      prior_none:
+        allow_prior: false
+        max_prior_ratio: 0.0
+        allowed_prior_types: []
+
+      prior_limited:
+        allow_prior: true
+        max_prior_ratio: 0.3
+        allowed_prior_types: ["pattern_benchmark", "learned_belief"]
+
+      prior_free:
+        allow_prior: true
+        max_prior_ratio: 0.7
+        allowed_prior_types: ["pattern_benchmark", "learned_belief", "llm_estimate"]
+
+    convergence_profiles:
+      conv_default:
+        default_threshold: 0.3
+        default_methods_required: 1
+        metric_specific:
+          MET-TAM:
+            threshold: 0.3
+            methods_required: 2
+          MET-SAM:
+            threshold: 0.3
+            methods_required: 2
+          MET-Revenue:
+            threshold: 0.2
+            methods_required: 1
+
+    orchestration_profiles:
+      orch_strict:
+        stall_threshold: 1
+        allow_partial_replan: true
+        require_human_approval: false
+
+      orch_balanced:
+        stall_threshold: 2
+        allow_partial_replan: true
+        require_human_approval: false
+
+      orch_exploration:
+        stall_threshold: 3
+        allow_partial_replan: true
+        require_human_approval: false
+
   modes:
     reporting_strict:
       description: "공식/Evidence 중심, Prior 최소 사용"
-      quality_profile:
-        min_literal_ratio: 0.7
-        max_spread_ratio: 0.3
-        allow_prior: false
-      
-      validation_gates:
-        evidence_quality: "strict"
-        convergence_threshold: 0.2  # ±20%
-        min_sources: 2
-      
+      profiles:
+        evidence: evidence_strict
+        value: value_strict
+        prior: prior_none
+        convergence: conv_default
+        orchestration: orch_strict
+      gates:
+        - evidence_min_sources
+        - evidence_require_official_if_configured
+        - evidence_max_age_days
+        - value_min_confidence
+        - value_literal_ratio
+        - value_spread_ratio
+        - prior_ratio_limit
+        - convergence_methods_required
       use_cases:
         - "공식 보고서"
         - "이사회 보고"
         - "감사용 분석"
-    
+
     decision_balanced:
       description: "Evidence 우선, 필요 시 Prior 제한적 허용"
-      quality_profile:
-        min_literal_ratio: 0.5
-        max_spread_ratio: 0.5
-        allow_prior: true
-      
-      validation_gates:
-        evidence_quality: "balanced"
-        convergence_threshold: 0.3  # ±30%
-        min_sources: 1
-      
+      profiles:
+        evidence: evidence_balanced
+        value: value_balanced
+        prior: prior_limited
+        convergence: conv_default
+        orchestration: orch_balanced
+      gates:
+        - evidence_min_sources
+        - evidence_max_age_days
+        - value_min_confidence
+        - value_literal_ratio
+        - value_spread_ratio
+        - prior_ratio_limit
+        - convergence_methods_required
       use_cases:
         - "전략 수립"
         - "투자 의사결정"
         - "ROI 분석"
-    
+
     exploration_friendly:
       description: "기회 탐색용, Prior/패턴 활용 허용"
-      quality_profile:
-        min_literal_ratio: 0.3
-        max_spread_ratio: 0.7
-        allow_prior: true
-      
-      validation_gates:
-        evidence_quality: "permissive"
-        convergence_threshold: 0.5  # ±50%
-        min_sources: 0  # Evidence 없어도 가능
-      
+      profiles:
+        evidence: evidence_permissive
+        value: value_permissive
+        prior: prior_free
+        convergence: conv_default
+        orchestration: orch_exploration
+      gates:
+        - value_spread_ratio
+        - prior_ratio_limit
       use_cases:
         - "초기 시장 탐색"
         - "Opportunity Discovery"
         - "Rough Sizing"
-  
-  quality_gates:
-    strict:
-      description: "엄격한 품질 기준"
-      min_confidence: 0.8
-      require_official_sources: true
-      max_prior_ratio: 0.0
-    
-    balanced:
-      description: "균형잡힌 품질 기준"
-      min_confidence: 0.6
-      require_official_sources: false
-      max_prior_ratio: 0.3
-    
-    permissive:
-      description: "탐색용 품질 기준"
-      min_confidence: 0.3
-      require_official_sources: false
-      max_prior_ratio: 0.7
-  
-  convergence_rules:
-    default_threshold: 0.3  # ±30%
-    
-    metric_specific:
-      MET-TAM:
-        threshold: 0.3
-        methods_required: 2  # 최소 2가지 방법 수렴
-      
-      MET-SAM:
-        threshold: 0.3
-        methods_required: 2
-      
-      MET-Revenue:
-        threshold: 0.2
-        methods_required: 1

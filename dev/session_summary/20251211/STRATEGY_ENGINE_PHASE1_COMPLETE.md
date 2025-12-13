@@ -88,25 +88,25 @@ class PortfolioEvaluation:
 ```python
 def generate(pattern_matches, gaps, goal):
     strategies = []
-    
+
     # 1. Single Pattern
     for pm in pattern_matches:
         strategy = create_strategy_from_pattern(pm, goal)
         strategies.append(strategy)
-    
+
     # 2. Pattern Composition
     for pm in pattern_matches:
         for compose_id in pattern.composes_with:
             if compose_id in matched_ids:
                 comp_strategy = create_composition_strategy(...)
                 strategies.append(comp_strategy)
-    
+
     # 3. Gap-based
     for gap in gaps:
         if gap.feasibility in ["high", "medium"]:
             strategy = create_strategy_from_gap(gap, goal)
             strategies.append(strategy)
-    
+
     return strategies
 ```
 
@@ -128,14 +128,14 @@ def generate(pattern_matches, gaps, goal):
 def predict_outcomes(strategy, baseline, horizon_years=3):
     # 1. Pattern Benchmark 통합
     benchmarks = aggregate_pattern_benchmarks(...)
-    
+
     # 2. Growth 시뮬레이션
     revenue_growth = benchmarks["revenue_growth_yoy"]
     future_revenue = baseline["current_revenue"] * (1 + growth) ^ years
-    
+
     # 3. ROI
     roi = (future_revenue - current_revenue) / required_investment
-    
+
     return {
         "revenue_3y": future_revenue,
         "roi": roi,
@@ -164,12 +164,12 @@ class StrategyEngine:
     # Public API (cmis.yaml 대응)
     def search_strategies_api(goal_id, constraints, project_context_id):
         # 1. Goal 로딩
-        # 2. ProjectContext 로딩
+        # 2. FocalActorContext 로딩
         # 3. World/Pattern Engine 호출
         # 4. Core 함수 호출
         # 5. D-Graph 저장
         return strategy_set_ref
-    
+
     # Core (내부 함수)
     def search_strategies_core(...):
         # 1. Generator로 생성
@@ -273,12 +273,12 @@ StrategyEngine Phase 1: 10/10 passed (100%)
 ### 2. Greenfield/Brownfield 지원
 
 **Greenfield**:
-- ProjectContext 없음
+- FocalActorContext 없음
 - greenfield_constraints (budget, timeline)
 - ROI 기준 정렬
 
 **Brownfield**:
-- ProjectContext 있음
+- FocalActorContext 있음
 - constraints_profile 사용
 - Execution Fit × adjusted_score 정렬
 
@@ -359,3 +359,5 @@ StrategyEngine Phase 1: 10/10 passed (100%)
 **다음**: Phase 2 또는 다른 작업
 
 **StrategyEngine Phase 1 완성!** 🎉
+
+

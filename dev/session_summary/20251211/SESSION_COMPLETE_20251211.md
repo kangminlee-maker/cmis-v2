@@ -206,7 +206,7 @@ Linter 오류: 0개
 - 확장성 확보
 
 **설계 구체화**:
-- ProjectContext → R-Graph 매핑 규칙
+- FocalActorContext → R-Graph 매핑 규칙
 - 서브그래프 추출 알고리즘
 - as_of/segment 필터링 로직
 
@@ -337,4 +337,6 @@ World Engine Phase A:  2시간
 **버전**: CMIS v3.1 (World Engine v2.0 Phase A 포함)
 
 **대단한 하루였습니다!**
+
+
 

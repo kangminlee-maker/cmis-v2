@@ -1,6 +1,6 @@
 # 검색 Evidence 전략 현황 분석
 
-**작성일**: 2025-12-10  
+**작성일**: 2025-12-10
 **목적**: 검색 결과 활용 전략 개선
 
 ---
@@ -17,7 +17,7 @@
 class BaseSearchSource:
     def __init__(self, fetch_full_page: bool = False):
         self.fetch_full_page = fetch_full_page
-    
+
     def fetch_page_content(self, url: str) -> Optional[str]:
         """웹 페이지 크롤링 (BeautifulSoup)"""
         # HTML 파싱, 텍스트 추출
@@ -187,19 +187,19 @@ class EvidenceQuality(Enum):
 def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
     query = self.build_search_query(request)
     results = self._search(query)
-    
+
     # Stage 1: Snippet에서 시도
     numbers = self.extract_numbers(results)
-    
+
     # Stage 2: 데이터 없으면 Full page (자동)
     if not numbers and not self.fetch_full_page:
         print(f"No numbers in snippets, fetching full pages...")
         results = self._enrich_with_full_content(results)
         numbers = self.extract_numbers(results)
-    
+
     if not numbers:
         raise DataNotFoundError("No numbers")
-    
+
     ...
 ```
 
@@ -216,18 +216,18 @@ def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
 ```python
 def extract_all_evidence(self, results: List[Dict]) -> Dict[str, Any]:
     """모든 Evidence 추출 (primary + hints)"""
-    
+
     all_numbers = self.extract_numbers(results)
-    
+
     # Primary (consensus)
     primary_value, primary_confidence = self.calculate_consensus(all_numbers)
-    
+
     # Hints (개별 숫자들)
     hints = []
     for i, result in enumerate(results):
         text = result.get('snippet', '') or result.get('body', '')
         result_numbers = self.extract_numbers_from_text(text)
-        
+
         for num in result_numbers:
             hints.append({
                 "value": num,
@@ -237,7 +237,7 @@ def extract_all_evidence(self, results: List[Dict]) -> Dict[str, Any]:
                 "confidence": 0.5,  # Hint 기본 신뢰도
                 "extracted_from": f"result_{i}"
             })
-    
+
     return {
         "primary": {"value": primary_value, "confidence": primary_confidence},
         "hints": hints
@@ -365,6 +365,8 @@ hints = evidence_store.query_hints(
 
 ---
 
-**작성**: 2025-12-10  
+**작성**: 2025-12-10
 **결론**: Priority 1 즉시 구현 권장
+
+
 

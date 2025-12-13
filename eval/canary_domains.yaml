@@ -1,0 +1,5 @@
+---
+schema_version: 1
+description: "Canary domains for CMIS eval harness (placeholder)."
+
+canary_domains: []

@@ -95,7 +95,7 @@ decision_graph:
       - name
       - description
     # pattern_composition은 edge로 표현
-  
+
   edge_types:
     strategy_uses_pattern  # Strategy → Pattern
     strategy_targets_goal  # Strategy → Goal
@@ -150,27 +150,27 @@ ValueEngine 역할:
 class StrategyEvaluator:
     def __init__(self, value_engine: ValueEngine):
         self.value_engine = value_engine
-    
+
     def predict_outcomes(self, strategy, baseline_state, value_engine):
         # 1. Pattern Benchmark → ValueEngine Prior
         pattern_priors = extract_pattern_priors(strategy.pattern_composition)
-        
+
         # 2. ValueEngine 호출 (Phase 2)
         # value_records = value_engine.evaluate_metrics(
         #     metric_requests=[...],
         #     priors=pattern_priors
         # )
-        
+
         # Phase 1: 간단한 계산 (ValueEngine-lite)
         outcomes = simple_calculation(...)
-        
+
         # Lineage: ValueEngine 형식
         outcomes["lineage"] = {
             "method": "pattern_benchmark_projection",
             "confidence": 0.6,
             "engine": "strategy_engine_phase1"
         }
-        
+
         return outcomes
 ```
 
@@ -209,7 +209,7 @@ if ctype == "financial" and "budget" in dimension:
 def _normalize_greenfield_constraints(constraints):
     """
     Greenfield constraints → constraints_profile 형식
-    
+
     내부 통일: 모두 동일 형식으로 처리
     """
     return {
@@ -291,7 +291,7 @@ def _adjust_by_preferences(strategy, preference_profile):
         dimension = pref["dimension"]
         value = pref["value"]
         weight = pref["weight"]
-        
+
         if dimension == "prefer_patterns":
             # 보너스 × weight
         elif dimension == "risk_appetite":
@@ -445,3 +445,5 @@ def search_strategies_api(
 **상태**: 피드백 검토 및 반영 완료 ✅
 **결과**: Enhanced Design v1.1
 **다음**: Phase 1 구현
+
+

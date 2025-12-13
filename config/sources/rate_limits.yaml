@@ -8,25 +8,25 @@ limits:
     period: 60  # seconds
     burst: 10
     note: "한국은행 ECOS - 100 calls/min"
-  
+
   - source_id: KOSIS
     calls: 1000
     period: 86400  # 1 day
     burst: 50
     note: "통계청 KOSIS - 1000 calls/day"
-  
+
   - source_id: DART
     calls: 10000
     period: 86400
     burst: 100
     note: "전자공시 DART - 10000 calls/day"
-  
+
   - source_id: GoogleSearch
     calls: 100
     period: 86400
     burst: 10
     note: "Google Custom Search - 100 calls/day"
-  
+
   - source_id: DuckDuckGo
     calls: 1000
     period: 86400
@@ -35,3 +35,5 @@ limits:
 
 # Source별 제한은 여기서만 관리
 # 공식 문서 변경 시 여기만 수정
+
+

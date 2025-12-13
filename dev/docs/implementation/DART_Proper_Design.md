@@ -69,26 +69,26 @@ keywords = [
 ```python
 class AccountMatcher:
     """계정과목 매칭 (Rule + LLM Hybrid)"""
-    
+
     def __init__(self, llm_provider=None):
         self.llm = llm_provider
         self.rule_matcher = RuleBasedMatcher()
         self.llm_matcher = LLMBasedMatcher(llm_provider)
-    
+
     def find_revenue_account(
         self,
         financials: List[Dict],
         context: Dict
     ) -> Optional[Dict]:
         """매출액 계정 찾기
-        
+
         Args:
             financials: 재무제표 항목 리스트
             context: {"company_name": ..., "year": ...}
-        
+
         Returns:
             매칭된 항목 or None
-        
+
         알고리즘:
         1. Rule-based Filtering (확실한 후보만)
         2. LLM Interpretation (애매한 경우)
@@ -99,21 +99,21 @@ class AccountMatcher:
             financials,
             target_concept="revenue"
         )
-        
+
         if not candidates:
             return None
-        
+
         # 1개면 즉시 반환 (확실)
         if len(candidates) == 1:
             return candidates[0]
-        
+
         # Step 2: LLM Interpretation (여러 후보)
         best_match = self.llm_matcher.select_best(
             candidates,
             target_concept="revenue",
             context=context
         )
-        
+
         return best_match
 ```
 
@@ -122,14 +122,14 @@ class AccountMatcher:
 ```python
 class RuleBasedMatcher:
     """Rule 기반 필터링 (명확한 것만)"""
-    
+
     # 고정 규칙 (확실한 것만)
     INCLUDE_KEYWORDS = {
         "revenue": ["매출", "수익", "영업"],
         "operating_income": ["영업이익", "영업손익"],
         "net_income": ["순이익", "당기순"],
     }
-    
+
     # 명확한 제외 (확실)
     EXCLUDE_KEYWORDS = [
         "자산", "부채", "자본",
@@ -137,32 +137,32 @@ class RuleBasedMatcher:
         "현금", "예금",
         "비용", "원가",
     ]
-    
+
     def filter_candidates(
         self,
         financials: List[Dict],
         target_concept: str
     ) -> List[Dict]:
         """후보 필터링 (명확한 것만)
-        
+
         Returns:
             후보 리스트 (0~N개)
         """
         include_kw = self.INCLUDE_KEYWORDS.get(target_concept, [])
-        
+
         candidates = []
-        
+
         for item in financials:
             account_nm = item.get('account_nm', '')
-            
+
             # 제외 키워드 체크 (명확)
             if any(ex in account_nm for ex in self.EXCLUDE_KEYWORDS):
                 continue
-            
+
             # 포함 키워드 체크
             if any(inc in account_nm for inc in include_kw):
                 candidates.append(item)
-        
+
         return candidates
 ```
 
@@ -171,10 +171,10 @@ class RuleBasedMatcher:
 ```python
 class LLMBasedMatcher:
     """LLM 기반 계정과목 해석"""
-    
+
     def __init__(self, llm_provider):
         self.llm = llm_provider
-    
+
     def select_best(
         self,
         candidates: List[Dict],
@@ -182,36 +182,36 @@ class LLMBasedMatcher:
         context: Dict
     ) -> Optional[Dict]:
         """여러 후보 중 최적 선택 (LLM 활용)
-        
+
         Args:
             candidates: 후보 리스트
             target_concept: "revenue", "operating_income" 등
             context: {"company_name": ..., "year": ...}
-        
+
         Returns:
             최적 항목
         """
         if not candidates:
             return None
-        
+
         if len(candidates) == 1:
             return candidates[0]
-        
+
         # LLM Prompt 구성
         prompt = self._build_prompt(candidates, target_concept, context)
-        
+
         # LLM 호출
         response = self.llm.call(prompt)
-        
+
         # 응답 파싱 (선택된 index)
         selected_idx = self._parse_response(response)
-        
+
         if selected_idx is not None and 0 <= selected_idx < len(candidates):
             return candidates[selected_idx]
-        
+
         # Fallback: 가장 큰 금액
         return max(candidates, key=lambda x: abs(float(x.get('thstrm_amount', 0))))
-    
+
     def _build_prompt(
         self,
         candidates: List[Dict],
@@ -219,48 +219,48 @@ class LLMBasedMatcher:
         context: Dict
     ) -> str:
         """LLM Prompt 생성"""
-        
+
         concept_map = {
             "revenue": "매출액 (Revenue)",
             "operating_income": "영업이익 (Operating Income)",
             "net_income": "순이익 (Net Income)",
         }
-        
+
         target_name = concept_map.get(target_concept, target_concept)
         company = context.get("company_name", "")
         year = context.get("year", "")
-        
+
         prompt = f"""다음은 {company}의 {year}년 재무제표 항목입니다.
 이 중에서 "{target_name}"에 해당하는 항목을 선택해주세요.
 
 항목 목록:
 """
-        
+
         for i, item in enumerate(candidates):
             account_nm = item.get('account_nm', '')
             amount = float(item.get('thstrm_amount', 0))
-            
+
             prompt += f"{i}. {account_nm}: {amount/100_000_000:,.1f}억원\n"
-        
+
         prompt += f"""
 "{target_name}"에 가장 적합한 항목의 번호를 선택하세요.
 애매한 경우, 금액이 가장 큰 것을 선택하세요.
 
 응답 형식: 숫자만 (예: 0, 1, 2)
 """
-        
+
         return prompt
-    
+
     def _parse_response(self, response: str) -> Optional[int]:
         """LLM 응답 파싱"""
         import re
-        
+
         # 첫 번째 숫자 추출
         match = re.search(r'\d+', response)
-        
+
         if match:
             return int(match.group())
-        
+
         return None
 ```
 
@@ -274,21 +274,21 @@ class LLMBasedMatcher:
 def fetch_company_revenue(company_name, year):
     # 1. 기업 코드
     corp_code = get_corp_code(company_name)
-    
+
     # 2. 재무제표
     financials = get_financials(corp_code, year)
-    
+
     # 3. AccountMatcher 사용
     matcher = AccountMatcher(llm_provider)
-    
+
     revenue_item = matcher.find_revenue_account(
         financials,
         context={"company_name": company_name, "year": year}
     )
-    
+
     if not revenue_item:
         return None
-    
+
     # 4. Evidence 생성
     return Evidence(
         value=float(revenue_item['thstrm_amount']),
@@ -330,27 +330,27 @@ else:
 ```python
 class SimpleRuleMatcher:
     """단순 Rule 매칭 (LLM 없이)"""
-    
+
     def find_revenue(self, financials):
         # 1. "매출", "수익" 포함 수집
         candidates = [
             item for item in financials
-            if any(kw in item.get('account_nm', '') 
+            if any(kw in item.get('account_nm', '')
                    for kw in ['매출', '수익', '영업'])
         ]
-        
+
         # 2. 명확한 제외
         candidates = [
             c for c in candidates
-            if not any(ex in c.get('account_nm', '') 
+            if not any(ex in c.get('account_nm', '')
                       for ex in ['자산', '부채', '채권', '원가'])
         ]
-        
+
         # 3. Fallback: 가장 큰 금액
         if candidates:
-            return max(candidates, 
+            return max(candidates,
                       key=lambda x: abs(float(x.get('thstrm_amount', 0))))
-        
+
         return None
 ```
 
@@ -364,18 +364,18 @@ class SimpleRuleMatcher:
 ```python
 class AccountMatcher:
     """Rule + LLM Hybrid"""
-    
+
     def find_revenue(self, financials, context, use_llm=True):
         # Rule 먼저
         candidates = rule_matcher.filter(financials)
-        
+
         if len(candidates) == 1:
             return candidates[0]  # 확실
-        
+
         if not use_llm:
             # LLM 없이: 가장 큰 금액
             return max(candidates, key=lambda x: ...)
-        
+
         # LLM 사용
         return llm_matcher.select_best(candidates, context)
 ```
@@ -401,7 +401,7 @@ revenue_keywords = [
 # ✅ Rule + Fallback (하드코딩 없음)
 def find_revenue_account(financials):
     """매출액 계정 찾기 (Rule + Fallback)
-    
+
     전략:
     1. 포함 키워드로 후보 수집
     2. 제외 키워드로 필터링
@@ -410,21 +410,21 @@ def find_revenue_account(financials):
     # 1. 후보 수집 (넓게)
     candidates = [
         item for item in financials
-        if any(kw in item.get('account_nm', '') 
+        if any(kw in item.get('account_nm', '')
                for kw in ['매출', '수익', '영업'])
     ]
-    
+
     # 2. 명확한 제외 (좁게)
     EXCLUDE = ['자산', '부채', '채권', '채무', '원가', '비용', '현금']
-    
+
     candidates = [
         c for c in candidates
         if not any(ex in c.get('account_nm', '') for ex in EXCLUDE)
     ]
-    
+
     if not candidates:
         return None
-    
+
     # 3. Fallback: 가장 큰 금액
     # 이유: 매출액은 일반적으로 가장 큰 "수익" 항목
     return max(
@@ -531,10 +531,10 @@ revenue_keywords = [
 def _find_revenue_account(financials):
     # 포함 키워드 (넓게)
     candidates = [...]
-    
+
     # 제외 키워드 (명확)
     filtered = [...]
-    
+
     # Fallback: 가장 큰 금액
     return max(filtered, key=...)
 ```
@@ -576,3 +576,5 @@ def _find_revenue_account(financials):
 **작성**: 2025-12-09
 **상태**: 설계 수정 완료
 **다음**: 즉시 구현
+
+

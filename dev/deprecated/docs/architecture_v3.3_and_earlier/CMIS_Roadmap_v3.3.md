@@ -72,7 +72,7 @@
 
 **성과**:
 - Outcome 학습
-- ProjectContext 업데이트
+- FocalActorContext 업데이트
 - **Understand → Discover → Decide → Learn 루프 완성!**
 
 ---

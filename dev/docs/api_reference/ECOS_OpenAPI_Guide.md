@@ -1,8 +1,8 @@
 # ECOS (한국은행 경제통계시스템) OpenAPI 가이드
 
-**작성일**: 2025-12-10  
-**출처**: 한국은행 ECOS OpenAPI 개발명세서  
-**API 문서**: https://ecos.bok.or.kr/api/  
+**작성일**: 2025-12-10
+**출처**: 한국은행 ECOS OpenAPI 개발명세서
+**API 문서**: https://ecos.bok.or.kr/api/
 **버전**: v1.0
 
 ---
@@ -380,16 +380,16 @@ class ECOSSource(BaseDataSource):
             "unit": "지수"
         }
     }
-    
+
     def _fetch_key_statistic(self, keyword, context):
         # KeyStatisticList API 호출
         url = f"{base_url}/KeyStatisticList/{key}/json/kr/1/100"
         data = requests.get(url).json()
-        
+
         # Keyword로 필터링
         rows = data["KeyStatisticList"]["row"]
         matched = [r for r in rows if keyword in r["KEYSTAT_NAME"]]
-        
+
         return matched
 ```
 
@@ -513,6 +513,8 @@ print(f"GDP: {record.value:,.1f} {record.metadata['unit']}")
 
 ---
 
-**작성**: 2025-12-10  
-**검증**: GDP, CPI, 금리 (14개 테스트 통과)  
+**작성**: 2025-12-10
+**검증**: GDP, CPI, 금리 (14개 테스트 통과)
 **형식**: JSON (권장)
+
+

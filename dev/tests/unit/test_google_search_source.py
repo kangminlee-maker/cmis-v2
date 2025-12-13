@@ -59,7 +59,7 @@ def test_google_search_source_init_with_credentials():
         api_key="test-key",
         search_engine_id="test-engine-id"
     )
-    
+
     assert source.source_id == "GoogleSearch"
     assert source.source_tier == SourceTier.COMMERCIAL
     assert source.api_key == "test-key"
@@ -73,7 +73,7 @@ def test_google_search_source_init_with_credentials():
 def testbuild_search_query_basic():
     """기본 쿼리 구성"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="metric",
@@ -84,9 +84,9 @@ def testbuild_search_query_basic():
             "year": 2024
         }
     )
-    
+
     query = source.build_search_query(request)
-    
+
     assert "adult language education" in query.lower()
     assert "korea" in query.lower()
     assert "revenue" in query.lower()
@@ -96,16 +96,16 @@ def testbuild_search_query_basic():
 def testbuild_search_query_minimal():
     """최소 context"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="metric",
         metric_id="MET-TAM",
         context={}
     )
-    
+
     query = source.build_search_query(request)
-    
+
     assert "tam" in query.lower()
 
 
@@ -116,11 +116,11 @@ def testbuild_search_query_minimal():
 def test_extract_numbers_korean():
     """한국어 숫자 추출 (억, 조)"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     text = "시장 규모는 약 2900억원이며, 2023년 대비 10% 성장했습니다. 전체 교육 시장은 5조원 규모입니다."
-    
+
     numbers = source.extract_numbers_from_text(text)
-    
+
     assert 290_000_000_000 in numbers  # 2900억
     assert 5_000_000_000_000 in numbers  # 5조
 
@@ -128,11 +128,11 @@ def test_extract_numbers_korean():
 def test_extract_numbers_english():
     """영어 숫자 추출 (M, B, T)"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     text = "The market is worth $500M in 2024. Total industry size is $2.5B."
-    
+
     numbers = source.extract_numbers_from_text(text)
-    
+
     assert 500_000_000 in numbers  # $500M
     assert 2_500_000_000 in numbers  # $2.5B
 
@@ -140,11 +140,11 @@ def test_extract_numbers_english():
 def test_extract_numbers_large_integers():
     """큰 정수 추출 (콤마 포함)"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     text = "Revenue: 1,234,567,890 (2024)"
-    
+
     numbers = source.extract_numbers_from_text(text)
-    
+
     assert 1_234_567_890 in numbers
 
 
@@ -155,9 +155,9 @@ def test_extract_numbers_large_integers():
 def test_calculate_consensus_single():
     """단일 숫자"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     value, confidence = source.calculate_consensus([1000000])
-    
+
     assert value == 1000000
     assert confidence == 0.6  # 단일 source
 
@@ -165,10 +165,10 @@ def test_calculate_consensus_single():
 def test_calculate_consensus_multiple():
     """여러 숫자 (중앙값)"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     numbers = [1000000, 1100000, 1050000, 1080000]
     value, confidence = source.calculate_consensus(numbers)
-    
+
     # 중앙값: (1050000 + 1080000) / 2 = 1065000
     assert value == 1065000
     assert confidence > 0.6  # 여러 source
@@ -177,14 +177,14 @@ def test_calculate_consensus_multiple():
 def test_remove_outliers():
     """Outlier 제거 (GoogleSearchSource 활용)"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     # 충분한 데이터로 테스트
     numbers = [1000000, 1050000, 1100000, 1080000, 1120000, 10000000]
     filtered = source.remove_outliers(numbers)
-    
+
     # 극단값 제거 (완벽하지 않아도 됨)
     assert len(filtered) <= len(numbers)
-    
+
     # 작은 데이터셋
     small = [100, 110, 105]
     filtered_small = source.remove_outliers(small)
@@ -203,24 +203,24 @@ def test_fetch_with_mock(mock_get, mock_google_response):
     mock_response.status_code = 200
     mock_response.json.return_value = mock_google_response
     mock_get.return_value = mock_response
-    
+
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="metric",
         metric_id="MET-Revenue",
         context={"region": "KR", "year": 2024}
     )
-    
+
     record = source.fetch(request)
-    
+
     assert record.source_id == "GoogleSearch"
     assert record.source_tier == "commercial"
     assert record.value_kind.value == "numeric"
     assert record.value > 0
     assert 0.5 <= record.confidence <= 0.85
-    
+
     # Metadata 확인
     assert "query" in record.metadata
     assert record.metadata["num_results"] == 3
@@ -233,16 +233,16 @@ def test_fetch_no_results(mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {'items': []}
     mock_get.return_value = mock_response
-    
+
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="metric",
         metric_id="MET-Revenue",
         context={}
     )
-    
+
     with pytest.raises(DataNotFoundError):
         source.fetch(request)
 
@@ -250,26 +250,28 @@ def test_fetch_no_results(mock_get):
 def test_can_handle_metric():
     """can_handle() - Metric 요청"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="metric",
         metric_id="MET-Revenue",
         context={}
     )
-    
+
     assert source.can_handle(request) == True
 
 
 def test_can_handle_reality_slice():
     """can_handle() - Reality slice 요청 거부"""
     source = GoogleSearchSource(api_key="test", search_engine_id="test")
-    
+
     request = EvidenceRequest(
         request_id="test",
         request_type="reality_slice",
         context={}
     )
-    
+
     assert source.can_handle(request) == False
+
+
 

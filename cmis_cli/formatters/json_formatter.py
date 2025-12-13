@@ -18,12 +18,12 @@ def format_json(
     pretty: bool = True
 ) -> str:
     """결과를 JSON으로 포맷팅
-    
+
     Args:
         result: 워크플로우 결과
         include_lineage: Lineage 포함 여부
         pretty: 정렬 출력 여부
-    
+
     Returns:
         JSON 문자열
     """
@@ -35,7 +35,7 @@ def format_json(
         "metrics": [],
         "completeness": result.get("completeness", "unknown")
     }
-    
+
     # Pattern matches
     for pm in result.get("pattern_matches", []):
         pattern_dict = {
@@ -43,12 +43,12 @@ def format_json(
             "description": pm.description if hasattr(pm, 'description') else pm.get("description"),
             "combined_score": pm.combined_score if hasattr(pm, 'combined_score') else pm.get("combined_score")
         }
-        
+
         if include_lineage and hasattr(pm, 'evidence'):
             pattern_dict["evidence"] = pm.evidence
-        
+
         output["pattern_matches"].append(pattern_dict)
-    
+
     # Metrics
     for vr in result.get("metrics", []):
         metric_dict = {
@@ -56,15 +56,17 @@ def format_json(
             "point_estimate": vr.point_estimate if hasattr(vr, 'point_estimate') else vr.get("point_estimate"),
             "quality": vr.quality if hasattr(vr, 'quality') else vr.get("quality", {})
         }
-        
+
         if include_lineage and hasattr(vr, 'lineage'):
             metric_dict["lineage"] = vr.lineage
-        
+
         output["metrics"].append(metric_dict)
-    
+
     # JSON 변환
     if pretty:
         return json.dumps(output, ensure_ascii=False, indent=2, default=str)
     else:
         return json.dumps(output, ensure_ascii=False, default=str)
+
+
 

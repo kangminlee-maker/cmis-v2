@@ -1,0 +1,11 @@
+---
+schema_version: 1
+description: "Pattern Graph (P-Graph) schema. Placeholder v1."
+
+graph:
+  id: "P"
+  name: "Pattern Graph"
+  ontology_ref: "schemas/ontology.yaml"
+  node_types: []
+  edge_types: []
+  pattern_library_ref: "libraries/patterns/"

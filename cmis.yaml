@@ -46,7 +46,7 @@ cmis:
       - id: "ledger_based_orchestration"
         statement: "유한 컨텍스트의 한계를 Task/Progress Ledger로 보완하고, 실행/재계획은 Ledger 업데이트로만 제어합니다."
         enforced_by:
-          - "orchestration_plane.ledgers.task_ledger"
+          - "orchestration_plane.ledgers.project_ledger"
           - "orchestration_plane.ledgers.progress_ledger"
 
       - id: "agent_is_persona_plus_workflow"
@@ -83,7 +83,7 @@ cmis:
       metrics_spec: "libraries/metrics_spec.yaml"
       domain_registry: "libraries/domain_registry.yaml"
       prompts: "libraries/prompt_library.yaml"
-    
+
     config:
       policies: "config/policies.yaml"
       workflows: "config/workflows.yaml"
@@ -92,13 +92,13 @@ cmis:
 
   registries:
     metric_sets:
-      structure_core_economics: "config/metrics_spec.yaml#metric_sets.structure_core_economics"
-      opportunity_additional: "config/metrics_spec.yaml#metric_sets.opportunity_additional"
-      monitoring_core: "config/metrics_spec.yaml#metric_sets.monitoring_core"
+      structure_core_economics: "libraries/metrics_spec.yaml#metric_sets.structure_core_economics"
+      opportunity_additional: "libraries/metrics_spec.yaml#metric_sets.opportunity_additional"
+      monitoring_core: "libraries/metrics_spec.yaml#metric_sets.monitoring_core"
     policy_modes:
-      reporting_strict: "config/policies.yaml#modes.reporting_strict"
-      decision_balanced: "config/policies.yaml#modes.decision_balanced"
-      exploration_friendly: "config/policies.yaml#modes.exploration_friendly"
+      reporting_strict: "config/policies.yaml#policy_pack.modes.reporting_strict"
+      decision_balanced: "config/policies.yaml#policy_pack.modes.decision_balanced"
+      exploration_friendly: "config/policies.yaml#policy_pack.modes.exploration_friendly"
 
   ids_and_lineage:
     id_prefixes:
@@ -259,7 +259,7 @@ cmis:
           purpose: "ValueRecord(VAL-*) 영속화"
           backend: "sqlite"
         project_context_store:
-          purpose: "ProjectContext(PRJ-*) 버전 관리"
+          purpose: "FocalActorContext(PRJ-*) 버전 관리"
           backend: "sqlite"
         outcome_store:
           purpose: "Outcome(OUT-*) 저장"
@@ -291,12 +291,12 @@ cmis:
           id: "P"
           store: "graph_store"
           schema_ref: "schemas/pattern_graph.yaml"
-          library_ref: "config/pattern_library.yaml"
+          library_ref: "libraries/patterns/"
         value_graph:
           id: "V"
           store: "graph_store"
           schema_ref: "schemas/value_graph.yaml"
-          metrics_spec_ref: "config/metrics_spec.yaml"
+          metrics_spec_ref: "libraries/metrics_spec.yaml"
         decision_graph:
           id: "D"
           store: "graph_store"
@@ -497,7 +497,7 @@ cmis:
           - "approval_required"
         lifecycle:
           - "init_run"
-          - "build_task_ledger"
+          - "build_project_ledger"
           - "plan_steps"
           - "execute_steps"
           - "verify_and_replan"
@@ -516,9 +516,9 @@ cmis:
           branch_isolation: "per_goal_node"
 
       ledgers:
-        task_ledger:
+        project_ledger:
           store: "ledger_store"
-          schema_ref: "schemas/ledgers.yaml#task_ledger"
+          schema_ref: "schemas/ledgers.yaml#ledgers.project_ledger"
           contains:
             - "goal_graph"
             - "success_predicates"
@@ -530,7 +530,7 @@ cmis:
             - "artifact_refs"
         progress_ledger:
           store: "ledger_store"
-          schema_ref: "schemas/ledgers.yaml#progress_ledger"
+          schema_ref: "schemas/ledgers.yaml#ledgers.progress_ledger"
           contains:
             - "step_index"
             - "step_status"
@@ -587,119 +587,7 @@ cmis:
             policy_mode: "decision_balanced"
 
       workflow_registry:
-        canonical_workflows:
-          structure_analysis:
-            description: "시장 구조/메커니즘 및 핵심 지표 이해"
-            role_id: "structure_analyst"
-            usage: "reporting"
-            steps:
-              - id: "policy"
-                call: "policy_engine.resolve_policy"
-                with:
-                  role_id: "structure_analyst"
-                  usage: "reporting"
-              - id: "snapshot"
-                call: "world_engine.snapshot"
-                with:
-                  domain_id: "@input.domain_id"
-                  region: "@input.region"
-                  segment: "@input.segment"
-                  as_of: "@input.as_of_or_latest"
-                  project_context_id: "@input.project_context_id_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "patterns"
-                call: "pattern_engine.match_patterns"
-                with:
-                  reality_snapshot_ref: "@prev.reality_snapshot_ref"
-                  project_context_id: "@input.project_context_id_or_null"
-              - id: "metrics"
-                call: "value_engine.evaluate_metrics"
-                with:
-                  metric_requests_ref: "@input.metric_set_ref_or_structure_core_economics"
-                  project_context_id: "@input.project_context_id_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "verify"
-                call: "orchestrator.verify"
-                with:
-                  run_id: "@run.run_id"
-
-          opportunity_discovery:
-            description: "갭 기반 기회 발굴 및 러프 사이징"
-            role_id: "opportunity_designer"
-            usage: "exploration"
-            steps:
-              - id: "policy"
-                call: "policy_engine.resolve_policy"
-                with:
-                  role_id: "opportunity_designer"
-                  usage: "exploration"
-              - id: "snapshot"
-                call: "world_engine.snapshot"
-                with:
-                  domain_id: "@input.domain_id"
-                  region: "@input.region"
-                  segment: "@input.segment"
-                  as_of: "@input.as_of_or_latest"
-                  project_context_id: "@input.project_context_id_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "gaps"
-                call: "pattern_engine.discover_gaps"
-                with:
-                  reality_snapshot_ref: "@prev.reality_snapshot_ref"
-                  project_context_id: "@input.project_context_id_or_null"
-              - id: "metrics"
-                call: "value_engine.evaluate_metrics"
-                with:
-                  metric_requests_ref: "@input.metric_set_ref_or_opportunity_additional"
-                  project_context_id: "@input.project_context_id_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "verify"
-                call: "orchestrator.verify"
-                with:
-                  run_id: "@run.run_id"
-
-          strategy_design:
-            description: "Goal 기반 전략 후보 생성 및 포트폴리오 평가"
-            role_id: "strategy_architect"
-            usage: "decision"
-            steps:
-              - id: "policy"
-                call: "policy_engine.resolve_policy"
-                with:
-                  role_id: "strategy_architect"
-                  usage: "decision"
-              - id: "strategies"
-                call: "strategy_engine.search_strategies"
-                with:
-                  goal_id: "@input.goal_id"
-                  project_context_id: "@input.project_context_id_or_null"
-                  greenfield_constraints_ref: "@input.greenfield_constraints_ref_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "portfolio"
-                call: "strategy_engine.evaluate_portfolio"
-                with:
-                  strategy_ids: "@prev.strategy_ids"
-                  goal_id: "@input.goal_id"
-                  project_context_id: "@input.project_context_id_or_null"
-                  policy_ref: "@prev.policy_ref"
-              - id: "verify"
-                call: "orchestrator.verify"
-                with:
-                  run_id: "@run.run_id"
-
-          reality_monitoring:
-            description: "Outcome 기반 학습 업데이트"
-            role_id: "reality_monitor"
-            usage: "reporting"
-            steps:
-              - id: "update"
-                call: "learning_engine.update_from_outcomes"
-                with:
-                  outcome_ids: "@input.outcome_ids"
-              - id: "verify"
-                call: "orchestrator.verify"
-                with:
-                  run_id: "@run.run_id"
+        canonical_workflows_ref: "config/workflows.yaml#canonical_workflows"
 
       run_audit_log:
         record:

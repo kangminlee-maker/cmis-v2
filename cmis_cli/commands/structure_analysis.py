@@ -29,7 +29,7 @@ def format_number(num: float) -> str:
 
 def cmd_structure_analysis(args):
     """structure-analysis 명령 실행
-    
+
     Args:
         args: Argparse args
     """
@@ -43,12 +43,12 @@ def cmd_structure_analysis(args):
         print(f"Policy: {args.policy or 'reporting_strict (default)'}")
         print()
         return
-    
+
     print("=" * 60)
     print("CMIS - Structure Analysis")
     print("=" * 60)
     print()
-    
+
     result = run_structure_analysis(
         domain_id=args.domain,
         region=args.region,
@@ -56,34 +56,34 @@ def cmd_structure_analysis(args):
         as_of=args.as_of,
         project_context_id=args.project_context
     )
-    
+
     print()
     print("=" * 60)
     print("결과")
     print("=" * 60)
     print()
-    
+
     # Meta
     print(f"도메인: {result.meta['domain_id']}")
     print(f"지역:   {result.meta['region']}")
     if result.meta.get('segment'):
         print(f"세그먼트: {result.meta['segment']}")
     print()
-    
+
     # Graph Overview
     print("[R-Graph 구조]")
     print(f"  Actors:      {result.graph_overview['num_actors']}개")
     print(f"  Money Flows: {result.graph_overview['num_money_flows']}개")
     print(f"  States:      {result.graph_overview.get('num_states', 0)}개")
     print()
-    
+
     # Actor Types
     if result.graph_overview.get('actor_types'):
         print("  Actor 종류:")
         for kind, count in result.graph_overview['actor_types'].items():
             print(f"    - {kind}: {count}개")
         print()
-    
+
     # Patterns
     print("[감지된 패턴]")
     for pm in result.pattern_matches:
@@ -91,7 +91,7 @@ def cmd_structure_analysis(args):
         print(f"    {pm.description}")
         print(f"    적합도: {pm.structure_fit_score:.2f}")
     print()
-    
+
     # Metrics
     print("[핵심 Metric]")
     for vr in result.metrics:
@@ -101,11 +101,11 @@ def cmd_structure_analysis(args):
         else:
             print(f"  {vr.metric_id}: (미구현)")
     print()
-    
+
     # 실행 시간
     print(f"실행 시간: {result.execution_time:.2f}초")
     print()
-    
+
     # JSON 저장 (선택적)
     if args.output:
         import json
@@ -113,4 +113,6 @@ def cmd_structure_analysis(args):
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(result.to_dict(), f, ensure_ascii=False, indent=2)
         print(f"✅ 결과 저장: {output_path}")
+
+
 

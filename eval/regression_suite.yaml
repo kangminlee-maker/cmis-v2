@@ -1,0 +1,6 @@
+---
+schema_version: 1
+description: "Regression suite for CMIS eval harness (placeholder)."
+
+regression_suite:
+  tests: []

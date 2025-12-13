@@ -104,14 +104,14 @@
 ```python
 class EvidenceEngine:
     """Evidence 수집 및 관리 엔진
-    
+
     설계 원칙:
     - Evidence-first, Prior-last
     - Early Return (상위 tier 성공 시 즉시 반환)
     - Graceful Degradation (tier별 fallback)
     - Source-agnostic (BaseDataSource 추상화)
     """
-    
+
     def __init__(
         self,
         config: CMISConfig,
@@ -124,62 +124,62 @@ class EvidenceEngine:
             source_registry: DataSource 레지스트리
             evidence_store: Evidence 저장소
         """
-    
+
     def fetch_for_metrics(
         self,
         metric_requests: List[MetricRequest],
         policy_ref: str = "reporting_strict"
     ) -> EvidenceBundle:
         """Metric 평가를 위한 Evidence 수집
-        
+
         Args:
             metric_requests: Metric 요청 목록
             policy_ref: 품질 정책 (reporting_strict/decision_balanced/exploration_friendly)
-        
+
         Returns:
             EvidenceBundle (수집된 모든 Evidence)
-        
+
         알고리즘:
             1. 각 MetricRequest를 EvidenceRequest로 변환
             2. Tier 1부터 순차적으로 fetch 시도
             3. 충분한 evidence 확보 시 Early Return
             4. 모든 tier 시도 후에도 부족하면 경고 포함 반환
         """
-    
+
     def fetch_for_reality_slice(
         self,
         scope: Dict[str, Any],
         as_of: str
     ) -> EvidenceBundle:
         """Reality Graph 구성을 위한 Evidence 수집
-        
+
         Args:
             scope: 시장/도메인 범위 (domain_id, region, segment 등)
             as_of: 기준 시점
-        
+
         Returns:
             EvidenceBundle
-        
+
         알고리즘:
             1. scope를 기반으로 필요한 Evidence 유형 결정
             2. Actor/MoneyFlow/State 정보를 위한 EvidenceRequest 생성
             3. fetch_for_metrics와 동일한 Early Return 로직
         """
-    
+
     def _fetch_with_early_return(
         self,
         request: EvidenceRequest,
         policy: EvidencePolicy
     ) -> EvidenceBundle:
         """Early Return 로직 구현
-        
+
         Args:
             request: Evidence 요청
             policy: 품질 정책
-        
+
         Returns:
             EvidenceBundle
-        
+
         알고리즘:
             1. Tier 1부터 순차 시도
             2. 각 tier에서 수집된 evidence 품질 평가
@@ -187,21 +187,21 @@ class EvidenceEngine:
             4. 충족 못하면 다음 tier 시도
             5. 모든 tier 소진 시 best-effort 반환
         """
-    
+
     def _evaluate_sufficiency(
         self,
         bundle: EvidenceBundle,
         policy: EvidencePolicy
     ) -> bool:
         """Evidence 충분성 판단
-        
+
         Args:
             bundle: 수집된 Evidence
             policy: 품질 정책
-        
+
         Returns:
             충분한지 여부
-        
+
         기준:
             - literal_ratio >= policy.min_literal_ratio
             - spread_ratio <= policy.max_spread_ratio
@@ -214,20 +214,20 @@ class EvidenceEngine:
 # Pseudo-code
 for tier in [1, 2, 3, 4, 5]:
     sources = source_registry.get_sources_by_tier(tier)
-    
+
     for source in sources:
         if not source.can_handle(request):
             continue
-        
+
         try:
             evidence = source.fetch(request)
             bundle.add_evidence(evidence)
-            
+
             # Early Return 조건 체크
             if self._evaluate_sufficiency(bundle, policy):
                 logger.info(f"Early Return at Tier {tier}")
                 return bundle
-        
+
         except Exception as e:
             logger.warning(f"Source {source.id} failed: {e}")
             continue  # Graceful degradation
@@ -250,13 +250,13 @@ return bundle
 ```python
 class SourceRegistry:
     """DataSource 레지스트리
-    
+
     역할:
     - Source 등록/조회
     - Tier별 source 그룹화
     - Source capability 매칭
     """
-    
+
     def __init__(self):
         """초기화"""
         self._sources: Dict[str, DataSource] = {}
@@ -267,7 +267,7 @@ class SourceRegistry:
             "structured_estimation": [],
             "llm_baseline": [],
         }
-    
+
     def register_source(
         self,
         source_id: str,
@@ -275,28 +275,28 @@ class SourceRegistry:
         source_instance: BaseDataSource
     ):
         """Source 등록
-        
+
         Args:
             source_id: Source 고유 ID (예: "DART", "KOSIS")
             source_tier: Tier (official/curated_internal/...)
             source_instance: BaseDataSource 구현체
         """
-    
+
     def get_sources_by_tier(self, tier: str) -> List[BaseDataSource]:
         """Tier별 source 목록 반환"""
-    
+
     def get_source(self, source_id: str) -> Optional[BaseDataSource]:
         """Source ID로 조회"""
-    
+
     def find_capable_sources(
         self,
         request: EvidenceRequest
     ) -> List[BaseDataSource]:
         """요청을 처리 가능한 source 목록 반환
-        
+
         Args:
             request: Evidence 요청
-        
+
         Returns:
             can_handle() == True인 source 목록 (tier 순서)
         """
@@ -340,10 +340,10 @@ class SourceTier(Enum):
 
 class BaseDataSource(ABC):
     """DataSource 추상 인터페이스
-    
+
     모든 connector는 이 인터페이스 구현 필수
     """
-    
+
     def __init__(
         self,
         source_id: str,
@@ -359,51 +359,51 @@ class BaseDataSource(ABC):
         self.source_id = source_id
         self.source_tier = source_tier
         self.capabilities = capabilities
-    
+
     @abstractmethod
     def fetch(
         self,
         request: EvidenceRequest
     ) -> EvidenceBundle:
         """Evidence 수집
-        
+
         Args:
             request: Evidence 요청
-        
+
         Returns:
             EvidenceBundle
-        
+
         Raises:
             SourceNotAvailableError: Source 접근 불가
             DataNotFoundError: 요청한 데이터 없음
             SourceTimeoutError: Timeout
         """
         pass
-    
+
     @abstractmethod
     def can_handle(
         self,
         request: EvidenceRequest
     ) -> bool:
         """요청 처리 가능 여부
-        
+
         Args:
             request: Evidence 요청
-        
+
         Returns:
             처리 가능 여부
-        
+
         기준:
             - capabilities와 request.required_capabilities 매칭
             - 도메인/지역 지원 여부
             - 데이터 타입 지원 여부
         """
         pass
-    
+
     def get_capabilities(self) -> Dict[str, Any]:
         """Capability 반환"""
         return self.capabilities
-    
+
     def _build_evidence_record(
         self,
         value: Any,
@@ -411,12 +411,12 @@ class BaseDataSource(ABC):
         metadata: Dict[str, Any]
     ) -> EvidenceRecord:
         """EvidenceRecord 생성 헬퍼
-        
+
         Args:
             value: 값
             confidence: 신뢰도 (0.0 ~ 1.0)
             metadata: 메타데이터
-        
+
         Returns:
             EvidenceRecord
         """
@@ -435,7 +435,7 @@ class BaseDataSource(ABC):
 ```python
 class DARTSource(BaseDataSource):
     """DART API connector"""
-    
+
     def __init__(self, api_key: str):
         super().__init__(
             source_id="DART",
@@ -448,24 +448,24 @@ class DARTSource(BaseDataSource):
         )
         self.api_key = api_key
         self.connector = DARTConnector(api_key)  # 기존 dart_connector.py 재사용
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceBundle:
         """DART에서 Evidence 수집"""
         # DARTConnector 호출 + EvidenceRecord 생성
         ...
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """DART가 처리 가능한지 확인"""
         required_caps = request.required_capabilities
-        
+
         # 지역 확인
         if request.context.get("region") != "KR":
             return False
-        
+
         # 데이터 타입 확인
         if not any(cap in self.capabilities["provides"] for cap in required_caps):
             return False
-        
+
         return True
 ```
 
@@ -487,26 +487,26 @@ from datetime import datetime
 @dataclass
 class EvidenceRequest:
     """Evidence 수집 요청
-    
+
     MetricRequest에서 변환되거나
     Reality Graph용으로 직접 생성
     """
     request_id: str
     request_type: str  # "metric", "reality_slice", "actor_info", etc.
-    
+
     # Metric 요청 시
     metric_id: Optional[str] = None
-    
+
     # Reality Graph 요청 시
     entity_type: Optional[str] = None  # "actor", "money_flow", "state"
-    
+
     # 공통
     context: Dict[str, Any] = field(default_factory=dict)
     # context 예: {"domain_id": "...", "region": "KR", "year": 2024}
-    
+
     required_capabilities: List[str] = field(default_factory=list)
     # 예: ["financial_statements", "market_size_reports"]
-    
+
     quality_requirements: Dict[str, Any] = field(default_factory=dict)
     # 예: {"min_confidence": 0.8, "max_age_days": 365}
 
@@ -514,26 +514,26 @@ class EvidenceRequest:
 @dataclass
 class EvidenceRecord:
     """개별 Evidence 레코드
-    
+
     하나의 source에서 수집된 하나의 evidence
     """
     evidence_id: str  # "EVD-{uuid}"
     source_tier: str  # "official", "commercial", etc.
     source_id: str  # "DART", "KOSIS", etc.
-    
+
     # 데이터
     value: Any  # 숫자, 문자열, 딕셔너리 등
     value_type: str = "unknown"  # "numeric", "categorical", "range", "distribution"
-    
+
     # 품질
     confidence: float = 0.0  # 0.0 ~ 1.0
-    
+
     # 메타데이터
     metadata: Dict[str, Any] = field(default_factory=dict)
     # 예: {"subject": "...", "year": 2024, "url": "..."}
-    
+
     retrieved_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    
+
     # Lineage
     lineage: Dict[str, Any] = field(default_factory=dict)
     # 예: {"query": "...", "response_time_ms": 123}
@@ -542,38 +542,38 @@ class EvidenceRecord:
 @dataclass
 class EvidenceBundle:
     """여러 source의 Evidence 묶음
-    
+
     EvidenceEngine.fetch_for_metrics()의 반환값
     """
     request: EvidenceRequest
-    
+
     records: List[EvidenceRecord] = field(default_factory=list)
-    
+
     # 집계 품질 지표
     quality_summary: Dict[str, Any] = field(default_factory=dict)
     # 예: {"literal_ratio": 0.8, "spread_ratio": 0.2, "num_sources": 3}
-    
+
     # 메타데이터
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     execution_time_ms: Optional[float] = None
-    
+
     def add_evidence(self, record: EvidenceRecord):
         """Evidence 추가"""
         self.records.append(record)
-    
+
     def get_best_record(self) -> Optional[EvidenceRecord]:
         """가장 신뢰도 높은 record 반환"""
         if not self.records:
             return None
         return max(self.records, key=lambda r: r.confidence)
-    
+
     def get_records_by_tier(self, tier: str) -> List[EvidenceRecord]:
         """Tier별 record 필터링"""
         return [r for r in self.records if r.source_tier == tier]
-    
+
     def calculate_quality_summary(self):
         """품질 지표 계산
-        
+
         - literal_ratio: 상위 tier (official/curated) 비율
         - spread_ratio: 값 분산 정도
         - num_sources: source 개수
@@ -585,26 +585,26 @@ class EvidenceBundle:
                 "num_sources": 0
             }
             return
-        
+
         # literal_ratio: official/curated 비율
         literal_count = sum(
             1 for r in self.records
             if r.source_tier in ["official", "curated_internal"]
         )
         literal_ratio = literal_count / len(self.records)
-        
+
         # spread_ratio: 숫자 값의 분산
         numeric_values = [
             r.value for r in self.records
             if isinstance(r.value, (int, float))
         ]
-        
+
         if len(numeric_values) >= 2:
             avg = sum(numeric_values) / len(numeric_values)
             spread_ratio = (max(numeric_values) - min(numeric_values)) / avg if avg > 0 else 0
         else:
             spread_ratio = 0.0
-        
+
         self.quality_summary = {
             "literal_ratio": literal_ratio,
             "spread_ratio": spread_ratio,
@@ -625,13 +625,13 @@ class EvidenceBundle:
 ```python
 class EvidenceStore:
     """Evidence 저장소
-    
+
     역할:
     - Evidence 영구 저장 (EvidenceRecord → evidence_store)
     - 캐싱 (동일 요청 재사용)
     - Lineage 추적
     """
-    
+
     def __init__(self, storage_backend: Any):
         """
         Args:
@@ -639,32 +639,32 @@ class EvidenceStore:
         """
         self.storage = storage_backend
         self._cache: Dict[str, EvidenceBundle] = {}
-    
+
     def save(self, bundle: EvidenceBundle):
         """EvidenceBundle 저장
-        
+
         Args:
             bundle: 저장할 EvidenceBundle
         """
-    
+
     def get(
         self,
         request: EvidenceRequest,
         max_age_seconds: Optional[int] = None
     ) -> Optional[EvidenceBundle]:
         """캐시/저장소에서 조회
-        
+
         Args:
             request: Evidence 요청
             max_age_seconds: 최대 허용 age (None이면 무제한)
-        
+
         Returns:
             저장된 EvidenceBundle (없거나 너무 오래되면 None)
         """
-    
+
     def invalidate_cache(self, pattern: str):
         """캐시 무효화
-        
+
         Args:
             pattern: 무효화할 request pattern (예: "metric_id:MET-Revenue")
         """
@@ -675,19 +675,19 @@ class EvidenceStore:
 # Pseudo-code
 def fetch_for_metrics(requests, policy):
     bundle = EvidenceBundle(request=requests[0])
-    
+
     # 1. 캐시 확인
     cached = evidence_store.get(requests[0], max_age_seconds=86400)  # 1일
     if cached:
         logger.info("Cache hit")
         return cached
-    
+
     # 2. 실제 fetch
     bundle = self._fetch_with_early_return(requests[0], policy)
-    
+
     # 3. 저장
     evidence_store.save(bundle)
-    
+
     return bundle
 ```
 
@@ -756,11 +756,11 @@ class NewResearchSource(BaseDataSource):
             capabilities={"provides": ["market_size_reports"], "regions": ["KR", "US"]}
         )
         self.api_key = api_key
-    
+
     def fetch(self, request):
         # API 호출 로직
         ...
-    
+
     def can_handle(self, request):
         # capability 매칭
         ...
@@ -793,7 +793,7 @@ class NewLLMSource(BaseDataSource):
             capabilities={"provides": ["long_tail_facts"], "regions": ["*"]}
         )
         self.provider = provider  # "openai", "anthropic", "custom"
-    
+
     def fetch(self, request):
         # 새 provider API 호출
         ...
@@ -812,19 +812,19 @@ registry.register_source("LLM_new", "llm_baseline", NewLLMSource("anthropic"))
 @dataclass
 class EvidencePolicy:
     """Evidence 품질 정책
-    
+
     PolicyEngine에서 resolve_policy()로 반환
     """
     policy_id: str  # "reporting_strict", "decision_balanced", "exploration_friendly"
-    
+
     # 품질 요구사항
     min_literal_ratio: float  # 상위 tier 최소 비율
     max_spread_ratio: float  # 값 분산 최대 허용
     allow_llm_baseline: bool  # LLM baseline 허용 여부
-    
+
     # Tier별 최대 시도 횟수
     max_attempts_per_tier: int = 3
-    
+
     # Timeout
     max_total_time_seconds: int = 30
 ```
@@ -835,19 +835,19 @@ class EvidencePolicy:
 def _evaluate_sufficiency(bundle, policy):
     """Evidence 충분성 판단"""
     bundle.calculate_quality_summary()
-    
+
     # 1. literal_ratio 체크
     if bundle.quality_summary["literal_ratio"] < policy.min_literal_ratio:
         return False
-    
+
     # 2. spread_ratio 체크
     if bundle.quality_summary["spread_ratio"] > policy.max_spread_ratio:
         return False
-    
+
     # 3. 최소 source 개수
     if bundle.quality_summary["num_sources"] < 1:
         return False
-    
+
     return True
 ```
 
@@ -888,4 +888,6 @@ def _evaluate_sufficiency(bundle, policy):
 
 **변경 이력**:
 - 2025-12-09: 초안 작성 (Evidence Engine 핵심 설계)
+
+
 

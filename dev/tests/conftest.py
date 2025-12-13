@@ -1,6 +1,7 @@
 """pytest configuration and fixtures for CMIS tests"""
 
 import pytest
+import sys
 from pathlib import Path
 
 
@@ -9,6 +10,12 @@ def project_root():
     """프로젝트 루트 디렉토리"""
     # dev/tests/ → 프로젝트 루트 (2단계 위)
     return Path(__file__).parent.parent.parent
+
+
+# Ensure repo root is importable even when running `pytest` as a script.
+_ROOT = Path(__file__).parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 
 @pytest.fixture

@@ -134,7 +134,7 @@ def snapshot(
     project_context_id: Optional[str] = None
 ) -> RealityGraphSnapshot:
     """R-Graph snapshot 생성
-    
+
     Args:
         as_of: 기준 시점 ("latest" | "YYYY-MM-DD")
         scope: 범위 지정
@@ -144,10 +144,10 @@ def snapshot(
             - sector: Optional[str]  # 향후 확장
             - time_horizon: Optional[str]  # 향후 확장
         project_context_id: Project Context ID (Brownfield용)
-    
+
     Returns:
         RealityGraphSnapshot
-        
+
     Notes:
         - project_context_id가 있으면 focal_actor 중심 서브그래프 반환
         - segment가 있으면 해당 segment Actor만 포함
@@ -171,7 +171,7 @@ def snapshot_for_domain(
     }
     if segment:
         scope["segment"] = segment
-    
+
     return snapshot(
         as_of=as_of or "latest",
         scope=scope,
@@ -212,33 +212,33 @@ project_context:
 
 1. **현재 GAP 문서 v1.0 설명**:
    - "WorldEngine이 focal_actor를 생성"
-   
+
 2. **cmis.yaml 스키마**:
-   - focal_actor_id가 required → ProjectContext 생성 시 이미 있어야 함
+   - focal_actor_id가 required → FocalActorContext 생성 시 이미 있어야 함
 
 **해결 방안 (선택 1 - 추천)**:
 
-**ProjectContext는 focal_actor_id를 이미 알고 있다고 가정**:
+**FocalActorContext는 focal_actor_id를 이미 알고 있다고 가정**:
 
 ```python
 def ingest_project_context(
     project_context_id: str
 ) -> Dict[str, Any]:
     """Project Context를 R-Graph에 투영
-    
+
     전제:
-        - ProjectContext는 이미 focal_actor_id를 알고 있음
+        - FocalActorContext는 이미 focal_actor_id를 알고 있음
         - focal_actor는 seed나 이전 ingest_evidence로 이미 생성되어 있을 수 있음
-    
+
     프로세스:
-        1. ProjectContext 로딩 (ProjectContextStore에서)
+        1. FocalActorContext 로딩 (FocalActorContextStore에서)
         2. focal_actor_id 확인
         3. R-Graph에 focal_actor가 없으면:
            - focal_actor 노드 생성 (baseline_state 기반)
         4. baseline_state → State 노드 생성/업데이트
         5. assets_profile → focal_actor traits 업데이트
         6. constraints_profile → State 노드 추가
-    
+
     Returns:
         {
             "focal_actor_id": "ACT-...",
@@ -248,7 +248,7 @@ def ingest_project_context(
 ```
 
 **설계 근거**:
-- ProjectContext는 "분석 주체(회사/프로젝트)"의 컨텍스트
+- FocalActorContext는 "분석 주체(회사/프로젝트)"의 컨텍스트
 - 생성 시점에 "어떤 Actor를 focal로 볼지" 이미 결정되어 있어야 자연스러움
 - WorldEngine은 그 focal_actor 주변 그래프를 구성하는 역할에 집중
 
@@ -261,7 +261,7 @@ focal_actor_id:
   required: false
 ```
 
-이 경우 ProjectContext 생성 → ingest_project_context → focal_actor_id 채우기 플로우
+이 경우 FocalActorContext 생성 → ingest_project_context → focal_actor_id 채우기 플로우
 
 **권장**: 선택 1 (스키마 변경 최소화, 역할 명확화)
 
@@ -290,19 +290,19 @@ ingest_evidence:
 ```python
 class EvidenceToWorldMapper(ABC):
     """Evidence → R-Graph 변환 추상 클래스"""
-    
+
     @abstractmethod
     def can_handle(self, evidence: EvidenceRecord) -> bool:
         """이 Evidence를 처리할 수 있는지"""
-        
+
     @abstractmethod
     def apply(
-        self, 
-        evidence: EvidenceRecord, 
+        self,
+        evidence: EvidenceRecord,
         graph: InMemoryGraph
     ) -> List[str]:
         """Evidence를 R-Graph에 반영
-        
+
         Returns:
             updated_node_ids
         """
@@ -313,7 +313,7 @@ class EvidenceToWorldMapper(ABC):
 ```python
 class DartFilingsMapper(EvidenceToWorldMapper):
     """DART 재무제표 → R-Graph"""
-    
+
     def apply(self, evidence, graph):
         # 1. Actor 생성/업데이트 (회사)
         actor_id = f"ACT-{evidence.metadata['corp_code']}"
@@ -324,7 +324,7 @@ class DartFilingsMapper(EvidenceToWorldMapper):
                 "institution_type": "public_company"
             }
         })
-        
+
         # 2. State 노드 생성 (재무지표)
         state_id = f"STA-{actor_id}-{evidence.metadata['year']}"
         graph.upsert_node(state_id, "state", {
@@ -336,16 +336,16 @@ class DartFilingsMapper(EvidenceToWorldMapper):
                 "operating_profit": evidence.data['op_profit']
             }
         })
-        
+
         # 3. Edge 생성
         graph.add_edge("state_applies_to_actor", state_id, actor_id)
-        
+
         return [actor_id, state_id]
 
 
 class MarketResearchMapper(EvidenceToWorldMapper):
     """시장조사 리포트 → R-Graph"""
-    
+
     def apply(self, evidence, graph):
         # 1. State 노드 (시장 규모)
         state_id = f"STA-market-{evidence.metadata['domain_id']}"
@@ -358,7 +358,7 @@ class MarketResearchMapper(EvidenceToWorldMapper):
                 "growth_rate": evidence.data['growth_rate']
             }
         })
-        
+
         # 2. Actor 노드들 (Top-N players)
         actor_ids = []
         for player in evidence.data.get('top_players', []):
@@ -371,7 +371,7 @@ class MarketResearchMapper(EvidenceToWorldMapper):
                 }
             })
             actor_ids.append(actor_id)
-        
+
         return [state_id] + actor_ids
 ```
 
@@ -382,13 +382,13 @@ def ingest_evidence(
     evidence_ids: List[str]
 ) -> Dict[str, Any]:
     """Evidence를 R-Graph에 반영
-    
+
     프로세스:
         1. Evidence 로딩 (EvidenceStore에서)
         2. 각 Evidence의 source_id/schema로 적절한 매퍼 선택
         3. 매퍼.apply() 실행
         4. Lineage 기록
-    
+
     Returns:
         {
             "updated_node_ids": [...],
@@ -406,22 +406,22 @@ def ingest_evidence(
         ECOSStatisticsMapper(),
         # ...
     ]
-    
+
     updated_nodes = []
-    
+
     for evidence_id in evidence_ids:
         evidence = self.evidence_store.get(evidence_id)
-        
+
         for mapper in mappers:
             if mapper.can_handle(evidence):
                 nodes = mapper.apply(evidence, self.graph)
                 updated_nodes.extend(nodes)
-                
+
                 # Lineage 기록
                 for node_id in nodes:
                     self._add_lineage(node_id, evidence_id)
                 break
-    
+
     return {
         "updated_node_ids": list(set(updated_nodes)),
         "lineage": {...}
@@ -457,19 +457,19 @@ def _filter_by_segment(
     segment: str
 ) -> InMemoryGraph:
     """segment 필터링
-    
+
     로직:
         1. Actor.traits.segment == segment인 Actor만 포함
         2. 그 Actor와 직접 연결된 MoneyFlow/State만 포함
         3. 해당 Actor 간의 edge만 포함
     """
     filtered_graph = InMemoryGraph()
-    
+
     # 1. segment에 해당하는 Actor 찾기
     for actor in graph.nodes_by_type("actor"):
         if actor.data.get("traits", {}).get("segment") == segment:
             filtered_graph.upsert_node(actor.id, "actor", actor.data)
-    
+
     # 2. 연결된 MoneyFlow/State 추가
     for actor_id in [n.id for n in filtered_graph.nodes_by_type("actor")]:
         # MoneyFlow (payer/payee가 filtered actor인 경우)
@@ -477,12 +477,12 @@ def _filter_by_segment(
             if mf.data.get("payer_id") in actor_ids or \
                mf.data.get("payee_id") in actor_ids:
                 filtered_graph.upsert_node(mf.id, "money_flow", mf.data)
-        
+
         # State
         for state in graph.nodes_by_type("state"):
             if state.data.get("target_id") == actor_id:
                 filtered_graph.upsert_node(state.id, "state", state.data)
-    
+
     return filtered_graph
 
 
@@ -492,42 +492,42 @@ def _filter_by_as_of(
     as_of: str
 ) -> InMemoryGraph:
     """as_of 시점 필터링
-    
+
     로직:
         1. State: state.as_of <= as_of 중 가장 최근 값만
         2. MoneyFlow: recurrence 기준 (연 단위 매핑)
         3. Actor: 시점 무관 (모두 포함)
     """
     filtered_graph = InMemoryGraph()
-    
+
     as_of_date = datetime.strptime(as_of, "%Y-%m-%d").date()
-    
+
     # 1. Actor (시점 무관)
     for actor in graph.nodes_by_type("actor"):
         filtered_graph.upsert_node(actor.id, "actor", actor.data)
-    
+
     # 2. State (as_of 이전, target별 최신값만)
     states_by_target = {}
     for state in graph.nodes_by_type("state"):
         state_date = datetime.strptime(state.data["as_of"], "%Y-%m-%d").date()
-        
+
         if state_date <= as_of_date:
             target_id = state.data["target_id"]
-            
+
             if target_id not in states_by_target or \
                state_date > states_by_target[target_id]["date"]:
                 states_by_target[target_id] = {
                     "state": state,
                     "date": state_date
                 }
-    
+
     for item in states_by_target.values():
         state = item["state"]
         filtered_graph.upsert_node(state.id, "state", state.data)
-    
+
     # 3. MoneyFlow (연도 기준 필터링)
     # 구현...
-    
+
     return filtered_graph
 ```
 
@@ -555,17 +555,17 @@ def _extract_subgraph_focal(
     edge_types: Optional[List[str]] = None
 ) -> InMemoryGraph:
     """focal_actor 중심 N-hop 서브그래프 추출
-    
+
     Args:
         graph: 전체 R-Graph
         focal_actor_id: 중심 Actor
         n_hops: 탐색 깊이 (기본 2)
         edge_types: 포함할 edge 타입 (None이면 전부)
             예: ["actor_pays_actor", "actor_competes_with_actor"]
-    
+
     Returns:
         서브그래프
-    
+
     알고리즘:
         BFS로 focal_actor에서 n_hops만큼 탐색
         각 hop별로 edge_type 필터링
@@ -577,44 +577,44 @@ def _extract_subgraph_focal(
             "actor_offers_resource",
             "actor_serves_actor"
         ]
-    
+
     subgraph = InMemoryGraph()
     visited = set()
     queue = [(focal_actor_id, 0)]  # (node_id, depth)
-    
+
     while queue:
         node_id, depth = queue.pop(0)
-        
+
         if node_id in visited or depth > n_hops:
             continue
-        
+
         visited.add(node_id)
-        
+
         # 노드 추가
         node = graph.get_node(node_id)
         subgraph.upsert_node(node.id, node.type, node.data)
-        
+
         if depth < n_hops:
             # 이웃 탐색
             for edge in graph.incident_edges(node_id):
                 if edge.type in edge_types:
                     # Edge 추가
                     subgraph.add_edge(edge.type, edge.source, edge.target, edge.data)
-                    
+
                     # 이웃 큐 추가
                     neighbor_id = edge.target if edge.source == node_id else edge.source
                     queue.append((neighbor_id, depth + 1))
-        
+
         # 연결된 MoneyFlow/State 추가
         for mf in graph.nodes_by_type("money_flow"):
             if mf.data.get("payer_id") == node_id or \
                mf.data.get("payee_id") == node_id:
                 subgraph.upsert_node(mf.id, "money_flow", mf.data)
-        
+
         for state in graph.nodes_by_type("state"):
             if state.data.get("target_id") == node_id:
                 subgraph.upsert_node(state.id, "state", state.data)
-    
+
     return subgraph
 ```
 
@@ -761,7 +761,7 @@ def snapshot(as_of, scope, auto_fetch_evidence=False):
     if auto_fetch_evidence:
         evidence_bundle = self.evidence_engine.fetch(...)
         self.ingest_evidence(evidence_bundle.evidence_ids)
-    
+
     # snapshot 생성...
 ```
 
@@ -792,7 +792,7 @@ def snapshot(as_of, scope, auto_fetch_evidence=False):
    - 테스트 5개
 
 3. **ingest_project_context() 구현** (2일)
-   - ProjectContextStore 연동
+   - FocalActorContextStore 연동
    - focal_actor 반영/생성
    - baseline_state → State 노드
    - assets_profile → Actor traits
@@ -891,13 +891,13 @@ def snapshot(as_of, scope, auto_fetch_evidence=False):
 def test_brownfield_full_pipeline():
     # 1. seed 로딩
     world_engine = WorldEngine()
-    
+
     # 2. project_context 반영
     world_engine.ingest_project_context("PRJ-001")
-    
+
     # 3. evidence 추가
     world_engine.ingest_evidence(["EVI-DART-001", "EVI-KOSIS-002"])
-    
+
     # 4. snapshot 생성 (focal_actor 중심, segment 필터링, as_of)
     snapshot = world_engine.snapshot(
         as_of="2025-12-01",
@@ -908,13 +908,13 @@ def test_brownfield_full_pipeline():
         },
         project_context_id="PRJ-001"
     )
-    
+
     # 5. PatternEngine 연동
     patterns = pattern_engine.match_patterns(
         snapshot.graph,
         project_context_id="PRJ-001"
     )
-    
+
     assert len(patterns) > 0
     assert snapshot.meta["focal_actor_id"] is not None
 ```

@@ -1,7 +1,7 @@
 # Evidence Engine 보강 기회 분석
 
-**작성일**: 2025-12-10  
-**현재 버전**: v2.1  
+**작성일**: 2025-12-10
+**현재 버전**: v2.1
 **상태**: Production Ready
 
 ---
@@ -53,12 +53,12 @@ def fetch_for_reality_slice(
     policy_ref: str = "reporting_strict"
 ) -> List[EvidenceRecord]:
     """Reality Graph 구성용 Evidence 수집
-    
+
     Args:
         scope: {"domain_id": "...", "region": "...", "segment": "..."}
         as_of: 시점
         policy_ref: 정책
-    
+
     Returns:
         EvidenceRecord 리스트 (Actor, MoneyFlow, State 등)
     """
@@ -68,7 +68,7 @@ def fetch_for_reality_slice(
     # 4. Return
 ```
 
-**예상 코드**: 100-150 라인  
+**예상 코드**: 100-150 라인
 **예상 테스트**: 5-8개
 
 **효과**: WorldEngine 완전 작동 ✅
@@ -96,7 +96,7 @@ class EvidenceStore:
         metric_pattern: str = "MET-*"
     ) -> List[Dict]:
         """과거 검색에서 수집한 hints 조회
-        
+
         Returns:
             [
                 {
@@ -110,7 +110,7 @@ class EvidenceStore:
         # SQLite에서 hints 필터링
 ```
 
-**예상 코드**: 80-100 라인  
+**예상 코드**: 80-100 라인
 **예상 테스트**: 5개
 
 **효과**: Evidence 재활용률 +50%
@@ -131,20 +131,20 @@ class EvidenceStore:
 ```python
 class RateLimiter:
     """Source별 Rate Limiting"""
-    
+
     def __init__(self):
         self.limits = {
             "ECOS": {"calls": 100, "period": 60},  # 100 calls/min
             "KOSIS": {"calls": 1000, "period": 86400}  # 1000 calls/day
         }
         self.counters = {}
-    
+
     def check(self, source_id: str) -> bool:
         """호출 가능 여부"""
         # Token bucket 또는 Sliding window
 ```
 
-**예상 코드**: 100-150 라인  
+**예상 코드**: 100-150 라인
 **예상 테스트**: 6-8개
 
 **효과**: 안정성 향상, 602 에러 방지
@@ -169,22 +169,22 @@ def adjust_confidence_by_age(
     policy: EvidencePolicy
 ) -> float:
     """Age 기반 confidence 조정
-    
+
     예시:
     - 1년 이상: -10%
     - 2년 이상: -20%
     """
     age_days = (datetime.now() - datetime.fromisoformat(retrieved_at)).days
-    
+
     if age_days > 730:  # 2년
         return confidence * 0.8
     elif age_days > 365:  # 1년
         return confidence * 0.9
-    
+
     return confidence
 ```
 
-**예상 코드**: 50-80 라인  
+**예상 코드**: 50-80 라인
 **예상 테스트**: 4-5개
 
 **효과**: 데이터 품질 향상
@@ -211,22 +211,22 @@ from concurrent.futures import ThreadPoolExecutor
 class EvidenceExecutor:
     async def run_parallel(self, plan: EvidencePlan):
         """병렬 실행"""
-        
+
         for tier_sources in plan.tiers:
             # 같은 Tier 내 병렬 호출
             tasks = [
                 self._fetch_async(source, request)
                 for source, request in tier_sources
             ]
-            
+
             results = await asyncio.gather(*tasks)
-            
+
             # Early Return 체크
             if is_sufficient(results):
                 return results
 ```
 
-**예상 코드**: 150-200 라인  
+**예상 코드**: 150-200 라인
 **예상 테스트**: 8-10개
 
 **효과**: 성능 3-5배 향상
@@ -249,7 +249,7 @@ def cross_validate(
     evidence_list: List[EvidenceRecord]
 ) -> Dict[str, Any]:
     """Cross-source validation
-    
+
     Returns:
         {
             "consensus_value": float,
@@ -260,10 +260,10 @@ def cross_validate(
     """
     if len(evidence_list) < 2:
         return {}
-    
+
     values = [e.value for e in evidence_list]
     cv = stdev(values) / mean(values)
-    
+
     if cv < 0.1:
         return {"confidence_bonus": 0.1, "agreement": "high"}
     elif cv < 0.3:
@@ -272,7 +272,7 @@ def cross_validate(
         return {"confidence_bonus": 0.0, "agreement": "low"}
 ```
 
-**예상 코드**: 100-120 라인  
+**예상 코드**: 100-120 라인
 **예상 테스트**: 6개
 
 **효과**: 신뢰도 정확도 향상
@@ -296,14 +296,14 @@ def fetch_batch(
     requests: List[EvidenceRequest]
 ) -> List[EvidenceBundle]:
     """일괄 수집 (Source 그룹화)
-    
+
     예시:
     - KOSIS 요청 5개 → 1번 호출로 처리
     - ECOS 요청 3개 → 1번 호출로 처리
     """
     # 1. Source별 그룹화
     grouped = group_by_source(requests)
-    
+
     # 2. Source별 batch fetch
     for source_id, reqs in grouped.items():
         source = registry.get(source_id)
@@ -316,7 +316,7 @@ def fetch_batch(
                 source.fetch(req)
 ```
 
-**예상 코드**: 120-150 라인  
+**예상 코드**: 120-150 라인
 **예상 테스트**: 5-7개
 
 **효과**: API 호출 -50%
@@ -346,7 +346,7 @@ def fetch_with_retry(source, request):
     return source.fetch(request)
 ```
 
-**예상 코드**: 60-80 라인  
+**예상 코드**: 60-80 라인
 **예상 테스트**: 4-5개
 
 **효과**: 성공률 +10-20%
@@ -369,7 +369,7 @@ def fetch_with_retry(source, request):
 ```python
 def calculate_quality_score(evidence: EvidenceRecord) -> float:
     """Evidence 품질 점수
-    
+
     점수 = (tier × 0.4) + (confidence × 0.4) + (freshness × 0.1) + (cross_val × 0.1)
     """
     tier_score = {
@@ -377,10 +377,10 @@ def calculate_quality_score(evidence: EvidenceRecord) -> float:
         "curated_internal": 0.8,
         "commercial": 0.6
     }[evidence.source_tier]
-    
+
     freshness = calculate_freshness(evidence.retrieved_at)
     cross_val = evidence.metadata.get("cross_validation_bonus", 0)
-    
+
     return (
         tier_score * 0.4 +
         evidence.confidence * 0.4 +
@@ -389,7 +389,7 @@ def calculate_quality_score(evidence: EvidenceRecord) -> float:
     )
 ```
 
-**예상 코드**: 80-100 라인  
+**예상 코드**: 80-100 라인
 **예상 테스트**: 5개
 
 ---
@@ -440,17 +440,17 @@ lineage = {
 ```python
 class SmartCache:
     """Smart caching 전략"""
-    
+
     def get_ttl(self, metric_id, source_tier):
         """동적 TTL"""
         # OFFICIAL: 1일
         # COMMERCIAL: 1시간
         # 검색: 10분
-        
+
     def should_refresh(self, key):
         """선제적 refresh"""
         # 만료 임박 시 백그라운드 refresh
-        
+
     def prioritize(self):
         """LRU + 우선순위"""
         # 자주 사용 + OFFICIAL tier 우선 유지
@@ -503,7 +503,7 @@ def fuse_evidence(
     fusion_method: str = "weighted_average"
 ) -> EvidenceRecord:
     """Evidence fusion
-    
+
     Methods:
     - weighted_average: Confidence 기반 가중 평균
     - bayesian: Bayesian update
@@ -526,7 +526,7 @@ def fuse_evidence(
 ```python
 def detect_conflicts(evidence_list):
     """Evidence 충돌 탐지
-    
+
     예시:
     - KOSIS: 인구 51,217,221명
     - Google: 인구 50,000,000명
@@ -553,7 +553,7 @@ def fetch_incremental(
     requests: List[EvidenceRequest]
 ):
     """증분 업데이트
-    
+
     - 변경된 데이터만 fetch
     - RSS/ATOM 활용
     """
@@ -642,8 +642,8 @@ def fetch_incremental(
 
 ### 현재 (v2.1)
 
-**상태**: Production Ready ✅  
-**테스트**: 85/85 (100%)  
+**상태**: Production Ready ✅
+**테스트**: 85/85 (100%)
 **핵심 기능**: 완전 작동
 
 ### 보강 추천 (v2.2-v3.0)
@@ -666,6 +666,8 @@ def fetch_incremental(
 
 ---
 
-**작성**: 2025-12-10  
-**결론**: 즉시 보강 가능한 4가지 영역 확인  
+**작성**: 2025-12-10
+**결론**: 즉시 보강 가능한 4가지 영역 확인
 **다음**: fetch_for_reality_slice 구현 권장
+
+

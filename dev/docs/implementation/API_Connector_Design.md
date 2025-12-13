@@ -93,10 +93,10 @@ consensus = _find_consensus(numbers)
 ```python
 class GoogleSearchSource(BaseDataSource):
     """Google Custom Search API Source
-    
+
     v7 WebSearchSource 기반, v9 Evidence 스키마로 변환
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -116,18 +116,18 @@ class GoogleSearchSource(BaseDataSource):
                 "data_types": ["numeric", "raw_document"]
             }
         )
-        
+
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         self.engine_id = search_engine_id or os.getenv("GOOGLE_SEARCH_ENGINE_ID")
-        
+
         if not self.api_key or not self.engine_id:
             raise SourceNotAvailableError(
                 "Google API credentials required"
             )
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """Evidence 수집
-        
+
         프로세스:
         1. Context에서 검색 쿼리 구성
         2. Google Custom Search API 호출
@@ -136,23 +136,23 @@ class GoogleSearchSource(BaseDataSource):
         """
         # 1. 쿼리 구성
         query = self._build_search_query(request)
-        
+
         # 2. API 호출
         results = self._search_google(query)
-        
+
         if not results:
             raise DataNotFoundError(f"No Google results for: {query}")
-        
+
         # 3. 숫자 추출
         numbers = self._extract_numbers(results, request)
-        
+
         if not numbers:
             raise DataNotFoundError(f"No numeric data in results")
-        
+
         # 4. Consensus (중앙값 사용)
         value = self._calculate_consensus(numbers)
         confidence = self._calculate_confidence(numbers)
-        
+
         # 5. EvidenceRecord 생성
         return EvidenceRecord(
             evidence_id=f"EVD-GoogleSearch-{uuid.uuid4().hex[:8]}",
@@ -172,25 +172,25 @@ class GoogleSearchSource(BaseDataSource):
                 "api": "custom_search_v1"
             }
         )
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """처리 가능 여부
-        
+
         조건:
         - API 키 있음
         - 수치 질문 (metric_id 또는 context에 숫자 관련 힌트)
         """
         if not self.api_key or not self.engine_id:
             return False
-        
+
         # Metric 요청은 처리 가능
         if request.metric_id:
             return True
-        
+
         # Reality slice는 처리 안 함
         if request.request_type == "reality_slice":
             return False
-        
+
         return True
 ```
 
@@ -200,13 +200,13 @@ class GoogleSearchSource(BaseDataSource):
 ```python
 def _build_search_query(self, request: EvidenceRequest) -> str:
     """검색 쿼리 구성
-    
+
     Context 기반:
     - metric_id: "MET-Revenue" → "market revenue"
     - domain_id: "Adult_Language_Education_KR"
     - region: "KR" → "Korea"
     - year: 2024
-    
+
     Example:
         "adult language education Korea market revenue 2024"
     """
@@ -216,7 +216,7 @@ def _build_search_query(self, request: EvidenceRequest) -> str:
 ```python
 def _search_google(self, query: str) -> List[Dict]:
     """Google Custom Search API 호출
-    
+
     v7 로직 재사용:
     - requests 라이브러리
     - timeout 처리
@@ -232,7 +232,7 @@ def _extract_numbers(
     request: EvidenceRequest
 ) -> List[float]:
     """결과에서 숫자 추출
-    
+
     v7 대비 개선:
     - LLM 제거 → 정규식 기반
     - 패턴: "100억", "1.2 trillion", "$500M"
@@ -263,10 +263,10 @@ def _extract_numbers(
 ```python
 class KOSISSource(BaseDataSource):
     """KOSIS (통계청) API Source
-    
+
     신규 구현 (v7에 없음)
     """
-    
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Args:
@@ -281,25 +281,25 @@ class KOSISSource(BaseDataSource):
                 "data_types": ["numeric", "table"]
             }
         )
-        
+
         self.api_key = api_key or os.getenv("KOSIS_API_KEY")
         self.base_url = "https://kosis.kr/openapi"
-        
+
         if not self.api_key:
             raise SourceNotAvailableError("KOSIS_API_KEY required")
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """Evidence 수집
-        
+
         v1: 기본 통계표만 지원
         - 인구 통계 (101)
         - 가구 통계 (102)
         """
         # TODO: 실제 API 호출 로직
         # v7에 구현 없으므로 신규 개발 필요
-        
+
         raise DataNotFoundError("KOSIS integration not yet implemented")
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """처리 가능 여부"""
         # KR region만 지원
@@ -400,4 +400,6 @@ class KOSISSource(BaseDataSource):
 
 **변경 이력**:
 - 2025-12-09: 초안 작성 (v7 코드 분석 기반)
+
+
 

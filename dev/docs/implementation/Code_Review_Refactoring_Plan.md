@@ -13,7 +13,7 @@
 Evidence Engine:
   evidence_engine.py              673 라인
   evidence_store.py               524 라인
-  
+
 Evidence Sources:
   google_search_source.py         566 라인
   duckduckgo_source.py            390 라인
@@ -64,7 +64,7 @@ _fetch_page_content()
 ```python
 class BaseSearchSource(BaseDataSource):
     """웹 검색 공통 로직"""
-    
+
     def _extract_numbers_from_text(text): ...
     def _calculate_consensus(numbers): ...
     def _remove_outliers(numbers): ...
@@ -73,7 +73,7 @@ class BaseSearchSource(BaseDataSource):
 class GoogleSearchSource(BaseSearchSource):
     def _search(self, query):
         # Google API 호출만
-    
+
 class DuckDuckGoSource(BaseSearchSource):
     def _search(self, query):
         # DuckDuckGo API 호출만
@@ -195,11 +195,11 @@ evidence/
     base/
       search_source.py       - BaseSearchSource
       official_source.py     - BaseOfficialSource
-    
+
     search/
       google.py
       duckduckgo.py
-    
+
     official/
       kosis.py
       dart.py
@@ -388,7 +388,7 @@ import re
 
 ---
 
-**결론**: 
+**결론**:
 
 **현재 코드 품질**: 양호 (테스트 100%, 작동 검증)
 **리팩토링 필요성**: 중간 (중복 제거 권장)
@@ -402,3 +402,4 @@ import re
 3. 재커밋 (v2.1)
 
 어떻게 진행할까요?
+

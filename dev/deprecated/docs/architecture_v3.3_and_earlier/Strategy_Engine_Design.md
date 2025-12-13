@@ -18,7 +18,7 @@ StrategyEngine은 Goal/Pattern/Reality/Value를 바탕으로 **전략 후보를 
 
 **설계 원칙**:
 - **Pattern-driven**: PatternEngine 결과 기반 전략 생성
-- **Context-aware**: ProjectContext 제약 반영
+- **Context-aware**: FocalActorContext 제약 반영
 - **Evidence-backed**: ValueEngine 연동 ROI 계산
 - **Composable**: 여러 Pattern 조합 가능
 
@@ -73,7 +73,7 @@ strategy_engine:
         project_context_id (optional)
       output:
         strategy_set_ref
-      
+
     - name: evaluate_portfolio
       input:
         strategy_ids
@@ -93,13 +93,13 @@ decision_graph:
       - target_metrics (예: ["MET-Revenue > 10B", "MET-CAC < 5000"])
       - target_horizon
       - project_context_id
-    
+
     scenario:
       - scenario_id
       - name
       - assumptions (가정 세트)
       - related_strategy_ids
-    
+
     strategy:
       - strategy_id
       - name
@@ -107,13 +107,13 @@ decision_graph:
       - action_set (구체적 행동)
       - expected_outcomes
       - execution_fit_score
-    
+
     action:
       - action_id
       - action_type
       - target_actor/resource
       - parameters
-  
+
   edge_types:
     goal_requires_strategy
     strategy_implements_pattern
@@ -131,7 +131,7 @@ strategy_design:
       with:
         goal_id: "@input.goal_id"
         constraints: {}
-    
+
     - call: strategy_engine.evaluate_portfolio
       with:
         strategy_ids: "@prev.strategy_ids"
@@ -167,7 +167,7 @@ strategy_design:
 │  - PatternEngine (매칭 + Gap)                            │
 │  - WorldEngine (R-Graph)                                 │
 │  - ValueEngine (ROI 계산)                                │
-│  - ProjectContext (제약, Baseline)                       │
+│  - FocalActorContext (제약, Baseline)                       │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -198,24 +198,24 @@ strategy_design:
 @dataclass
 class Strategy:
     """전략 정의
-    
+
     Pattern 조합 + 구체적 행동 계획
     """
     strategy_id: str
     name: str
     description: str
-    
+
     # Pattern 조합
     pattern_composition: List[str]  # pattern_id 리스트
     # ["PAT-subscription_model", "PAT-freemium_model"]
-    
+
     # 구체적 행동
     action_set: List[Dict[str, Any]]
     # [
     #   {"action_type": "launch_product", "target": "digital_service"},
     #   {"action_type": "set_pricing", "params": {"model": "subscription"}}
     # ]
-    
+
     # 예상 결과
     expected_outcomes: Dict[str, Any]
     # {
@@ -223,18 +223,18 @@ class Strategy:
     #   "customer_3y": 100000,
     #   "market_share_3y": 0.15
     # }
-    
+
     # 적합성
     execution_fit_score: Optional[float] = None
-    
+
     # 리스크
     risks: List[Dict[str, Any]] = field(default_factory=list)
     # [{"type": "execution", "description": "...", "severity": "medium"}]
-    
+
     # 메타
     created_from: str = "pattern_combination"  # "pattern_combination" | "gap_based" | "custom"
     source_patterns: List[str] = field(default_factory=list)  # 출처 Pattern
-    
+
     # Lineage
     lineage: Dict[str, Any] = field(default_factory=dict)
 ```
@@ -248,17 +248,17 @@ class Goal:
     goal_id: str
     name: str
     description: str
-    
+
     # Target Metrics
     target_metrics: List[Dict[str, Any]]
     # [
     #   {"metric_id": "MET-Revenue", "operator": ">", "value": 10000000000, "horizon": "3y"},
     #   {"metric_id": "MET-CAC", "operator": "<", "value": 50000}
     # ]
-    
+
     # Context
     project_context_id: Optional[str] = None
-    
+
     # Constraints
     hard_constraints: List[Dict[str, Any]] = field(default_factory=list)
     soft_preferences: List[Dict[str, Any]] = field(default_factory=list)
@@ -272,19 +272,19 @@ class PortfolioEvaluation:
     """Portfolio 평가 결과"""
     portfolio_id: str
     strategy_ids: List[str]
-    
+
     # 통합 평가
     aggregate_roi: float
     aggregate_risk: float
-    
+
     # Synergy
     synergies: List[Dict[str, Any]] = field(default_factory=list)
     # [{"strategies": ["STR-001", "STR-002"], "synergy_score": 0.3}]
-    
+
     # Conflicts
     conflicts: List[Dict[str, Any]] = field(default_factory=list)
     # [{"strategies": ["STR-001", "STR-003"], "conflict_type": "resource"}]
-    
+
     # 리소스
     resource_requirements: Dict[str, Any] = field(default_factory=dict)
     # {"budget": 1000000000, "team_size": 50, "timeline": "18m"}
@@ -300,7 +300,7 @@ class PortfolioEvaluation:
 - Matched Patterns (PatternEngine.match_patterns)
 - Gap Candidates (PatternEngine.discover_gaps)
 - Goal
-- ProjectContext
+- FocalActorContext
 
 **프로세스**:
 ```
@@ -323,8 +323,8 @@ class PortfolioEvaluation:
    - 예상 Outcome 계산 (ValueEngine Prior)
 
 5. Execution Fit 평가
-   - ProjectContext.constraints_profile 확인
-   - ProjectContext.assets_profile 충족도
+   - FocalActorContext.constraints_profile 확인
+   - FocalActorContext.assets_profile 충족도
 ```
 
 **알고리즘**:
@@ -333,35 +333,35 @@ def generate_strategies_from_patterns(
     matched_patterns: List[PatternMatch],
     gaps: List[GapCandidate],
     goal: Goal,
-    project_context: Optional[ProjectContext]
+    project_context: Optional[FocalActorContext]
 ) -> List[Strategy]:
     """
     Pattern 조합 → Strategy
-    
+
     전략 생성 방식:
     1. Single Pattern Strategy
        - 각 Matched Pattern → 1개 Strategy
-    
+
     2. Pattern Composition Strategy
        - composes_with 관계 → 2-3개 조합
-    
+
     3. Gap-based Strategy
        - High feasibility Gap → Strategy
-    
+
     4. Hybrid Strategy
        - Matched + Gap 조합
     """
     strategies = []
-    
+
     # 1. Single Pattern
     for pm in matched_patterns:
         strategy = create_strategy_from_pattern(pm, project_context)
         strategies.append(strategy)
-    
+
     # 2. Pattern Composition
     for pm in matched_patterns:
         pattern = pattern_library.get(pm.pattern_id)
-        
+
         for compose_id in pattern.composes_with:
             # compose_id가 matched 또는 gap에 있는지
             if compose_id in [p.pattern_id for p in matched_patterns]:
@@ -371,16 +371,16 @@ def generate_strategies_from_patterns(
                     project_context
                 )
                 strategies.append(strategy)
-    
+
     # 3. Gap-based
     for gap in gaps:
         if gap.feasibility in ["high", "medium"]:
             strategy = create_strategy_from_gap(gap, project_context)
             strategies.append(strategy)
-    
+
     # 4. Goal 필터링
     strategies = filter_by_goal(strategies, goal)
-    
+
     return strategies
 ```
 
@@ -397,28 +397,28 @@ def generate_strategies_from_patterns(
 ```python
 def calculate_execution_fit(
     strategy: Strategy,
-    project_context: ProjectContext
+    project_context: FocalActorContext
 ) -> float:
     """
     Strategy Execution Fit
-    
+
     계산:
     - 각 Pattern의 Execution Fit 계산
     - 평균 또는 최소값 (보수적)
     """
     pattern_fits = []
-    
+
     for pattern_id in strategy.pattern_composition:
         pattern = pattern_library.get(pattern_id)
-        
+
         # PatternScorer 재사용
         fit = pattern_scorer.calculate_execution_fit(
             pattern,
             project_context
         )
-        
+
         pattern_fits.append(fit)
-    
+
     # 보수적: 최소값
     return min(pattern_fits) if pattern_fits else 0.0
 ```
@@ -434,7 +434,7 @@ def estimate_roi(
 ) -> Dict[str, Any]:
     """
     Strategy ROI 예측
-    
+
     프로세스:
     1. Pattern Benchmark → Metric Prior
     2. Baseline State → 시작점
@@ -445,34 +445,34 @@ def estimate_roi(
     benchmarks = {}
     for pattern_id in strategy.pattern_composition:
         pattern = pattern_library.get(pattern_id)
-        
+
         for metric_id in pattern.benchmark_metrics:
             if metric_id not in benchmarks:
                 # quantitative_bounds → Prior
                 bounds = pattern.quantitative_bounds.get(metric_id)
                 if bounds:
                     benchmarks[metric_id] = bounds["typical"]
-    
+
     # 2. Baseline
     current_revenue = baseline_state.get("current_revenue", 0)
     current_customers = baseline_state.get("current_customers", 0)
-    
+
     # 3. Growth 시뮬레이션
     # 간단한 모델: Benchmark의 성장률 적용
     growth_rate = benchmarks.get("revenue_growth_yoy", [0.3, 0.5])
     avg_growth = sum(growth_rate) / len(growth_rate)
-    
+
     # Compound growth
     years = int(horizon[:-1])  # "3y" → 3
     future_revenue = current_revenue * ((1 + avg_growth) ** years)
-    
+
     # 4. ROI
     roi = {
         "revenue_3y": future_revenue,
         "revenue_growth_cagr": avg_growth,
         "confidence": 0.6  # Pattern Prior 기반이므로 중간
     }
-    
+
     return roi
 ```
 
@@ -487,14 +487,14 @@ def estimate_roi(
 ```python
 def assess_risks(
     strategy: Strategy,
-    project_context: Optional[ProjectContext],
+    project_context: Optional[FocalActorContext],
     matched_patterns: List[PatternMatch]
 ) -> List[Dict[str, Any]]:
     """
     Risk 평가
     """
     risks = []
-    
+
     # 1. Execution Risk
     if strategy.execution_fit_score < 0.5:
         risks.append({
@@ -502,19 +502,19 @@ def assess_risks(
             "severity": "high",
             "description": f"Execution Fit 낮음 ({strategy.execution_fit_score:.2f})"
         })
-    
+
     # 2. Resource Risk
     if project_context:
         required = estimate_resource_requirements(strategy)
         available = project_context.assets_profile
-        
+
         if required["budget"] > available.get("budget", 0):
             risks.append({
                 "type": "resource",
                 "severity": "medium",
                 "description": "예산 부족"
             })
-    
+
     # 3. Cannibalization
     for pattern_id in strategy.pattern_composition:
         if pattern_id in [pm.pattern_id for pm in matched_patterns]:
@@ -524,7 +524,7 @@ def assess_risks(
                 "severity": "low",
                 "description": f"{pattern_id} 기존 사업과 충돌 가능"
             })
-    
+
     return risks
 ```
 
@@ -553,7 +553,7 @@ def optimize_portfolio(
 ) -> List[str]:
     """
     Portfolio 최적화 (Greedy)
-    
+
     Phase 1: 단순 Greedy
     Phase 2: Dynamic Programming
     Phase 3: 유전 알고리즘
@@ -563,20 +563,20 @@ def optimize_portfolio(
         (s, s.expected_outcomes.get("roi", 0) / (1 + s.aggregate_risk))
         for s in strategies
     ]
-    
+
     scored_strategies.sort(key=lambda x: x[1], reverse=True)
-    
+
     # Greedy 선택
     selected = []
     total_budget = 0
-    
+
     for strategy, score in scored_strategies:
         required_budget = strategy.expected_outcomes.get("required_investment", 0)
-        
+
         if total_budget + required_budget <= budget_constraint:
             selected.append(strategy.strategy_id)
             total_budget += required_budget
-    
+
     return selected
 ```
 
@@ -597,34 +597,34 @@ def analyze_synergy(
 ) -> float:
     """
     두 Strategy 간 시너지
-    
+
     점수: -1.0 (강한 충돌) ~ +1.0 (강한 시너지)
     """
     synergy = 0.0
-    
+
     # 1. Pattern family 일치
     families1 = get_pattern_families(strategy1.pattern_composition)
     families2 = get_pattern_families(strategy2.pattern_composition)
-    
+
     common_families = families1 & families2
     synergy += len(common_families) * 0.2
-    
+
     # 2. composes_with 관계
     for p1 in strategy1.pattern_composition:
         for p2 in strategy2.pattern_composition:
             pattern1 = pattern_library.get(p1)
-            
+
             if p2 in pattern1.composes_with:
                 synergy += 0.3
-    
+
     # 3. conflicts_with 관계
     for p1 in strategy1.pattern_composition:
         for p2 in strategy2.pattern_composition:
             pattern1 = pattern_library.get(p1)
-            
+
             if p2 in pattern1.conflicts_with:
                 synergy -= 0.5
-    
+
     return max(-1.0, min(1.0, synergy))
 ```
 
@@ -640,34 +640,34 @@ def search_strategies(
     reality_snapshot: RealityGraphSnapshot,
     pattern_matches: List[PatternMatch],
     gaps: List[GapCandidate],
-    project_context: Optional[ProjectContext] = None,
+    project_context: Optional[FocalActorContext] = None,
     greenfield_constraints: Optional[Dict[str, Any]] = None,
     max_strategies: int = 10
 ) -> List[Strategy]:
     """
     Strategy 후보 탐색
-    
+
     프로세스:
     1. StrategyGenerator로 후보 생성
     2. Goal 필터링
     3. Execution Fit 계산
     4. Top-N 선택
-    
+
     Args:
         goal: 목표
         reality_snapshot: R-Graph
         pattern_matches: 매칭된 Pattern
         gaps: Gap 후보
-        project_context: ProjectContext (Brownfield, 선택)
+        project_context: FocalActorContext (Brownfield, 선택)
         greenfield_constraints: Greenfield 제약 (자본, 시간 등, 선택)
             예: {"budget": 1000000000, "timeline_months": 24}
         max_strategies: 최대 전략 수
-    
+
     Returns:
         Strategy 리스트
         - Greenfield: ROI 기준 정렬
         - Brownfield: execution_fit × ROI 기준 정렬
-    
+
     Note:
         - project_context와 greenfield_constraints 동시 사용 불가
         - project_context 없고 greenfield_constraints만 있으면 Greenfield
@@ -681,22 +681,22 @@ def search_strategies(
 def evaluate_portfolio(
     strategy_ids: List[str],
     goal: Goal,
-    project_context: Optional[ProjectContext] = None
+    project_context: Optional[FocalActorContext] = None
 ) -> PortfolioEvaluation:
     """
     Portfolio 평가
-    
+
     프로세스:
     1. 각 Strategy 조회
     2. Synergy/Conflict 분석
     3. 통합 ROI/Risk 계산
     4. 리소스 요구사항 합산
-    
+
     Args:
         strategy_ids: Strategy ID 리스트
         goal: 목표
-        project_context: ProjectContext
-    
+        project_context: FocalActorContext
+
     Returns:
         PortfolioEvaluation
     """
@@ -892,41 +892,41 @@ def predict_outcomes(
 ) -> Dict[str, Any]:
     """
     Strategy 실행 시 예상 결과
-    
+
     Args:
         strategy: Strategy
         baseline_state: 현재 상태
         horizon_years: 예측 기간
-    
+
     Returns:
         예상 Outcomes
     """
     outcomes = {}
-    
+
     # Baseline
     current_revenue = baseline_state.get("current_revenue", 0)
     current_customers = baseline_state.get("current_customers", 0)
     current_margin = baseline_state.get("gross_margin", 0.5)
-    
+
     # Pattern Benchmarks 통합
     benchmarks = aggregate_pattern_benchmarks(strategy.pattern_composition)
-    
+
     # Revenue 성장
     growth_rate = benchmarks.get("revenue_growth_yoy", [0.3, 0.5])
     avg_growth = sum(growth_rate) / len(growth_rate)
-    
+
     future_revenue = current_revenue * ((1 + avg_growth) ** horizon_years)
-    
+
     # Customer 성장 (비슷한 로직)
     customer_growth = benchmarks.get("customer_growth_yoy", [0.25, 0.40])
     avg_cust_growth = sum(customer_growth) / len(customer_growth)
-    
+
     future_customers = current_customers * ((1 + avg_cust_growth) ** horizon_years)
-    
+
     # Margin (Pattern Benchmark)
     target_margin = benchmarks.get("gross_margin", [0.6, 0.8])
     avg_margin = sum(target_margin) / len(target_margin)
-    
+
     # Outcomes
     outcomes = {
         "revenue_3y": future_revenue,
@@ -936,7 +936,7 @@ def predict_outcomes(
         "confidence": 0.6,  # Pattern Prior 기반
         "method": "pattern_benchmark_projection"
     }
-    
+
     return outcomes
 ```
 
@@ -951,7 +951,7 @@ def predict_outcomes_with_value_engine(
 ) -> Dict[str, Any]:
     """
     ValueEngine 시뮬레이션 기반 예측
-    
+
     프로세스:
     1. Strategy → R-Graph 변화 시뮬레이션
     2. ValueEngine.evaluate_metrics() 호출
@@ -967,7 +967,7 @@ def predict_outcomes_with_value_engine(
 
 ### 11.1 Hard Constraints (필수)
 
-**ProjectContext.constraints_profile**:
+**FocalActorContext.constraints_profile**:
 ```python
 constraints_profile: {
     "hard_constraints": [
@@ -986,30 +986,30 @@ def filter_by_constraints(
 ) -> List[Strategy]:
     """
     Hard Constraints 필터링
-    
+
     제약 위반 Strategy 제거
     """
     filtered = []
-    
+
     for strategy in strategies:
         violates = False
-        
+
         for constraint in constraints:
             if constraint["type"] == "budget":
                 required = strategy.expected_outcomes.get("required_investment", 0)
                 if required > constraint["threshold"]:
                     violates = True
                     break
-        
+
         if not violates:
             filtered.append(strategy)
-    
+
     return filtered
 ```
 
 ### 11.2 Soft Preferences (선호)
 
-**ProjectContext.preference_profile**:
+**FocalActorContext.preference_profile**:
 ```python
 preference_profile: {
     "prefer_patterns": ["PAT-subscription_model"],
@@ -1026,30 +1026,30 @@ def adjust_score_by_preferences(
 ) -> float:
     """
     선호도 반영
-    
+
     보너스/페널티 적용
     """
     score = strategy.execution_fit_score
-    
+
     # prefer_patterns 보너스
     for pattern_id in strategy.pattern_composition:
         if pattern_id in preferences.get("prefer_patterns", []):
             score += 0.1
-    
+
     # avoid_patterns 페널티
     for pattern_id in strategy.pattern_composition:
         if pattern_id in preferences.get("avoid_patterns", []):
             score -= 0.2
-    
+
     # Risk appetite
     risk_appetite = preferences.get("risk_appetite", "medium")
     strategy_risk = len(strategy.risks) / 10  # 간단한 risk 점수
-    
+
     if risk_appetite == "low" and strategy_risk > 0.3:
         score -= 0.15
     elif risk_appetite == "high" and strategy_risk < 0.2:
         score += 0.1  # 공격적 전략 선호
-    
+
     return max(0.0, min(1.0, score))
 ```
 
@@ -1059,9 +1059,9 @@ def adjust_score_by_preferences(
 
 ### 12.1 Greenfield: Neutral 시장 분석 및 전략
 
-**정의**: 
+**정의**:
 - '나'에 대한 정보 없이 시장 전체를 neutral하게 분석
-- ProjectContext 없음
+- FocalActorContext 없음
 - "이 시장에서 일반적으로 어떤 전략이 유효한가?"
 
 **상황**:
@@ -1102,7 +1102,7 @@ strategies = strategy_engine.search_strategies(
 
 **정의**:
 - '나'(focal_actor)에 대한 정의와 정보가 존재
-- ProjectContext 있음
+- FocalActorContext 있음
 - "우리 회사가 이 시장에서 취할 수 있는 전략은?"
 
 **상황**:
@@ -1111,8 +1111,8 @@ strategies = strategy_engine.search_strategies(
 
 **프로세스**:
 ```python
-# 1. ProjectContext
-project_context = ProjectContext(
+# 1. FocalActorContext
+project_context = FocalActorContext(
     project_context_id="PRJ-my-company",
     baseline_state={
         "current_revenue": 5000000000,  # 50억
@@ -1206,19 +1206,19 @@ portfolio_eval:
 strategy_template:
   template_id: "TMPL-launch-subscription"
   name: "구독 서비스 런칭 템플릿"
-  
+
   required_patterns: ["PAT-subscription_model"]
   optional_patterns: ["PAT-freemium_model", "PAT-tiered_pricing"]
-  
+
   action_template:
     - action_type: "design_pricing"
       params_template:
         model: "@pattern.trait.revenue_model"
         recurrence: "@pattern.trait.recurrence"
-    
+
     - action_type: "build_payment"
       condition: "@pattern.trait.payment_recurs == true"
-  
+
   outcome_formula:
     revenue_3y: "baseline.revenue * (1 + benchmark.growth_rate) ^ 3"
 ```
@@ -1234,19 +1234,19 @@ strategy_template:
 class StrategyLibrary:
     """
     Strategy 템플릿 및 과거 전략 저장소
-    
+
     역할:
     - StrategyTemplate YAML 로딩
     - 과거 Strategy 조회
     - LearningEngine 연동 (성공/실패 학습)
     """
-    
+
     def load_templates(self, template_dir: Path):
         """템플릿 로딩"""
-    
+
     def get_strategies_by_pattern(self, pattern_id: str) -> List[Strategy]:
         """특정 Pattern 사용 전략 조회"""
-    
+
     def get_successful_strategies(
         self,
         goal_type: str,
@@ -1307,16 +1307,16 @@ def create_strategy_from_pattern(pattern_id, project_context_id):
 def greedy_portfolio(strategies, budget):
     # ROI/Risk 정렬
     sorted_strategies = sorted(strategies, key=lambda s: s.roi / (1 + s.risk))
-    
+
     # Greedy 선택
     selected = []
     total_budget = 0
-    
+
     for s in sorted_strategies:
         if total_budget + s.cost <= budget:
             selected.append(s)
             total_budget += s.cost
-    
+
     return selected
 ```
 
@@ -1430,7 +1430,7 @@ def greedy_portfolio(strategies, budget):
 
 - [x] **PatternEngine**: Pattern 매칭 + Gap → Strategy 생성
 - [x] **ValueEngine**: ROI 예측, Benchmark 활용
-- [x] **WorldEngine**: R-Graph, ProjectContext
+- [x] **WorldEngine**: R-Graph, FocalActorContext
 - [x] **LearningEngine**: 성공/실패 학습 (미래)
 
 ### 확장성

@@ -10,7 +10,7 @@
 ### 1. Greenfield Constraints (최소 제약)
 
 **정의**:
-- ProjectContext 없을 때 사용
+- FocalActorContext 없을 때 사용
 - 주체 중립적 제약
 - 자본, 시간, 팀 규모 범위
 
@@ -34,7 +34,7 @@ greenfield_constraints = {
 ### 2. Brownfield Constraints (전체 제약)
 
 **정의**:
-- ProjectContext.constraints_profile 사용
+- FocalActorContext.constraints_profile 사용
 - 우리 회사 특화 제약
 - 자본, 시간, 팀, 기술, 시장, 규제 등
 
@@ -75,41 +75,41 @@ def filter_by_greenfield_constraints(
 ) -> List[Strategy]:
     """
     Greenfield 제약 필터링
-    
+
     간단한 제약만:
     - budget
     - timeline
     - team_size_range
     """
     filtered = []
-    
+
     budget_limit = greenfield_constraints.get("budget")
     timeline_limit = greenfield_constraints.get("timeline_months")
     team_range = greenfield_constraints.get("team_size_range")
-    
+
     for strategy in strategies:
         outcomes = strategy.expected_outcomes
-        
+
         # Budget
         if budget_limit:
             required = outcomes.get("required_investment", 0)
             if required > budget_limit:
                 continue  # 제외
-        
+
         # Timeline
         if timeline_limit:
             required_months = outcomes.get("required_timeline_months", 36)
             if required_months > timeline_limit:
                 continue
-        
+
         # Team size
         if team_range:
             required_team = outcomes.get("required_team_size", 10)
             if required_team < team_range[0] or required_team > team_range[1]:
                 continue
-        
+
         filtered.append(strategy)
-    
+
     return filtered
 ```
 
@@ -120,54 +120,54 @@ def filter_by_greenfield_constraints(
 ```python
 def filter_by_brownfield_constraints(
     strategies: List[Strategy],
-    project_context: ProjectContext
+    project_context: FocalActorContext
 ) -> List[Strategy]:
     """
     Brownfield 제약 필터링
-    
+
     복잡한 제약:
     - hard_constraints (모든 타입)
     - assets_profile 충족도 (Execution Fit)
     """
     filtered = []
-    
+
     hard_constraints = project_context.constraints_profile.get("hard_constraints", [])
-    
+
     for strategy in strategies:
         violates = False
-        
+
         for constraint in hard_constraints:
             ctype = constraint["type"]
-            
+
             if ctype == "budget":
                 required = strategy.expected_outcomes.get("required_investment", 0)
                 if required > constraint["threshold"]:
                     violates = True
                     break
-            
+
             elif ctype == "timeline":
                 required = strategy.expected_outcomes.get("required_timeline_months", 36)
                 if required > constraint["max_months"]:
                     violates = True
                     break
-            
+
             elif ctype == "team_size":
                 required = strategy.expected_outcomes.get("required_team_size", 10)
                 if required > constraint["max"]:
                     violates = True
                     break
-            
+
             elif ctype == "technology":
                 # 기술 제약 (우리 기존 플랫폼 사용해야 함)
                 if constraint.get("must_use"):
                     # Strategy가 기존 기술 활용하는지 확인
                     pass
-            
+
             # ... 기타 제약 타입
-        
+
         if not violates:
             filtered.append(strategy)
-    
+
     return filtered
 ```
 
@@ -214,7 +214,7 @@ cmis strategy-design \
 
 **structure-analysis**:
 ```bash
-# ProjectContext 사용 (제약 자동 반영)
+# FocalActorContext 사용 (제약 자동 반영)
 cmis structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
@@ -267,7 +267,7 @@ strategies_100B = strategy_engine.search_strategies(
 
 ```python
 # 우리 회사 = Seed 투자 받은 스타트업
-project_context = ProjectContext(
+project_context = FocalActorContext(
     baseline_state={"current_revenue": 100000000},  # 1억
     assets_profile={
         "capability_traits": [{"technology": "AI_ML"}],  # 우리 강점
@@ -319,21 +319,21 @@ def search_strategies(
     reality_snapshot: RealityGraphSnapshot,
     pattern_matches: List[PatternMatch],
     gaps: List[GapCandidate],
-    project_context: Optional[ProjectContext] = None,
+    project_context: Optional[FocalActorContext] = None,
     greenfield_constraints: Optional[Dict[str, Any]] = None,
     max_strategies: int = 10
 ) -> List[Strategy]:
     """
     전략 탐색
-    
+
     Greenfield:
         project_context=None,
         greenfield_constraints={"budget": 1000000000}
-    
+
     Brownfield:
-        project_context=ProjectContext(...),
+        project_context=FocalActorContext(...),
         greenfield_constraints=None (무시됨)
-    
+
     Validation:
         if project_context and greenfield_constraints:
             raise ValueError("Cannot use both")
@@ -345,3 +345,5 @@ def search_strategies(
 **작성**: 2025-12-11
 **상태**: Greenfield 제약 설계 완료 ✅
 **핵심**: Greenfield도 자본/시간 제약 입력 가능
+
+

@@ -17,7 +17,7 @@ from cmis_core.workflow import WorkflowOrchestrator
 
 def cmd_workflow_run(args):
     """workflow run 명령 실행
-    
+
     Args:
         args: Argparse args
     """
@@ -25,7 +25,7 @@ def cmd_workflow_run(args):
     print(f"CMIS - Workflow Run: {args.workflow_id}")
     print("=" * 60)
     print()
-    
+
     # inputs 파싱
     inputs = {}
     if args.input:
@@ -33,11 +33,11 @@ def cmd_workflow_run(args):
             if "=" in input_str:
                 key, value = input_str.split("=", 1)
                 inputs[key] = value
-    
+
     # role/policy
     role_id = args.role if hasattr(args, 'role') else None
     policy_mode = args.policy if hasattr(args, 'policy') else None
-    
+
     # --dry-run
     if args.dry_run:
         print("[DRY RUN MODE]")
@@ -53,37 +53,39 @@ def cmd_workflow_run(args):
         print("  4. Format output")
         print()
         return
-    
+
     # 실행
     orchestrator = WorkflowOrchestrator()
-    
+
     result = orchestrator.run_workflow(
         workflow_id=args.workflow_id,
         inputs=inputs,
         role_id=role_id,
         policy_mode=policy_mode
     )
-    
+
     # 출력
     print()
     print("=" * 60)
     print("결과")
     print("=" * 60)
     print()
-    
+
     if "error" in result:
         print(f"❌ 오류: {result['error']}")
         if "available" in result:
             print(f"사용 가능: {result['available']}")
         return
-    
+
     # JSON 출력
     import json
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    
+
     # 파일 저장
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
         print(f"\n✅ 결과 저장: {args.output}")
+
+
 

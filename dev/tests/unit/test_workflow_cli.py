@@ -16,25 +16,25 @@ from cmis_core.workflow import WorkflowOrchestrator
 
 class TestWorkflowOrchestrator:
     """WorkflowOrchestrator v2 테스트"""
-    
+
     def test_load_canonical_workflows(self, project_root):
         """canonical_workflows 로딩"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         workflows = orchestrator.workflows
-        
+
         assert "structure_analysis" in workflows
         assert "opportunity_discovery" in workflows
-        
+
         # structure_analysis 정의 확인
         sa = workflows["structure_analysis"]
         assert sa["role_id"] == "structure_analyst"
         assert "steps" in sa
-    
+
     def test_run_workflow_structure_analysis(self, project_root):
         """Generic run_workflow (structure_analysis)"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_workflow(
             workflow_id="structure_analysis",
             inputs={
@@ -42,16 +42,16 @@ class TestWorkflowOrchestrator:
                 "region": "KR"
             }
         )
-        
+
         assert "meta" in result
         assert result["meta"]["workflow_id"] == "structure_analysis"
         assert result["meta"]["role_id"] == "structure_analyst"
         assert result["meta"]["policy_mode"] == "reporting_strict"
-    
+
     def test_run_workflow_opportunity_discovery(self, project_root):
         """Generic run_workflow (opportunity_discovery)"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_workflow(
             workflow_id="opportunity_discovery",
             inputs={
@@ -60,16 +60,16 @@ class TestWorkflowOrchestrator:
                 "top_n": 3
             }
         )
-        
+
         assert "meta" in result
         assert result["meta"]["workflow_id"] == "opportunity_discovery"
         assert result["meta"]["role_id"] == "opportunity_designer"
         assert result["meta"]["policy_mode"] == "exploration_friendly"
-    
+
     def test_run_workflow_with_role_override(self, project_root):
         """Role override"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_workflow(
             workflow_id="structure_analysis",
             inputs={
@@ -78,13 +78,13 @@ class TestWorkflowOrchestrator:
             },
             role_id="numerical_modeler"  # Override
         )
-        
+
         assert result["meta"]["role_id"] == "numerical_modeler"
-    
+
     def test_run_workflow_with_policy_override(self, project_root):
         """Policy override"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_workflow(
             workflow_id="structure_analysis",
             inputs={
@@ -93,39 +93,39 @@ class TestWorkflowOrchestrator:
             },
             policy_mode="exploration_friendly"  # Override
         )
-        
+
         assert result["meta"]["policy_mode"] == "exploration_friendly"
 
 
 class TestOpportunityDiscovery:
     """opportunity_discovery 워크플로우 테스트"""
-    
+
     def test_opportunity_discovery_basic(self, project_root):
         """기본 opportunity discovery"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_opportunity_discovery(
             domain_id="Adult_Language_Education_KR",
             region="KR",
             top_n=5
         )
-        
+
         assert "meta" in result
         assert "matched_patterns" in result
         assert "gaps" in result
         assert result["top_n"] == 5
-    
+
     def test_opportunity_discovery_with_feasibility_filter(self, project_root):
         """Feasibility 필터링"""
         orchestrator = WorkflowOrchestrator(project_root=project_root)
-        
+
         result = orchestrator.run_opportunity_discovery(
             domain_id="Adult_Language_Education_KR",
             region="KR",
             top_n=10,
             min_feasibility="high"
         )
-        
+
         # 결과가 있으면 모두 high feasibility
         for gap_info in result["gaps"]:
             gap = gap_info["gap"]
@@ -136,7 +136,7 @@ class TestOpportunityDiscovery:
 
 class TestCLI:
     """CLI 명령어 테스트"""
-    
+
     def test_cli_structure_analysis_help(self):
         """structure-analysis --help"""
         result = subprocess.run(
@@ -145,12 +145,12 @@ class TestCLI:
             capture_output=True,
             text=True
         )
-        
+
         assert result.returncode == 0
         assert "--domain" in result.stdout
         assert "--region" in result.stdout
         assert "--role" in result.stdout  # 새로 추가된 옵션
-    
+
     def test_cli_opportunity_discovery_help(self):
         """opportunity-discovery --help"""
         result = subprocess.run(
@@ -159,12 +159,12 @@ class TestCLI:
             capture_output=True,
             text=True
         )
-        
+
         assert result.returncode == 0
         assert "--top-n" in result.stdout
         assert "--domain" in result.stdout
         assert "--role" in result.stdout  # 새로 추가된 옵션
-    
+
     def test_cli_workflow_run_help(self):
         """workflow run --help"""
         result = subprocess.run(
@@ -173,19 +173,19 @@ class TestCLI:
             capture_output=True,
             text=True
         )
-        
+
         assert result.returncode == 0
         assert "workflow_id" in result.stdout
 
 
 class TestIntegrationCLI:
     """CLI 통합 테스트"""
-    
+
     def test_structure_analysis_with_output(self, project_root):
         """structure-analysis 실제 실행 + 파일 저장"""
         with tempfile.TemporaryDirectory() as tmpdir:
             output_file = Path(tmpdir) / "result.json"
-            
+
             result = subprocess.run(
                 [
                     "python3", "-m", "cmis_cli",
@@ -198,20 +198,20 @@ class TestIntegrationCLI:
                 capture_output=True,
                 text=True
             )
-            
+
             # 성공 확인
             assert result.returncode == 0
             assert output_file.exists()
-            
+
             # 결과 파일 검증
             with open(output_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
+
             assert "meta" in data
             assert data["meta"]["domain_id"] == "Adult_Language_Education_KR"
             assert "graph_overview" in data
             assert "pattern_matches" in data
-    
+
     def test_opportunity_discovery_actual_run(self, project_root):
         """opportunity-discovery 실제 실행"""
         result = subprocess.run(
@@ -227,8 +227,10 @@ class TestIntegrationCLI:
             text=True,
             timeout=30
         )
-        
+
         # 성공 확인
         assert result.returncode == 0
         assert "opportunity_discovery 완료" in result.stdout or "Opportunity Discovery" in result.stdout
+
+
 

@@ -33,11 +33,11 @@
 **핵심 추상화 5개**:
 1. **GoalGraph** (What) - D-Graph goal 활용, Success Predicate
 2. **TaskGraph/Queue** (How) - 실행 작업, 의존성
-3. **Ledgers** (State) - TaskLedger + ProgressLedger (2개로 고정)
+3. **Ledgers** (State) - ProjectLedger + ProgressLedger (2개로 고정)
 4. **Verifier** (Check) - Predicate 검증, Diff Report
 5. **Replanner** (Adjust) - 부분 재계획 (브랜치 단위)
 
-**LLM 역할 격하**: 
+**LLM 역할 격하**:
 - 결정권자 ❌
 - **PlanPatch 제안자** ✅
 - Kernel이 검증 후 적용
@@ -129,7 +129,7 @@ Engines (능력)
 │  └─ ValidateGoal Task                   │
 │                                         │
 │  Ledgers (상태 2개로 고정)               │
-│  ├─ TaskLedger (문제공간 작업기억)       │
+│  ├─ ProjectLedger (문제공간 작업기억)       │
 │  └─ ProgressLedger (프로세스 제어판)     │
 │                                         │
 │  Verifier                               │
@@ -170,33 +170,33 @@ Engines (능력)
 ```python
 def reconcile_loop():
     """Kubernetes-style Reconcile Loop"""
-    
+
     while not goal_achieved():
         # 1. Desired State (Goal + Predicates)
         desired = get_goal_with_predicates()
-        
+
         # 2. Observed State (Ledgers)
         observed = get_current_state_from_ledgers()
-        
+
         # 3. Diff (Verifier)
         diff_report = verifier.compare(desired, observed)
-        
+
         # 4. Task Generation (Replanner)
         if diff_report.has_gaps():
             tasks = replanner.generate_tasks(diff_report)
             task_queue.enqueue(tasks)
-        
+
         # 5. Execute
         task = task_queue.dequeue()
         result = executor.execute(task)
-        
+
         # 6. Update Ledgers
         ledgers.update(task, result)
-        
+
         # 7. Verify (다시 확인)
         if verifier.check_success(desired, ledgers):
             break
-        
+
         # 8. Governor (제어)
         if governor.should_stop(ledgers):
             break
@@ -222,7 +222,7 @@ goal:
     - metric_id: "MET-SAM"
       operator: "exists"
       quality_min: 0.7
-  
+
   # Success Predicate (신규 필드)
   success_predicate:
     type: "all_of"
@@ -243,28 +243,28 @@ goal:
 @dataclass
 class GoalPredicate:
     """Success Predicate (검증 가능)"""
-    
+
     predicate_id: str
     goal_id: str
     type: str  # "all_of" | "any_of" | "threshold"
     conditions: List[Dict[str, Any]]
-    
+
     def evaluate(self, ledgers: Ledgers) -> bool:
         """Predicate 평가
-        
+
         Args:
             ledgers: 현재 상태
-        
+
         Returns:
             True if 성공 조건 만족
         """
         if self.type == "all_of":
             return all(self._check_condition(c, ledgers) for c in self.conditions)
         # ...
-    
+
     def get_diff_report(self, ledgers: Ledgers) -> Dict:
         """실패한 조건 = Diff Report
-        
+
         Returns:
             {
                 "missing": ["MET-SAM"],
@@ -273,7 +273,7 @@ class GoalPredicate:
             }
         """
         diff = {"missing": [], "low_quality": [], "gaps": []}
-        
+
         for condition in self.conditions:
             if not self._check_condition(condition, ledgers):
                 # 어떤 조건이 실패했는지 기록
@@ -282,7 +282,7 @@ class GoalPredicate:
                 elif condition["type"] == "evidence_quality":
                     # quality 부족한 metric 찾기
                     pass
-        
+
         return diff
 ```
 
@@ -307,34 +307,34 @@ class TaskType(Enum):
 @dataclass
 class Task:
     """실행 작업 단위"""
-    
+
     task_id: str
     task_type: TaskType
-    
+
     # 의존성
     depends_on: List[str] = field(default_factory=list)  # task_id 리스트
-    
+
     # 입력/출력
     inputs: Dict[str, Any] = field(default_factory=dict)
     expected_outputs: List[str] = field(default_factory=list)
-    
+
     # 품질 게이트
     quality_gate: Optional[Dict] = None
     # {"min_literal_ratio": 0.7, "policy_ref": "reporting_strict"}
-    
+
     # 예산
     budget: Optional[Dict] = None
     # {"max_time_sec": 30, "max_retries": 2}
-    
+
     # 상태
     status: str = "pending"  # pending | running | completed | failed
-    
+
     # 결과
     result: Optional[Dict] = None
-    
+
     def can_execute(self, ledgers: Ledgers) -> bool:
         """실행 가능 여부
-        
+
         의존성 완료 + 리소스 가용 확인
         """
         # 의존 Task 모두 완료?
@@ -342,7 +342,7 @@ class Task:
             dep_task = ledgers.get_task(dep_id)
             if not dep_task or dep_task.status != "completed":
                 return False
-        
+
         return True
 ```
 
@@ -351,26 +351,26 @@ class Task:
 ```python
 class TaskQueue:
     """Task 실행 큐 (의존성 기반)"""
-    
+
     def __init__(self):
         self.tasks: Dict[str, Task] = {}
         self.execution_order: List[str] = []
-    
+
     def enqueue(self, tasks: List[Task]):
         """Task 추가 (의존성 정렬)"""
         for task in tasks:
             self.tasks[task.task_id] = task
-        
+
         # 의존성 기반 정렬 (Topological Sort)
         self.execution_order = self._topological_sort()
-    
+
     def dequeue(self) -> Optional[Task]:
         """실행 가능한 Task 반환"""
         for task_id in self.execution_order:
             task = self.tasks[task_id]
             if task.status == "pending" and task.can_execute(self.ledgers):
                 return task
-        
+
         return None
 ```
 
@@ -382,36 +382,36 @@ class TaskQueue:
 
 ```python
 @dataclass
-class TaskLedger:
+class ProjectLedger:
     """문제공간 작업기억
-    
+
     Facts, Evidence, Metrics, Gaps, Artifacts
     """
-    
+
     # Facts
     facts: Dict[str, Any] = field(default_factory=dict)
     # {"domain_id": "Adult_Language_Education_KR", "region": "KR"}
-    
+
     # Assumptions
     assumptions: List[str] = field(default_factory=list)
     # ["TAM > 1조원 가정", ...]
-    
+
     # Evidence
     evidence_refs: List[str] = field(default_factory=list)
     # ["EVD-001", "EVD-002", ...]
-    
+
     # Derived Metrics
     metrics: Dict[str, Any] = field(default_factory=dict)
     # {"MET-TAM": {"value": 1.5e12, "quality": 0.75}, ...}
-    
+
     # Gaps (부족한 것)
     gaps: List[str] = field(default_factory=list)
     # ["MET-SAM", "MET-SOM"]
-    
+
     # Artifacts
     artifacts: List[str] = field(default_factory=list)
     # ["ART-market-size-001", ...]
-    
+
     def get_metric_quality(self, metric_id: str) -> float:
         """Metric 품질 조회"""
         metric = self.metrics.get(metric_id)
@@ -422,54 +422,54 @@ class TaskLedger:
 @dataclass
 class ProgressLedger:
     """프로세스 제어판
-    
+
     Task 상태, Stall, Loop, Budget
     """
-    
+
     # Task 상태
     task_statuses: Dict[str, str] = field(default_factory=dict)
     # {"TASK-001": "completed", "TASK-002": "running", ...}
-    
+
     # Stall 카운터
     stall_counters: Dict[str, int] = field(default_factory=dict)
     # {"evidence_collection": 2, ...}
-    
+
     # Loop 플래그
     loop_flags: Dict[str, bool] = field(default_factory=dict)
     # {"query_loop": False, "task_loop": False}
-    
+
     # Budget
     budgets: Dict[str, Any] = field(default_factory=dict)
     # {"time_spent_sec": 120, "llm_calls": 5, "max_time": 300}
-    
+
     # Next Action
     next_action: Optional[str] = None
     # "continue" | "replan" | "stop"
-    
+
     # Replanning 카운터
     replanning_count: int = 0
 
 class Ledgers:
     """Ledger 컨테이너"""
-    
+
     def __init__(self):
-        self.task_ledger = TaskLedger()
+        self.project_ledger = ProjectLedger()
         self.progress_ledger = ProgressLedger()
-    
+
     def update_from_task_result(self, task: Task, result: Dict):
         """Task 결과 → Ledger 업데이트"""
-        
-        # TaskLedger 업데이트
+
+        # ProjectLedger 업데이트
         if task.task_type == TaskType.COLLECT_EVIDENCE:
-            self.task_ledger.evidence_refs.extend(result.get("evidence_ids", []))
-        
+            self.project_ledger.evidence_refs.extend(result.get("evidence_ids", []))
+
         elif task.task_type == TaskType.COMPUTE_METRIC:
             metric_id = result.get("metric_id")
-            self.task_ledger.metrics[metric_id] = {
+            self.project_ledger.metrics[metric_id] = {
                 "value": result.get("value"),
                 "quality": result.get("quality", {})
             }
-        
+
         # ProgressLedger 업데이트
         self.progress_ledger.task_statuses[task.task_id] = "completed"
         self.progress_ledger.budgets["time_spent_sec"] += result.get("time_sec", 0)
@@ -484,20 +484,20 @@ class Ledgers:
 ```python
 class Verifier:
     """Predicate 검증 및 Diff 생성
-    
+
     Policy Engine 연동 (품질 기준)
     """
-    
+
     def __init__(self, policy_engine):
         self.policy_engine = policy_engine
-    
+
     def verify_goal(
         self,
         goal: Goal,
         ledgers: Ledgers
     ) -> Dict[str, Any]:
         """Goal Predicate 검증
-        
+
         Returns:
             {
                 "satisfied": True/False,
@@ -506,79 +506,79 @@ class Verifier:
             }
         """
         predicate = goal.success_predicate
-        
+
         # Predicate 평가
         satisfied = self._evaluate_predicate(predicate, ledgers)
-        
+
         if satisfied:
             return {
                 "satisfied": True,
                 "diff_report": {},
                 "quality_level": self._assess_quality(ledgers)
             }
-        
+
         # Diff Report 생성
         diff_report = self._generate_diff_report(predicate, ledgers)
-        
+
         return {
             "satisfied": False,
             "diff_report": diff_report,
             "quality_level": self._assess_quality(ledgers)
         }
-    
+
     def _evaluate_predicate(
         self,
         predicate: Dict,
         ledgers: Ledgers
     ) -> bool:
         """Predicate 평가"""
-        
+
         conditions = predicate.get("conditions", [])
-        
+
         for condition in conditions:
             cond_type = condition["type"]
-            
+
             if cond_type == "metric_exists":
                 metric_id = condition["metric_id"]
-                if metric_id not in ledgers.task_ledger.metrics:
+                if metric_id not in ledgers.project_ledger.metrics:
                     return False
-            
+
             elif cond_type == "evidence_quality":
                 # Policy Engine에서 기준 조회
                 threshold = self._get_quality_threshold(condition)
-                
+
                 # 모든 Metric 평균 품질
                 avg_quality = self._get_average_quality(ledgers)
-                
+
                 if avg_quality < threshold:
                     return False
-        
+
         return True
-    
+
     def _get_quality_threshold(self, condition: Dict) -> float:
         """Policy Engine에서 품질 기준 조회
-        
+
         하드코딩 금지! Policy Engine이 단일 소스.
         """
         threshold_ref = condition.get("threshold")
-        
+
         if threshold_ref.startswith("policy:"):
             # "policy:min_literal_ratio" → Policy Engine 조회
             policy_key = threshold_ref.split(":")[1]
             policy = self.policy_engine.get_current_policy()
             return policy.get(policy_key, 0.5)
-        
+
         return float(threshold_ref)
-    
+
     def _generate_diff_report(
         self,
         predicate: Dict,
         ledgers: Ledgers
     ) -> Dict:
         """Diff Report 생성
-        
+
         무엇이 부족한지 명확히 기술.
-        
+
         Returns:
             {
                 "missing_metrics": ["MET-SAM", "MET-SOM"],
@@ -593,27 +593,27 @@ class Verifier:
             "quality_gap": 0.0,
             "missing_evidence": 0
         }
-        
+
         conditions = predicate.get("conditions", [])
-        
+
         for condition in conditions:
             if condition["type"] == "metric_exists":
                 metric_id = condition["metric_id"]
-                if metric_id not in ledgers.task_ledger.metrics:
+                if metric_id not in ledgers.project_ledger.metrics:
                     diff["missing_metrics"].append(metric_id)
-            
+
             elif condition["type"] == "evidence_quality":
                 threshold = self._get_quality_threshold(condition)
                 current = self._get_average_quality(ledgers)
-                
+
                 if current < threshold:
                     diff["quality_gap"] = threshold - current
-                    
+
                     # 어떤 Metric이 부족한지
-                    for metric_id, metric in ledgers.task_ledger.metrics.items():
+                    for metric_id, metric in ledgers.project_ledger.metrics.items():
                         if metric.get("quality", 0) < threshold:
                             diff["low_quality_metrics"].append(metric_id)
-        
+
         return diff
 ```
 
@@ -626,10 +626,10 @@ class Verifier:
 ```python
 class Replanner:
     """부분 재계획 엔진
-    
+
     OrchVis: 실패한 브랜치만 재계획
     """
-    
+
     def generate_tasks_from_diff(
         self,
         diff_report: Dict,
@@ -637,19 +637,19 @@ class Replanner:
         ledgers: Ledgers
     ) -> List[Task]:
         """Diff Report → Task 생성
-        
+
         부족한 것만 채우는 Task.
-        
+
         Args:
             diff_report: Verifier 결과
             goal: 목표
             ledgers: 현재 상태
-        
+
         Returns:
             Task 리스트
         """
         tasks = []
-        
+
         # Missing Metrics → ComputeMetric Task
         for metric_id in diff_report.get("missing_metrics", []):
             tasks.append(Task(
@@ -658,7 +658,7 @@ class Replanner:
                 inputs={"metric_id": metric_id},
                 expected_outputs=[metric_id]
             ))
-        
+
         # Low Quality → CollectEvidence Task
         if diff_report.get("quality_gap", 0) > 0:
             tasks.append(Task(
@@ -670,9 +670,9 @@ class Replanner:
                 },
                 quality_gate={"min_literal_ratio": diff_report["quality_gap"] + 0.1}
             ))
-        
+
         return tasks
-    
+
     def replan_branch(
         self,
         failed_goal: Goal,
@@ -680,9 +680,9 @@ class Replanner:
         ledgers: Ledgers
     ) -> Dict:
         """실패한 브랜치만 재계획
-        
+
         OrchVis 핵심: 전체 재계획 ❌, 실패 부분만 ✅
-        
+
         Returns:
             {
                 "replan_scope": "branch",  # 부분만
@@ -692,10 +692,10 @@ class Replanner:
         """
         # 실패한 Goal과 연결된 브랜치 찾기
         affected_goals = self._find_downstream_goals(failed_goal)
-        
+
         # 해당 브랜치만 재계획
         new_tasks = self.generate_tasks_from_diff(diff_report, failed_goal, ledgers)
-        
+
         return {
             "replan_scope": "branch",
             "affected_goals": [g.goal_id for g in affected_goals],
@@ -714,28 +714,28 @@ class Replanner:
 @dataclass
 class PlanPatch:
     """Plan 변경 제안 (구조화)
-    
+
     LLM 출력 → 검증 가능한 구조.
     """
-    
+
     patch_id: str
     patch_type: str  # "add_task" | "remove_task" | "modify_goal"
-    
+
     # 변경 내용
     changes: Dict[str, Any]
     # {
     #   "task_type": "collect_evidence",
     #   "inputs": {...}
     # }
-    
+
     # 근거
     reasoning: str
-    
+
     # LLM 메타
     llm_model: str
     llm_prompt: str
     llm_response: str
-    
+
     def validate_schema(self) -> bool:
         """Patch 스키마 검증"""
         required_fields = ["patch_type", "changes", "reasoning"]
@@ -743,15 +743,15 @@ class PlanPatch:
 
 class LLMPatchProvider:
     """LLM 기반 Patch 제안자
-    
+
     결정 ❌ → 제안 ✅
     Kernel이 검증 후 적용.
     """
-    
+
     def __init__(self, llm_client, model="gpt-4"):
         self.llm = llm_client
         self.model = model
-    
+
     def propose_patch(
         self,
         goal: Goal,
@@ -759,24 +759,24 @@ class LLMPatchProvider:
         ledgers: Ledgers
     ) -> PlanPatch:
         """Diff Report → PlanPatch 제안
-        
+
         LLM에게 "무엇이 부족한지" 알려주고,
         "어떻게 채울지" 제안 받음.
         """
         prompt = f"""
         목표: {goal.name}
-        
+
         현재 상태:
-        - Metrics: {list(ledgers.task_ledger.metrics.keys())}
+        - Metrics: {list(ledgers.project_ledger.metrics.keys())}
         - Evidence Quality: {self._get_avg_quality(ledgers):.1%}
-        
+
         부족한 것:
         - Missing: {diff_report.get("missing_metrics", [])}
         - Low Quality: {diff_report.get("low_quality_metrics", [])}
         - Quality Gap: {diff_report.get("quality_gap", 0):.1%}
-        
+
         부족한 것을 채우기 위한 Task를 제안하세요.
-        
+
         Output (JSON):
         {{
             "patch_type": "add_task",
@@ -790,13 +790,13 @@ class LLMPatchProvider:
             "reasoning": "SAM 없음 → Evidence 수집 필요"
         }}
         """
-        
+
         response = self.llm.complete(prompt, model=self.model, temperature=0.3)
-        
+
         # JSON 파싱
         import json
         patch_data = json.loads(response)
-        
+
         # PlanPatch 생성
         patch = PlanPatch(
             patch_id=f"PATCH-{uuid.uuid4().hex[:8]}",
@@ -807,17 +807,17 @@ class LLMPatchProvider:
             llm_prompt=prompt,
             llm_response=response
         )
-        
+
         return patch
 
 class OrchestrationKernel:
     """Orchestration Kernel (Reconcile Engine)"""
-    
+
     def apply_patch(self, patch: PlanPatch) -> bool:
         """Patch 검증 후 적용
-        
+
         LLM 출력 → 검증 → 적용
-        
+
         Returns:
             True if 적용 성공
         """
@@ -825,22 +825,22 @@ class OrchestrationKernel:
         if not patch.validate_schema():
             self._log_patch_rejection(patch, "invalid_schema")
             return False
-        
+
         # 2. 정책 검증 (Policy Engine)
         if not self._validate_patch_against_policy(patch):
             self._log_patch_rejection(patch, "policy_violation")
             return False
-        
+
         # 3. 리소스 검증
         if not self._check_resource_availability(patch):
             self._log_patch_rejection(patch, "resource_unavailable")
             return False
-        
+
         # 4. 적용
         if patch.patch_type == "add_task":
             task = self._create_task_from_patch(patch)
             self.task_queue.enqueue([task])
-        
+
         # 5. DecisionLog 기록
         self.decision_log.append({
             "timestamp": datetime.now().isoformat(),
@@ -849,7 +849,7 @@ class OrchestrationKernel:
             "patch": patch.__dict__,
             "validation": "passed"
         })
-        
+
         return True
 ```
 
@@ -862,11 +862,11 @@ class OrchestrationKernel:
 ```python
 class OrchestrationKernel:
     """Orchestration Kernel (Reconcile Engine)
-    
+
     Desired State (Goal) ↔ Observed State (Ledgers) 비교
     → Diff → Tasks → Execute → 반복
     """
-    
+
     def __init__(
         self,
         workflow_orchestrator: WorkflowOrchestrator,
@@ -882,31 +882,31 @@ class OrchestrationKernel:
         self.workflow_orch = workflow_orchestrator
         self.policy_engine = policy_engine
         self.llm_patch_provider = llm_patch_provider
-        
+
         # Core
         self.verifier = Verifier(policy_engine)
         self.replanner = Replanner()
         self.governor = Governor()
-        
+
         # State
         self.goal_graph: Dict[str, Goal] = {}
         self.task_queue = TaskQueue()
         self.ledgers = Ledgers()
-        
+
         # Logging
         self.decision_log: List[Dict] = []
-    
+
     def execute(
         self,
         query: str,
         context: Optional[Dict] = None
     ) -> Dict:
         """Reconcile Loop 실행
-        
+
         Args:
             query: 사용자 질문
             context: project_context_id 등
-        
+
         Returns:
             {
                 "goal_satisfied": True,
@@ -918,42 +918,42 @@ class OrchestrationKernel:
         # 1. Goal 생성 (D-Graph)
         goal = self._create_goal_from_query(query, context)
         self.goal_graph[goal.goal_id] = goal
-        
+
         self._log_decision("goal_created", {"goal": goal.goal_id})
-        
+
         # 2. 초기 Task 생성
         initial_tasks = self._generate_initial_tasks(goal)
         self.task_queue.enqueue(initial_tasks)
-        
+
         # 3. Reconcile Loop
         max_iterations = 20
         iteration = 0
-        
+
         while iteration < max_iterations:
             # 3-1. Verify Goal
             verification = self.verifier.verify_goal(goal, self.ledgers)
-            
+
             if verification["satisfied"]:
                 # Goal 달성!
                 self._log_decision("goal_satisfied", verification)
                 break
-            
+
             # 3-2. Diff Report
             diff_report = verification["diff_report"]
-            
+
             self._log_decision(
                 "diff_detected",
                 diff_report,
                 f"Gap: {len(diff_report.get('missing_metrics', []))}개"
             )
-            
+
             # 3-3. Task 생성/재계획
             if self.llm_patch_provider:
                 # LLM Patch 제안
                 patch = self.llm_patch_provider.propose_patch(
                     goal, diff_report, self.ledgers
                 )
-                
+
                 # 검증 후 적용
                 if self.apply_patch(patch):
                     self._log_decision("patch_applied", {"patch_id": patch.patch_id})
@@ -963,35 +963,35 @@ class OrchestrationKernel:
                         diff_report, goal, self.ledgers
                     )
                     self.task_queue.enqueue(tasks)
-            
+
             else:
                 # 규칙 기반
                 tasks = self.replanner.generate_tasks_from_diff(
                     diff_report, goal, self.ledgers
                 )
                 self.task_queue.enqueue(tasks)
-            
+
             # 3-4. Execute Task
             task = self.task_queue.dequeue()
-            
+
             if task is None:
                 # Task 없음 → Stall
                 if self.governor.check_stall(self.ledgers):
                     break
                 continue
-            
+
             result = self._execute_task(task)
-            
+
             # 3-5. Update Ledgers
             self.ledgers.update_from_task_result(task, result)
-            
+
             # 3-6. Governor 체크
             if self.governor.should_stop(self.ledgers):
                 self._log_decision("governor_stop", {"reason": "budget_exceeded"})
                 break
-            
+
             iteration += 1
-        
+
         return {
             "goal_satisfied": verification["satisfied"],
             "ledgers": self.ledgers,
@@ -1016,26 +1016,26 @@ class OrchestrationKernel:
 ```python
 class MetricStageTracker:
     """Metric Stage 추적 (Ledger 활용)"""
-    
+
     def get_metric_stage(
         self,
         metric_id: str,
         ledgers: Ledgers
     ) -> str:
         """Metric의 현재 Stage
-        
+
         Returns:
             "evidence" | "derived" | "prior" | "fusion" | "none"
         """
-        metric = ledgers.task_ledger.metrics.get(metric_id)
-        
+        metric = ledgers.project_ledger.metrics.get(metric_id)
+
         if not metric:
             return "none"
-        
+
         # Quality 기반 Stage 판단
         quality = metric.get("quality", {})
         literal_ratio = quality.get("literal_ratio", 0)
-        
+
         if literal_ratio > 0.7:
             return "evidence"  # Direct Evidence
         elif literal_ratio > 0:
@@ -1044,7 +1044,7 @@ class MetricStageTracker:
             return "prior"
         else:
             return "fusion"
-    
+
     def should_collect_more_evidence(
         self,
         metric_id: str,
@@ -1052,24 +1052,24 @@ class MetricStageTracker:
         policy_ref: str
     ) -> bool:
         """더 많은 Evidence 수집 필요?
-        
+
         Policy Engine 연동.
         """
         stage = self.get_metric_stage(metric_id, ledgers)
-        
+
         # Evidence Stage가 아니면 수집 시도
         if stage in ["prior", "none"]:
             return True
-        
+
         # Policy 기준 미달이면 수집
-        metric = ledgers.task_ledger.metrics[metric_id]
+        metric = ledgers.project_ledger.metrics[metric_id]
         quality = metric.get("quality", {})
-        
+
         policy = self.policy_engine.get_policy(policy_ref)
-        
+
         if quality.get("literal_ratio", 0) < policy.min_literal_ratio:
             return True
-        
+
         return False
 ```
 
@@ -1079,16 +1079,16 @@ class MetricStageTracker:
 # Verifier에서:
 def _generate_diff_report(self, predicate, ledgers):
     diff = {...}
-    
+
     # Stage 확인
     for metric_id in required_metrics:
         stage = stage_tracker.get_metric_stage(metric_id, ledgers)
-        
+
         if stage == "prior":
             diff["prior_stage_metrics"].append(metric_id)
             # → Evidence 수집 Task 자동 생성
             diff["action_required"] = "collect_evidence"
-    
+
     return diff
 ```
 
@@ -1102,18 +1102,18 @@ def _generate_diff_report(self, predicate, ledgers):
 orchestration_kernel:
   description: "Reconcile 기반 동적 재설계 엔진 (Desired ↔ Observed)"
   pattern: "Kubernetes Controller"
-  
+
   philosophy:
     architecture: "Objective-Oriented (목표 중심)"
     paradigm: "Reconcile Loop (Desired State ↔ Observed State)"
     core_principle: "Diff → Tasks → Execute → Verify → Repeat"
-  
+
   core_abstractions:
     - id: "goal_graph"
       description: "목표 그래프 (D-Graph goal 노드 활용)"
       reuses: "substrate_plane.graphs.decision_graph.goal"
       extension: "success_predicate 필드 추가"
-      
+
     - id: "task_graph"
       description: "실행 작업 그래프"
       task_types:
@@ -1122,26 +1122,26 @@ orchestration_kernel:
         - "compute_metric"
         - "validate_goal"
         - "propose_replan"
-    
+
     - id: "ledgers"
       description: "상태 2개로 고정 (Magentic-One)"
       ledgers:
-        - name: "task_ledger"
+        - name: "project_ledger"
           description: "문제공간 작업기억"
           fields: ["facts", "assumptions", "evidence_refs", "metrics", "gaps", "artifacts"]
-        
+
         - name: "progress_ledger"
           description: "프로세스 제어판"
           fields: ["task_statuses", "stall_counters", "loop_flags", "budgets", "next_action"]
-    
+
     - id: "verifier"
       description: "Predicate 검증 + Diff Report"
       policy_integration: "Policy Engine에서 품질 기준 조회 (단일 소스)"
-      
+
     - id: "replanner"
       description: "부분 재계획 (OrchVis)"
       strategy: "실패 브랜치만 재계획, 나머지 계속"
-  
+
   llm_role:
     role: "PlanPatch 제안자 (결정권자 ❌)"
     workflow:
@@ -1150,7 +1150,7 @@ orchestration_kernel:
       - "Kernel → Policy 검증"
       - "Kernel → 적용"
       - "DecisionLog → Patch 원문 + 검증 결과 기록"
-  
+
   evidence_first_integration:
     description: "4-Stage Resolver 통합"
     stages: ["evidence", "derived", "prior", "fusion"]
@@ -1159,30 +1159,30 @@ orchestration_kernel:
       - "Stage 승격 조건 (Policy)"
       - "Evidence 부족 → CollectEvidence Task 자동 생성"
       - "Prior 사용 시 명시적 DecisionLog + 경고"
-  
+
   greenfield_brownfield:
     integration: "project_context_id 기반 자동 판단"
     greenfield:
       predicate_mode: "greenfield_constraints만 반영"
     brownfield:
       predicate_mode: "constraints_profile + execution_fit + baseline_ROI"
-  
+
   governor:
     budgets:
       max_time_sec: 300
       max_llm_calls: 20
       max_iterations: 20
-    
+
     stall_detection:
       stall_threshold: 2
       action: "propose_replan or stop"
-    
+
     loop_detection:
       max_similar_tasks: 3
-    
+
     quality_gates:
       source: "policy_engine"  # 단일 소스
-  
+
   decision_log:
     format: "event_sourcing"
     stored_in: "memory_store"
@@ -1269,7 +1269,7 @@ class Goal:
     goal_id: str
     name: str
     target_metrics: List[Dict]
-    
+
     # 신규 필드
     success_predicate: Optional[Dict] = None
     # {
@@ -1294,7 +1294,7 @@ class Goal:
 ```python
 class ResourceRegistry:
     """리소스 1급화 (TEA)"""
-    
+
     def __init__(self):
         self.capabilities = {
             "cursor": ["code_edit", "file_write", "shell_exec"],
@@ -1302,17 +1302,17 @@ class ResourceRegistry:
             "cli": ["shell_exec"],
             "api": []
         }
-    
+
     def can_execute_task(
         self,
         task: Task,
         interface: str
     ) -> bool:
         """Interface에서 Task 실행 가능?"""
-        
+
         required_capabilities = task.required_capabilities
         available = self.capabilities.get(interface, [])
-        
+
         return all(cap in available for cap in required_capabilities)
 ```
 

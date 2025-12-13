@@ -1,7 +1,7 @@
 # PatternEngine Phase 2 구현 완료 보고
 
-**작업일**: 2025-12-10  
-**소요 시간**: 약 2시간  
+**작업일**: 2025-12-10
+**소요 시간**: 약 2시간
 **상태**: ✅ Phase 2 완료
 
 ---
@@ -52,11 +52,11 @@ def determine_context_archetype(graph, project_context_id):
     # 1차: Project Context scope (confidence 0.95)
     if project_context_id:
         return find_by_scope(...)
-    
+
     # 2차: Graph trait voting (confidence 0.7)
     traits = extract_dominant_traits(graph)
     return find_by_traits(...)
-    
+
     # 3차: Fallback (confidence 0.3)
     return get_fallback()
 ```
@@ -150,7 +150,7 @@ gaps = engine.discover_gaps(graph, precomputed_matches=matches)  # 재사용! O(
 - GapDiscoverer 통합
 
 **3. cmis_core/types.py** (+80 라인)
-- ProjectContext dataclass
+- FocalActorContext dataclass
 - ContextArchetype dataclass
 
 ### 테스트 (1개)
@@ -250,7 +250,7 @@ Phase 1+2 통합:     43 passed (100%)
 
 ```python
 # 강한 Project Context
-project_context = ProjectContext(
+project_context = FocalActorContext(
     project_context_id="PRJ-startup",
     assets_profile={
         "capability_traits": [
@@ -383,8 +383,8 @@ Phase 2: 22 passed (100%)
 
 ---
 
-**작성**: 2025-12-10  
-**상태**: Phase 2 Complete, Phase 3 Ready  
-**테스트**: 43/43 (100%)  
+**작성**: 2025-12-10
+**상태**: Phase 2 Complete, Phase 3 Ready
+**테스트**: 43/43 (100%)
 **전체**: 193/196 (98.5%)
 

@@ -79,7 +79,7 @@ def evaluate_portfolio_api(
 ) -> str:  # portfolio_eval_ref
     """
     1. Strategy 로딩 (캐시)
-    2. ProjectContext 로딩
+    2. FocalActorContext 로딩
     3. policy_ref 해석
     4. Core 호출
     5. D-Graph 저장
@@ -101,7 +101,7 @@ def evaluate_portfolio_core(strategies, project_context, policy_params):
     # 4. Synergy 보너스, Conflict 페널티
     # 5. 리소스 집계
     # 6. Policy 반영
-    
+
     return PortfolioEvaluation(...)
 ```
 
@@ -310,3 +310,5 @@ Phase 3: ⏳ 선택 (고급 기능)
 **다음**: Phase 3 (선택) 또는 다음 엔진
 
 **StrategyEngine v1.0 (Phase 1+2) 완성!** 🎉🚀
+
+

@@ -201,7 +201,7 @@ newEstPrdCnt: '5'  # 최근 5개 시점
 def fetch(request):
     stat_type = _determine_stat_type(request)  # population만
     stat_info = STAT_TABLES[stat_type]         # DT_1B04006만
-    
+
     params = {
         'objL1': '00+',   # 전국 고정
         'objL2': 'ALL',   # 전체 고정
@@ -215,15 +215,15 @@ def fetch(request):
     # 1. 통계표 선택 (확장)
     stat_type = _determine_stat_type(request)
     stat_table = STAT_TABLES[stat_type]
-    
+
     # 2. 파라미터 동적 생성
     params = _build_params(request.context, stat_table)
     # → region: "서울" → objL1: "11"
     # → items: ["인구수", "가구수"] → itmId: "T2+T3+"
-    
+
     # 3. API 호출
     data = _fetch_stat_data(params)
-    
+
     # 4. 유연한 파싱
     value = _parse_data(data, request.context)
 ```
@@ -305,3 +305,5 @@ context = {"region": "KR", "year": 2024}
 **작성**: 2025-12-10
 **우선순위**: 중간 (다음 세션 또는 v3)
 **예상 소요**: 1주
+
+

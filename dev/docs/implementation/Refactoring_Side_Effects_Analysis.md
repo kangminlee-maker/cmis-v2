@@ -46,7 +46,7 @@ duckduckgo_source.py (100 라인)
 # 영향받는 테스트
 dev/tests/unit/test_google_search_source.py
   - 내부 메서드 테스트 (중복 제거 시 위치 이동)
-  
+
 # 수정 필요
 - import 경로 유지 (외부 API 동일)
 - 내부 메서드 테스트 → BaseSearchSource로 이동
@@ -57,7 +57,7 @@ dev/tests/unit/test_google_search_source.py
 # 영향받는 파일
 cmis_core/evidence/sources.py
   - from .google_search_source import GoogleSearchSource
-  
+
 dev/tests/integration/test_real_api_sources.py
   - from cmis_core.evidence.google_search_source import ...
 
@@ -236,7 +236,7 @@ from .evidence.engine import *
 # 파일 분리 시 발생 가능
 engine/planner.py
   from .executor import EvidenceExecutor
-  
+
 engine/executor.py
   from .planner import EvidencePlanner
 
@@ -452,7 +452,7 @@ def test_extract_numbers_korean():
     source = GoogleSearchSource()
     numbers = source._extract_numbers_from_text(text)
     # → BaseSearchSource._extract_numbers_from_text()로 이동
-    
+
 # 수정 후
 def test_extract_numbers_korean():
     from cmis_core.evidence.base_search_source import BaseSearchSource
@@ -621,3 +621,5 @@ if TYPE_CHECKING:
 
 **작성**: 2025-12-09
 **결론**: 즉시 리팩토링은 안전, 대규모는 연기
+
+

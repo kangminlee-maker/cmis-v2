@@ -1,7 +1,7 @@
 # Evidence Engine 하드코딩 전수 검토
 
-**작성일**: 2025-12-10  
-**목적**: 하드코딩된 부분 식별 및 개선 방안  
+**작성일**: 2025-12-10
+**목적**: 하드코딩된 부분 식별 및 개선 방안
 **범위**: Evidence Engine 전체 (10개 파일)
 
 ---
@@ -77,8 +77,8 @@ def discover_tables(domain):
     # 사용 가능한 통계표 자동 발견
 ```
 
-**우선순위**: ⭐⭐⭐⭐⭐ (매우 높음)  
-**난이도**: 🟡 중간  
+**우선순위**: ⭐⭐⭐⭐⭐ (매우 높음)
+**난이도**: 🟡 중간
 **예상**: 2일
 
 ---
@@ -111,8 +111,8 @@ def discover_regions(stat_code):
     # objL1 항목 목록 자동 조회
 ```
 
-**우선순위**: ⭐⭐⭐ (중간)  
-**난이도**: 🟢 낮음  
+**우선순위**: ⭐⭐⭐ (중간)
+**난이도**: 🟢 낮음
 **예상**: 1일
 
 ---
@@ -148,8 +148,8 @@ def fetch_all_key_statistics():
 # config/ecos_keywords.yaml
 ```
 
-**우선순위**: ⭐⭐⭐⭐ (높음)  
-**난이도**: 🟢 낮음  
+**우선순위**: ⭐⭐⭐⭐ (높음)
+**난이도**: 🟢 낮음
 **예상**: 1일
 
 ---
@@ -190,8 +190,8 @@ def capability_to_metric(capability):
             return metric_id
 ```
 
-**우선순위**: ⭐⭐⭐⭐⭐ (매우 높음)  
-**난이도**: 🟡 중간  
+**우선순위**: ⭐⭐⭐⭐⭐ (매우 높음)
+**난이도**: 🟡 중간
 **예상**: 2일
 
 ---
@@ -227,8 +227,8 @@ class BaseDataSource:
 LIMITS = load_from_yaml("rate_limits.yaml")
 ```
 
-**우선순위**: ⭐⭐⭐ (중간)  
-**난이도**: 🟢 낮음  
+**우선순위**: ⭐⭐⭐ (중간)
+**난이도**: 🟢 낮음
 **예상**: 1일
 
 ---
@@ -275,8 +275,8 @@ STAT_TABLES = {
 }
 ```
 
-**우선순위**: ⭐⭐⭐ (중간)  
-**난이도**: 🟢 낮음  
+**우선순위**: ⭐⭐⭐ (중간)
+**난이도**: 🟢 낮음
 **예상**: 0.5일
 
 ---
@@ -325,8 +325,8 @@ def _determine_stat_type(request):
                 return stat_type
 ```
 
-**우선순위**: ⭐⭐⭐ (중간)  
-**난이도**: 🟢 낮음  
+**우선순위**: ⭐⭐⭐ (중간)
+**난이도**: 🟢 낮음
 **예상**: 0.5일
 
 ---
@@ -364,8 +364,8 @@ def build_search_query_smart(request):
     # LLM에게 최적 쿼리 생성 요청
 ```
 
-**우선순위**: ⭐⭐ (낮음, 현재도 작동)  
-**난이도**: 🟡 중간  
+**우선순위**: ⭐⭐ (낮음, 현재도 작동)
+**난이도**: 🟡 중간
 **예상**: 1일
 
 ---
@@ -442,12 +442,12 @@ class EvidenceEngine:
     def _build_capability_mapping(self):
         """metrics_spec에서 동적 생성"""
         mapping = {}
-        
+
         for metric_id, spec in self.config.metrics.items():
             sources = spec.direct_evidence_sources
             for source in sources:
                 mapping[source] = metric_id
-        
+
         return mapping
 ```
 
@@ -496,15 +496,15 @@ statistics:
 
 def _determine_stat_type(request, stat_tables):
     metric_text = f"{request.metric_id} {request.context}".lower()
-    
+
     for stat_type, info in stat_tables.items():
         keywords = info.get("keywords", [])
         exclude = info.get("exclude_keywords", [])
-        
+
         if any(kw in metric_text for kw in keywords):
             if not any(ex in metric_text for ex in exclude):
                 return stat_type
-    
+
     return None
 ```
 
@@ -649,6 +649,8 @@ def _build_capability_mapping(self):
 
 ---
 
-**작성**: 2025-12-10  
-**발견**: 8개 하드코딩  
+**작성**: 2025-12-10
+**발견**: 8개 하드코딩
 **추천**: capability_to_metric 즉시 개선
+
+

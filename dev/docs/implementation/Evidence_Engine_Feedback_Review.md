@@ -72,7 +72,7 @@ class EvidencePolicy:
     min_literal_ratio: float
     max_spread_ratio: float
     allow_prior: bool  # ← cmis.yaml과 일치
-    
+
     @classmethod
     def from_config(cls, policy_id, config):
         """cmis.yaml에서 로드 (config-driven)"""
@@ -345,4 +345,6 @@ quality_profiles:
 **검토 완료**: 2025-12-09
 **승인 상태**: ✅ 구현 진행 승인
 **다음 문서**: Evidence_Engine_Implementation_Guide.md
+
+
 

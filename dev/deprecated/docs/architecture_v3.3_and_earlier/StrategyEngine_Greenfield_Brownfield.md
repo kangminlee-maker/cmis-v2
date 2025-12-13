@@ -11,7 +11,7 @@
 
 **정의**:
 - **'나'에 대한 정보가 없는 상태**에서 neutral한 시장 분석
-- ProjectContext 없음
+- FocalActorContext 없음
 - focal_actor 없음
 - **단, 최소 제약 조건은 입력 가능** (자본 규모, 시간 등)
 
@@ -43,7 +43,7 @@
 
 **정의**:
 - **'나'(focal_actor)에 대한 정의와 정보가 존재**
-- ProjectContext 있음 (baseline_state, assets_profile, constraints)
+- FocalActorContext 있음 (baseline_state, assets_profile, constraints)
 - '나'의 입장에서 시장 분석 및 전략 도출
 
 **질문**:
@@ -76,8 +76,8 @@
 
 | 구분 | 올바른 정의 | 핵심 |
 |------|-----------|------|
-| Greenfield | '나' 없이 시장 분석 | ProjectContext 없음 |
-| Brownfield | '나'의 관점에서 분석 | ProjectContext 있음 |
+| Greenfield | '나' 없이 시장 분석 | FocalActorContext 없음 |
+| Brownfield | '나'의 관점에서 분석 | FocalActorContext 있음 |
 
 ---
 
@@ -127,8 +127,8 @@ STR-002: Platform + Network effects
 
 **입력**:
 ```python
-# 1. ProjectContext 정의 ('나'를 정의)
-project_context = ProjectContext(
+# 1. FocalActorContext 정의 ('나'를 정의)
+project_context = FocalActorContext(
     project_context_id="PRJ-my-company",
     focal_actor_id="ACT-my-company",
     baseline_state={
@@ -227,10 +227,10 @@ def search_strategies(
     all_strategies = generate_all_possible_strategies(
         matched_patterns, gaps
     )
-    
+
     # 2. Goal 필터링
     strategies = filter_by_goal(all_strategies, goal)
-    
+
     # 3. Greenfield Constraints 필터링 (신규)
     if greenfield_constraints:
         strategies = filter_by_greenfield_constraints(
@@ -238,15 +238,15 @@ def search_strategies(
             greenfield_constraints
         )
         # 예: budget 10억 이내 전략만
-    
+
     # 4. Pattern Benchmark 기반 ROI
     for strategy in strategies:
         strategy.expected_outcomes = predict_from_benchmarks(strategy)
         strategy.execution_fit_score = None  # focal_actor 없음
-    
+
     # 5. ROI 기준 정렬
     strategies.sort(key=lambda s: s.expected_outcomes["roi"], reverse=True)
-    
+
     return strategies
 ```
 
@@ -257,40 +257,40 @@ def search_strategies(..., project_context):
     focal_strategies = generate_strategies_for_focal_actor(
         matched_patterns, gaps, project_context.focal_actor_id
     )
-    
+
     # 2. Hard Constraints 필터링
     strategies = filter_by_constraints(
         focal_strategies,
         project_context.constraints_profile["hard_constraints"]
     )
-    
+
     # 3. Execution Fit 계산
     for strategy in strategies:
         strategy.execution_fit_score = calculate_execution_fit(
             strategy,
             project_context  # assets_profile 활용
         )
-    
+
     # 4. baseline_state 기반 ROI (우리 회사 기준)
     for strategy in strategies:
         strategy.expected_outcomes = predict_from_baseline(
             strategy,
             project_context.baseline_state
         )
-    
+
     # 5. Soft Preferences 반영
     for strategy in strategies:
         strategy.adjusted_score = adjust_by_preferences(
             strategy,
             project_context.preference_profile
         )
-    
+
     # 6. Execution Fit × adjusted_score 정렬
     strategies.sort(
         key=lambda s: s.execution_fit_score * s.adjusted_score,
         reverse=True
     )
-    
+
     return strategies
 ```
 
@@ -309,7 +309,7 @@ def search_strategies(..., project_context):
 
 **프로세스**:
 ```python
-# ProjectContext 없이 시장 분석
+# FocalActorContext 없이 시장 분석
 snapshot = world_engine.snapshot("Adult_Language_Education_KR", "KR")
 matches = pattern_engine.match_patterns(snapshot.graph)
 gaps = pattern_engine.discover_gaps(snapshot.graph)
@@ -388,8 +388,8 @@ strategies_large = strategy_engine.search_strategies(
 
 **프로세스**:
 ```python
-# ProjectContext 정의 (우리 회사 = '나')
-project_context = ProjectContext(
+# FocalActorContext 정의 (우리 회사 = '나')
+project_context = FocalActorContext(
     project_context_id="PRJ-our-new-venture",
     baseline_state={
         "current_revenue": 0,  # 신규 진입이지만
@@ -459,8 +459,8 @@ strategies = strategy_engine.search_strategies(
 
 **프로세스**:
 ```python
-# ProjectContext (우리 = 기존 사업자)
-project_context = ProjectContext(
+# FocalActorContext (우리 = 기존 사업자)
+project_context = FocalActorContext(
     project_context_id="PRJ-our-expansion",
     baseline_state={
         "current_revenue": 5000000000,  # 우리 현재
@@ -493,7 +493,7 @@ strategies = strategy_engine.search_strategies(..., project_context)
 
 | 구분 | Greenfield | Brownfield |
 |------|-----------|-----------|
-| **ProjectContext** | 없음 | 있음 |
+| **FocalActorContext** | 없음 | 있음 |
 | **focal_actor** | 없음 | 있음 (우리) |
 | **baseline_state** | 없음 | 우리 현재 상태 |
 | **assets_profile** | 없음 | 우리 자산/역량 |
@@ -590,11 +590,11 @@ strategies.sort(
 
 **Case 1: 시장 보고서 (Greenfield)**:
 - "교육 시장에 진입하려면 어떤 전략이 있을까?" (주체 불명)
-- ProjectContext 없음
+- FocalActorContext 없음
 
 **Case 2: 우리 회사 진입 (Brownfield)**:
 - "우리 회사가 교육 시장에 진입하려면?" (주체 명확)
-- ProjectContext 있음
+- FocalActorContext 있음
 
 → **신규 여부가 아니라 '나'의 존재 여부가 기준!**
 

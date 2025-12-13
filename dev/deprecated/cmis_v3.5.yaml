@@ -180,7 +180,7 @@ cmis:
               - "blockchain"
               - "iot"
               - "other"
-          
+
           domain_expertise:
             value_type: "enum"
             allowed_values:
@@ -194,32 +194,32 @@ cmis:
               - "manufacturing"
               - "real_estate"
               - "other"
-          
+
           maturity_level:
             value_type: "enum"
             allowed_values: ["concept","prototype","mvp","early","production_ready","mature","industry_leading"]
-          
+
           scale_tier:
             value_type: "enum"
             allowed_values: ["poc","startup_scale","growth_stage","enterprise","hyperscale"]
-          
+
           deployment_type:
             value_type: "enum"
             allowed_values: ["on_premise","cloud_native","hybrid","saas","managed_service"]
-          
+
           content_type:
             value_type: "enum"
             allowed_values: ["curriculum","course_content","assessment","platform","tool","service","other"]
-          
+
           language_coverage:
             value_type: "list"
             item_type: "string"
             note: "지원 언어 목록 (예: ['korean','english','chinese'])"
-          
+
           geographic_coverage:
             value_type: "enum"
             allowed_values: ["local","regional","national","international","global"]
-          
+
           regulatory_compliance:
             value_type: "list"
             item_type: "string"
@@ -282,7 +282,7 @@ cmis:
     # ---------------- Orchestration Layer (신규 v3.6.0) ----------------
     orchestration_layer:
       description: "Self-Orchestration 계층 - Objective-Oriented 아키텍처의 핵심"
-      
+
       philosophy:
         architecture_type: "Objective-Oriented (목표 중심)"
         note: "Process-Oriented (고정 프로세스) 아님!"
@@ -292,13 +292,13 @@ cmis:
           - "Structure/Opportunity/Strategy 모두 중간 결과에 따라 달라짐"
           - "새로운 발견 → 능동적 판단 → 경로 변경"
           - "목표 달성이 유일한 제약, 프로세스는 자유"
-        
+
         why_dynamic_replanning_essential:
           reason_1: "Evidence 품질에 따라 다음 단계가 완전히 달라짐"
           reason_2: "계산/추정 결과가 예상과 다르면 전략 방향 전환 필요"
           reason_3: "시장 발견 (작음/큼, 집중/분산) → Opportunity 접근 변경"
           example: "시장 포화 발견 → Gap Discovery ❌ → Adjacent Market ✅"
-        
+
         why_guardian_critical:
           reason: "프로세스 자유도 높음 → 목적 잃을 위험 높음 → 감독 강화 필수"
           guardian_role:
@@ -306,7 +306,7 @@ cmis:
             - "탐색 깊이 제한 (Depth Control)"
             - "순환 감지 (Loop Detection)"
             - "완전한 Decision Logging (투명성/재현성)"
-      
+
       core_components:
         - id: "adaptive_orchestrator"
           description: "Objective-Oriented 동적 재설계 엔진 (v7 Self-Orchestration 계승)"
@@ -320,24 +320,24 @@ cmis:
             - "Workflow 선택/조합 (Single/Multi/Custom/Iterative)"
             - "OrchestrationProvider에 위임 (LLM 추상화)"
             - "완전한 Decision Logging (재현/디버깅/감사)"
-          
+
           decision_types:
             - id: "single"
               description: "하나의 canonical_workflow 실행"
               use_case: "간단한 질문 (시장 규모는?)"
-            
+
             - id: "multi"
               description: "여러 canonical_workflow 순차 실행"
               use_case: "복잡한 질문 (시장 분석 + 기회 발굴)"
-            
+
             - id: "custom"
               description: "Custom path (canonical 조합/변형)"
               use_case: "특수 요구사항"
-            
+
             - id: "iterative"
               description: "점진적 실행 (중간 평가 후 계속)"
               use_case: "불확실성 높은 질문"
-        
+
         - id: "orchestration_provider"
           description: "LLM 기반 또는 규칙 기반 orchestration 제공자 (추상화)"
           implementations:
@@ -345,7 +345,7 @@ cmis:
               description: "Cursor Agent 활용 (IDE 내장)"
               llm: "cursor_builtin"
               use_case: "Cursor IDE에서 사용"
-              
+
             - id: "external_llm_orchestration_provider"
               description: "외부 LLM API 활용 (GPT-4, Claude 등)"
               llm: "external_api"
@@ -355,29 +355,29 @@ cmis:
                 - "gpt-4-turbo"
                 - "claude-3-opus"
                 - "claude-3-sonnet"
-              
+
             - id: "rule_based_orchestration_provider"
               description: "키워드 기반 규칙 (Fallback)"
               llm: "none"
               use_case: "CLI, LLM 없을 때"
-      
+
       interface_orchestration_mapping:
         - interface_id: "cli"
           orchestration_provider: "rule_based"
           reason: "LLM 불필요, 명령어 기반"
-        
+
         - interface_id: "cursor_agent"
           orchestration_provider: "cursor_orchestration"
           reason: "Cursor Agent 직접 활용"
-        
+
         - interface_id: "notebook"
           orchestration_provider: "cursor_orchestration | rule_based"
           reason: "선택적 (개발자 선호)"
-        
+
         - interface_id: "web_app"
           orchestration_provider: "external_llm"
           reason: "프로덕션, 사용자 대면"
-        
+
         - interface_id: "api"
           orchestration_provider: "external_llm | rule_based"
           reason: "클라이언트 지정 또는 기본 규칙"
@@ -703,7 +703,7 @@ cmis:
                 type: "int"
                 default: 1
                 description: "버전 번호 (LearningEngine에서 자동 증가)"
-              
+
               previous_version_id:
                 type: "optional[string]"
                 description: "이전 버전 ID (버전 체인)"
@@ -1049,7 +1049,7 @@ cmis:
                 - "project_context_id: focal_actor + baseline_state → R-Graph"
                 - "서브그래프 추출 (focal_actor 중심 N-hop)"
                 - "slice_spec 커스터마이즈 (n_hops, edge 타입)"
-            
+
             - name: "ingest_evidence"
               description: "Evidence → R-Graph 자동 변환 및 반영"
               version: "v2.0"
@@ -1063,9 +1063,9 @@ cmis:
                 - "EvidenceMapper: 6개 타입 자동 변환"
                 - "Conflict 해결 (최신 우선)"
                 - "Lineage 자동 기록"
-            
+
             - name: "ingest_project_context"
-              description: "ProjectContext → ProjectOverlay 투영"
+              description: "FocalActorContext → ProjectOverlay 투영"
               version: "v2.0"
               input:
                 project_context: "project_context"
@@ -1102,7 +1102,7 @@ cmis:
               notes:
                 - "project_context_id 없으면 structure_fit_score만 계산"
                 - "project_context_id 있으면 capability_traits 기반 execution_fit_score 추가"
-            
+
             - name: "discover_gaps"
               description: "적용 가능하지만 적용되지 않은 패턴/메커니즘 갭 탐지"
               input:
@@ -1140,7 +1140,7 @@ cmis:
               notes:
                 - "project_context_id 있으면 project-level Metric 계산 가능"
                 - "MET-SOM_for_project, MET-Base_Revenue_for_project 등"
-            
+
             - name: "simulate_scenario"
               description: "D-Graph의 Scenario에 대해 시뮬레이션 수행"
               input:
@@ -1157,7 +1157,7 @@ cmis:
             description: >
               하나의 Metric을 해결하기 위해
               (1) Direct Evidence → (2) Derived/계산 → (3) Prior/구조 추정 → (4) Fusion을 수행하는 파이프라인.
-              v7 Estimator 4-Stage의 일반화 버전. 
+              v7 Estimator 4-Stage의 일반화 버전.
             stages:
               - id: "direct_evidence"
                 uses: ["evidence_engine.fetch_for_metrics"]
@@ -1725,7 +1725,7 @@ cmis:
                 - "API 레벨 분리 (Public / Orchestration / Core)"
                 - "D-Graph 저장 (strategy 노드 + strategy_uses_pattern edge)"
                 - "Strategy 캐싱 (재사용)"
-            
+
             - name: "evaluate_portfolio_api"
               description: "여러 Strategy를 포트폴리오로 묶어 평가"
               version: "v1.0"
@@ -1762,7 +1762,7 @@ cmis:
                 outcome_ids: "list[outcome_id]"
               output:
                 updated_entities: "dict"
-            
+
             - name: "update_project_context_from_outcome"
               description: "실제 Outcome 기반 Project Context의 baseline/learned_patterns 업데이트"
               input:
@@ -1805,7 +1805,7 @@ cmis:
                 - "Evidence 없으면 Uninformative Prior (confidence 0.1)"
                 - "reporting_strict: confidence×0.5, spread×2.0"
                 - "exploration_friendly: spread×1.2"
-            
+
             - name: "update_belief"
               description: "LearningEngine이 Outcome 기반 업데이트"
               input:
@@ -1823,7 +1823,7 @@ cmis:
                 - "Bayesian: Prior × Likelihood → Posterior"
                 - "Replace: 관측값만으로 새 분포"
                 - "누적 관측 시 신뢰도 증가 (n_observations)"
-            
+
             - name: "propagate_uncertainty"
               description: "Monte Carlo 불확실성 전파"
               input:
@@ -1837,7 +1837,7 @@ cmis:
                 - "Monte Carlo 시뮬레이션 (기본 10,000 샘플)"
                 - "민감도 분석 (분산 기여도)"
                 - "Phase 3: samples는 artifact_store 저장"
-          
+
           core_components:
             - id: "prior_manager"
               description: "Prior Distribution 저장/조회/생성"
@@ -1847,7 +1847,7 @@ cmis:
                 - "Pattern Benchmark 기반 Prior 생성"
                 - "Uninformative Prior 생성"
                 - "value_store 영속성"
-            
+
             - id: "belief_updater"
               description: "Bayesian Update 로직"
               methods:
@@ -1859,7 +1859,7 @@ cmis:
                 - "Conjugate Prior 해석적 업데이트"
                 - "보수적 학습 (천천히 개선)"
                 - "lineage EVD-*/OUT-* 분리"
-            
+
             - id: "uncertainty_propagator"
               description: "불확실성 전파 및 시뮬레이션"
               evaluator: "eval (Phase 3: asteval)"
@@ -1867,7 +1867,7 @@ cmis:
                 - "Monte Carlo 시뮬레이션"
                 - "민감도 분석"
                 - "Sobol Sequence (Phase 3)"
-          
+
           prior_strategies:
             - id: "pattern_benchmark"
               description: "Pattern Benchmark 기반 Prior 생성"
@@ -1880,7 +1880,7 @@ cmis:
               notes:
                 - "유사 Pattern Benchmark 가중 평균"
                 - "보수적 확대 (std × 1.5)"
-            
+
             - id: "uninformative"
               description: "매우 넓은 범위의 Uninformative Prior"
               confidence: 0.1
@@ -1888,7 +1888,7 @@ cmis:
                 market_size: "1M ~ 1T (loguniform)"
                 unit_economics: "100 ~ 1M (loguniform)"
                 ratio: "0 ~ 1 (uniform)"
-          
+
           update_modes:
             - id: "bayesian"
               description: "베이지안 업데이트 (Prior × Likelihood → Posterior)"
@@ -1897,7 +1897,7 @@ cmis:
                 - "Normal-Normal: 해석적"
                 - "관측 누적 시 분산 감소"
                 - "n_observations 기반 신뢰도 증가"
-            
+
             - id: "replace"
               description: "직접 대체 (관측값 기반 새 분포)"
               features:

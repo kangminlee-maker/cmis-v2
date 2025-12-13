@@ -146,7 +146,7 @@ archetype:
 2. `TestContextArchetype` (4개)
 3. `TestGapDiscovery` (3개)
 4. `TestPatternEngineV2Phase2` (4개)
-5. `TestProjectContext` (2개)
+5. `TestFocalActorContext` (2개)
 6. `TestGapCandidateFields` (1개)
 7. `TestIntegrationPhase2` (2개)
 

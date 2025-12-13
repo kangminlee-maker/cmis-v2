@@ -42,7 +42,7 @@
    - Prior/Belief 관리
    - Bayesian Update
    - Monte Carlo
-   
+
    보조 문서:
    - BeliefEngine_Feedback_Review.md
    - BeliefEngine_Implementation_Complete.md
@@ -61,7 +61,7 @@
 4. **StrategyEngine_Design_Enhanced.md**
    - Pattern → Strategy
    - Portfolio 최적화
-   
+
    보조 문서:
    - StrategyEngine_Greenfield_Brownfield.md
    - StrategyEngine_Constraints_Design.md
@@ -69,7 +69,7 @@
 5. **LearningEngine_Design_Enhanced.md**
    - Outcome 학습
    - 4-Learner 구조
-   - ProjectContext 버전 관리
+   - FocalActorContext 버전 관리
 
 6. **Workflow_CLI_Design_Enhanced.md**
    - 8개 명령어
@@ -83,7 +83,7 @@
 ### 프로젝트 전체 (1개)
 
 **cmis_project_context_layer_design.md**
-- ProjectContext 설계
+- FocalActorContext 설계
 - Greenfield/Brownfield 정의
 
 ---

@@ -1,7 +1,7 @@
 # PatternEngine 설계 청사진 (Design Blueprint)
 
-**작성일**: 2025-12-10  
-**버전**: v1.0  
+**작성일**: 2025-12-10
+**버전**: v1.0
 **상태**: 설계안 (Design Proposal)
 
 ---
@@ -144,7 +144,7 @@ PatternEngine은 다음 CMIS 철학을 준수합니다:
 pattern:
   pattern_id: "PAT-subscription_model"
   name: "구독형 비즈니스 모델"
-  
+
   # Trait 조합으로 정의
   trait_constraints:
     money_flow:
@@ -153,7 +153,7 @@ pattern:
         payment_recurs: true
       optional_traits:
         recurrence: ["monthly", "yearly"]
-  
+
   # Graph 구조로 정의
   graph_structure:
     requires:
@@ -228,7 +228,7 @@ pattern:
 context_archetype:
   archetype_id: "ARCH-digital_service_KR"
   name: "한국 디지털 서비스 시장"
-  
+
   expected_patterns:
     core:  # 거의 항상 존재해야 함
       - "PAT-subscription_model"
@@ -314,7 +314,7 @@ class PatternSpec:
     name: str
     family: str  # "business_model_patterns"
     description: str
-    
+
     # Trait 제약
     trait_constraints: Dict[str, Any]
     # {
@@ -323,7 +323,7 @@ class PatternSpec:
     #     "optional_traits": {"recurrence": ["monthly", "yearly"]}
     #   }
     # }
-    
+
     # Graph 구조 제약
     graph_structure: Dict[str, Any]
     # {
@@ -332,23 +332,23 @@ class PatternSpec:
     #     {"edge_type": "actor_pays_actor", "min_count": 10}
     #   ]
     # }
-    
+
     # 정량 제약 (선택)
     quantitative_bounds: Optional[Dict[str, Any]]
     # {
     #   "churn_rate": {"min": 0.01, "max": 0.08},  # 1-8%
     #   "gross_margin": {"min": 0.60, "max": 0.85}  # 60-85%
     # }
-    
+
     # Pattern 관계
     composes_with: List[str] = []  # 함께 나타나는 Pattern
     conflicts_with: List[str] = []  # 공존 불가 Pattern
     specializes: Optional[str] = None  # 특수화 대상
-    
+
     # Benchmark (ValueEngine 연동)
     benchmark_metrics: List[str] = []
     # ["MET-Churn_rate", "MET-Gross_margin"]
-    
+
     # Context Archetype 적합성
     suited_for_contexts: List[str] = []
 ```
@@ -363,7 +363,7 @@ pattern:
   description: |
     정기적인 결제 구조를 가지는 비즈니스 모델.
     월/연 단위 반복 수익이 핵심.
-    
+
   trait_constraints:
     money_flow:
       required_traits:
@@ -374,54 +374,54 @@ pattern:
           - "monthly"
           - "yearly"
           - "quarterly"
-    
+
     actor:
       payer_role: "customer"
       min_payers: 10  # 최소 구독자 수
-  
+
   graph_structure:
     requires:
       - node_type: "money_flow"
         min_count: 1
         traits:
           revenue_model: "subscription"
-      
+
       - edge_type: "actor_pays_actor"
         min_count: 10
         pattern: "recurring"
-  
+
   quantitative_bounds:
     churn_rate:
       min: 0.01
       max: 0.15
       typical: [0.03, 0.08]
       source: "pattern_benchmarks"
-    
+
     gross_margin:
       min: 0.40
       max: 0.95
       typical: [0.60, 0.85]
       source: "pattern_benchmarks"
-    
+
     ltv_cac_ratio:
       min: 1.0
       typical: [3.0, 5.0]
-  
+
   composes_with:
     - "PAT-freemium_model"
     - "PAT-tiered_pricing"
     - "PAT-network_effects"
-  
+
   conflicts_with:
     - "PAT-transaction_model"
-  
+
   benchmark_metrics:
     - "MET-Churn_rate"
     - "MET-Gross_margin"
     - "MET-LTV"
     - "MET-CAC"
     - "MET-Payback_period"
-  
+
   suited_for_contexts:
     - "ARCH-digital_service_KR"
     - "ARCH-saas_global"
@@ -441,7 +441,7 @@ def match_patterns(
 ) -> List[PatternMatch]:
     """
     Pattern 매칭 알고리즘
-    
+
     프로세스:
     1. Trait 기반 필터링 (빠른 제거)
     2. Graph 구조 검증 (정밀 매칭)
@@ -449,29 +449,29 @@ def match_patterns(
     4. (선택) Execution Fit 점수 계산
     5. Combined Score = structure × execution
     """
-    
+
     matches = []
     patterns = PatternLibrary.get_all()
-    
+
     for pattern in patterns:
         # Stage 1: Trait Filtering (O(n) where n = nodes)
         trait_match = check_trait_constraints(
-            graph, 
+            graph,
             pattern.trait_constraints
         )
-        
+
         if not trait_match:
             continue  # 빠른 제거
-        
+
         # Stage 2: Graph Structure Verification
         structure_match = check_graph_structure(
             graph,
             pattern.graph_structure
         )
-        
+
         if not structure_match:
             continue
-        
+
         # Stage 3: Structure Fit Scoring (0.0 ~ 1.0)
         structure_fit = calculate_structure_fit(
             graph,
@@ -479,7 +479,7 @@ def match_patterns(
             trait_match,
             structure_match
         )
-        
+
         # Stage 4: Execution Fit (Project Context 있을 때만)
         execution_fit = None
         if project_context_id:
@@ -488,7 +488,7 @@ def match_patterns(
                 pattern,
                 project_context
             )
-        
+
         # Pattern Match 생성
         match = PatternMatch(
             pattern_id=pattern.pattern_id,
@@ -501,9 +501,9 @@ def match_patterns(
                 "node_ids": trait_match["matched_nodes"]
             }
         )
-        
+
         matches.append(match)
-    
+
     # 정렬: structure_fit 우선, 같으면 execution_fit
     matches.sort(
         key=lambda m: (
@@ -512,7 +512,7 @@ def match_patterns(
         ),
         reverse=True
     )
-    
+
     return matches
 ```
 
@@ -527,33 +527,33 @@ def calculate_structure_fit(
 ) -> float:
     """
     Structure Fit 점수 계산
-    
+
     점수 = (Trait 점수 × 0.6) + (Graph 구조 점수 × 0.4)
-    
+
     Trait 점수:
     - required_traits 모두 일치: 1.0
     - 일부만 일치: 일치 비율
-    
+
     Graph 구조 점수:
     - requires 모두 만족: 1.0
     - 일부만 만족: 만족 비율
     """
-    
+
     # Trait Score
     required_traits = pattern.trait_constraints
     matched_traits = trait_match["matched_traits"]
-    
+
     trait_score = len(matched_traits) / len(required_traits)
-    
+
     # Structure Score
     required_structures = pattern.graph_structure["requires"]
     satisfied_structures = structure_match["satisfied"]
-    
+
     structure_score = len(satisfied_structures) / len(required_structures)
-    
+
     # Combined
     final_score = (trait_score * 0.6) + (structure_score * 0.4)
-    
+
     return final_score
 ```
 
@@ -562,58 +562,58 @@ def calculate_structure_fit(
 ```python
 def calculate_execution_fit(
     pattern: PatternSpec,
-    project_context: ProjectContext
+    project_context: FocalActorContext
 ) -> float:
     """
     Execution Fit 점수 계산 (Project Context 기반)
-    
+
     점수 = (Capability 일치도 × 0.5) + (제약 충족도 × 0.3) + (자산 충분성 × 0.2)
-    
+
     Capability 일치도:
     - Pattern이 요구하는 capability_traits와
       Project Context의 capability_traits 비교
-    
+
     제약 충족도:
     - Pattern의 실행이 hard_constraints 위반하지 않는지
-    
+
     자산 충분성:
     - Pattern 실행에 필요한 channels, brand_assets 등 확보 여부
     """
-    
+
     # Capability Matching
     required_capabilities = pattern.required_capabilities or []
     available_capabilities = project_context.assets_profile.capability_traits
-    
+
     capability_score = calculate_capability_overlap(
         required_capabilities,
         available_capabilities
     )
-    
+
     # Constraints Check
     hard_constraints = project_context.constraints_profile.hard_constraints
     violates_constraints = check_constraint_violations(
         pattern,
         hard_constraints
     )
-    
+
     constraint_score = 0.0 if violates_constraints else 1.0
-    
+
     # Asset Sufficiency
     required_assets = pattern.required_assets or {}
     available_assets = project_context.assets_profile
-    
+
     asset_score = calculate_asset_sufficiency(
         required_assets,
         available_assets
     )
-    
+
     # Combined
     final_score = (
         capability_score * 0.5 +
         constraint_score * 0.3 +
         asset_score * 0.2
     )
-    
+
     return final_score
 ```
 
@@ -630,7 +630,7 @@ def discover_gaps(
 ) -> List[GapCandidate]:
     """
     Gap Discovery 알고리즘
-    
+
     프로세스:
     1. Context Archetype 결정 (도메인/지역 기반)
     2. Expected Pattern Set 조회
@@ -638,48 +638,48 @@ def discover_gaps(
     4. Gap = Expected - Matched
     5. Feasibility 평가 (Project Context 기반)
     """
-    
+
     gaps = []
-    
+
     # 1. Context Archetype 결정
     archetype = determine_context_archetype(graph)
-    
+
     if not archetype:
         return []  # Archetype 판별 불가
-    
+
     # 2. Expected Pattern Set
     expected_patterns = ContextArchetypeLibrary.get_expected_patterns(
         archetype.archetype_id
     )
-    
+
     # 3. Matched Patterns
     matched_patterns = match_patterns(graph, project_context_id)
     matched_ids = {m.pattern_id for m in matched_patterns}
-    
+
     # 4. Gap Identification
     for expected in expected_patterns:
         if expected.pattern_id not in matched_ids:
             # Gap 발견!
             pattern = PatternLibrary.get(expected.pattern_id)
-            
+
             # 5. Feasibility 평가
             feasibility = "unknown"
             execution_fit = None
-            
+
             if project_context_id:
                 project_context = load_project_context(project_context_id)
                 execution_fit = calculate_execution_fit(
                     pattern,
                     project_context
                 )
-                
+
                 if execution_fit >= 0.7:
                     feasibility = "high"
                 elif execution_fit >= 0.4:
                     feasibility = "medium"
                 else:
                     feasibility = "low"
-            
+
             gap = GapCandidate(
                 pattern_id=pattern.pattern_id,
                 description=f"Missing: {pattern.name}",
@@ -691,13 +691,13 @@ def discover_gaps(
                     "expected_level": expected.level
                 }
             )
-            
+
             gaps.append(gap)
-    
+
     # 정렬: expected_level (core > common > rare), feasibility (high > medium > low)
     level_order = {"core": 3, "common": 2, "rare": 1}
     feasibility_order = {"high": 3, "medium": 2, "low": 1, "unknown": 0}
-    
+
     gaps.sort(
         key=lambda g: (
             level_order.get(g.expected_level, 0),
@@ -705,7 +705,7 @@ def discover_gaps(
         ),
         reverse=True
     )
-    
+
     return gaps
 ```
 
@@ -716,34 +716,34 @@ context_archetype:
   archetype_id: "ARCH-digital_service_KR"
   name: "한국 디지털 서비스 시장"
   description: "한국의 B2C 디지털 서비스 (SaaS, 플랫폼, 콘텐츠 등)"
-  
+
   criteria:
     region: "KR"
     delivery_channel: "online"
     resource_kind: ["digital_service", "software_license"]
-  
+
   expected_patterns:
     core:  # 거의 항상 존재 (90%+)
       - pattern_id: "PAT-subscription_model"
         weight: 0.9
-      
+
       - pattern_id: "PAT-freemium_model"
         weight: 0.7
-    
+
     common:  # 자주 관찰 (50-90%)
       - pattern_id: "PAT-network_effects"
         weight: 0.6
-      
+
       - pattern_id: "PAT-tiered_pricing"
         weight: 0.5
-      
+
       - pattern_id: "PAT-viral_growth"
         weight: 0.4
-    
+
     rare:  # 드물지만 기회 (10-50%)
       - pattern_id: "PAT-multi_sided_market"
         weight: 0.3
-      
+
       - pattern_id: "PAT-winner_take_all"
         weight: 0.2
 ```
@@ -891,7 +891,7 @@ Next Matching 시 개선된 Benchmark 사용
 context_archetype:
   archetype_id: "ARCH-digital_service_US"
   region: "US"
-  
+
   expected_patterns:
     core:
       - pattern_id: "PAT-freemium_model"  # US에서 더 흔함
@@ -911,7 +911,7 @@ pattern:
   pattern_id: "PAT-healthcare_subscription"
   family: "business_model_patterns"
   domain: "healthcare"
-  
+
   trait_constraints:
     actor:
       required_traits:
@@ -935,13 +935,13 @@ pattern:
     traits: dict (Trait 제약)
     constraints: list (Graph 구조 제약)
     benchmark_metrics: list (MET-*)
-    
+
 pattern_family:
   fields:
     family_id: string
     name: string
     description: string
-    
+
 context_archetype:
   fields:
     archetype_id: string (ARCH-*)
@@ -1106,13 +1106,13 @@ def _estimate_from_pattern(
     matched_patterns: List[PatternMatch]
 ) -> Optional[Distribution]:
     """Pattern Benchmark 기반 Prior 추정"""
-    
+
     for match in matched_patterns:
         pattern = PatternLibrary.get(match.pattern_id)
-        
+
         if metric_id in pattern.benchmark_metrics:
             bounds = pattern.quantitative_bounds.get(metric_id)
-            
+
             if bounds:
                 return Distribution(
                     min=bounds["min"],
@@ -1121,7 +1121,7 @@ def _estimate_from_pattern(
                     source=f"pattern_benchmark:{match.pattern_id}",
                     confidence=match.structure_fit_score
                 )
-    
+
     return None
 ```
 
@@ -1151,9 +1151,9 @@ def _generate_strategy_from_patterns(
     goal: Goal
 ) -> List[Strategy]:
     """Pattern 조합 기반 Strategy 생성"""
-    
+
     strategies = []
-    
+
     # 현재 Pattern 유지 + Gap Pattern 추가 전략
     for gap in gap_patterns:
         if gap.feasibility in ["high", "medium"]:
@@ -1168,7 +1168,7 @@ def _generate_strategy_from_patterns(
                 }
             )
             strategies.append(strategy)
-    
+
     return strategies
 ```
 
@@ -1326,8 +1326,8 @@ Next Matching에서 개선된 Benchmark 사용
 
 ---
 
-**작성**: 2025-12-10  
-**작성자**: CMIS Architecture Team  
-**상태**: Design Proposal  
+**작성**: 2025-12-10
+**작성자**: CMIS Architecture Team
+**상태**: Design Proposal
 **다음 단계**: 설계 리뷰 및 Spike 착수
 

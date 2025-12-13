@@ -307,7 +307,7 @@ strategies = engine.search_strategies_api(
 
 ```python
 # 우리 회사 정의
-project_context = ProjectContext(
+project_context = FocalActorContext(
     baseline_state={"current_revenue": 5000000000},
     assets_profile={"capability_traits": [...]},
     constraints_profile={"hard_constraints": [...]}
@@ -385,3 +385,5 @@ Phase 3: ✅ D-Graph + Library
 **완성도**: 100%
 
 **StrategyEngine v1.0 완전 완성!** 🎉🚀✨
+
+

@@ -1,7 +1,7 @@
 # 검색 쿼리 고도화 전략 분석
 
-**작성일**: 2025-12-10  
-**목적**: 검색 쿼리 확장 및 고도화 방안  
+**작성일**: 2025-12-10
+**목적**: 검색 쿼리 확장 및 고도화 방안
 **중요도**: ⭐⭐⭐⭐⭐ (리서치 핵심)
 
 ---
@@ -16,25 +16,25 @@
 ```python
 def build_search_query(request):
     parts = []
-    
+
     # domain_id
     if domain_id:
         parts.append(domain_id.replace("_", " "))
-    
+
     # region
     if region == "KR":
         parts.append("Korea")
-    
+
     # metric_id - 간단한 키워드 추가
     if "revenue" in metric_id or "tam" in metric_id:
         parts.append("market size")
-    
+
     if "revenue" in metric_id:
         parts.append("revenue")
-    
+
     # year
     parts.append(str(year))
-    
+
     return " ".join(parts)
 ```
 
@@ -62,7 +62,7 @@ templates:
   MET-TAM:
     template: "{domain} {region} total addressable market size {year}"
     keywords: [market size, total addressable market]
-  
+
   MET-Revenue:
     template: "{domain} {region} market size revenue {year}"
     keywords: [market size, revenue]
@@ -119,7 +119,7 @@ default:
 ```python
 def generate_query_variations(request):
     """쿼리 변형 생성
-    
+
     Returns:
         [
             "Korea adult language education market revenue 2024",
@@ -129,22 +129,22 @@ def generate_query_variations(request):
         ]
     """
     base_query = build_base_query(request)
-    
+
     variations = [base_query]
-    
+
     # 1. 동의어 변형
     variations.append(replace_synonyms(base_query))
-    
+
     # 2. 단어 순서 변경
     variations.append(reorder_keywords(base_query))
-    
+
     # 3. 도메인 특화 용어
     variations.append(add_domain_terms(base_query, request.domain))
-    
+
     return variations
 ```
 
-**예상 코드**: 150-200 라인  
+**예상 코드**: 150-200 라인
 **효과**: 검색 성공률 +30%
 
 ---
@@ -157,13 +157,13 @@ def generate_query_variations(request):
 ```python
 def fetch_with_multi_query(request):
     """Multi-query 전략
-    
+
     1. 3-5개 쿼리 변형 생성
     2. 병렬 실행
     3. 결과 병합 (가장 신뢰도 높은 것 선택)
     """
     queries = generate_query_variations(request)
-    
+
     # 병렬 실행
     results = []
     for query in queries:
@@ -176,14 +176,14 @@ def fetch_with_multi_query(request):
             })
         except:
             continue
-    
+
     # 가장 좋은 결과 선택
     best_result = max(results, key=lambda r: r["confidence"])
-    
+
     return best_result
 ```
 
-**예상 코드**: 200-250 라인  
+**예상 코드**: 200-250 라인
 **효과**: 검색 성공률 +50%, 품질 +30%
 
 ---
@@ -196,14 +196,14 @@ def fetch_with_multi_query(request):
 ```python
 def generate_query_with_llm(request, context):
     """LLM 기반 쿼리 생성
-    
+
     Prompt:
     - Domain: Adult Language Education
     - Region: Korea
     - Metric: Total Addressable Market
     - Year: 2024
     - Goal: Find market size revenue data
-    
+
     → LLM이 최적 검색 쿼리 생성
     """
     prompt = f"""
@@ -212,22 +212,22 @@ def generate_query_with_llm(request, context):
     - Domain: {context.domain}
     - Region: {context.region}
     - Year: {context.year}
-    
+
     Queries should be:
     1. Specific and targeted
     2. Use industry terms
     3. Likely to return numeric data
     4. Varied approaches (top-down, competitor, market research)
-    
+
     Return as JSON array.
     """
-    
+
     queries = llm_service.call_structured(prompt, schema=QueryList)
-    
+
     return queries
 ```
 
-**예상 코드**: 250-300 라인  
+**예상 코드**: 250-300 라인
 **효과**: 검색 품질 +50%, 성공률 +70%
 
 ---
@@ -240,26 +240,26 @@ def generate_query_with_llm(request, context):
 ```python
 class QueryLearner:
     """쿼리 성능 학습
-    
+
     - 쿼리별 성공률 추적
     - 도메인별 최적 패턴 학습
     - 자동 최적화
     """
-    
+
     def record_query_result(self, query, metric, success, quality):
         """쿼리 결과 기록"""
         # DB에 저장
-        
+
     def get_best_queries(self, metric, domain):
         """과거 성공한 쿼리 조회"""
         # 유사 context에서 성공한 쿼리 반환
-        
+
     def optimize_query(self, base_query, context):
         """학습 기반 최적화"""
         # 과거 패턴 적용
 ```
 
-**예상 코드**: 400-500 라인  
+**예상 코드**: 400-500 라인
 **효과**: 장기적 품질 향상 +100%
 
 ---
@@ -293,7 +293,7 @@ class QueryLearner:
    ```python
    def fetch_with_variations(request):
        queries = generator.generate(base_query)
-       
+
        for query in queries:
            try:
                result = search(query)
@@ -323,14 +323,14 @@ class QueryLearner:
    - Region: {region}
    - Metric: {metric}
    - Year: {year}
-   
+
    Generate 5 search queries optimized for:
    1. Finding market size data
    2. Competitor revenue
    3. Industry reports
    4. Government statistics
    5. News/announcements
-   
+
    Each query should target different data sources.
    """
    ```
@@ -404,7 +404,7 @@ query = "adult language education Korea revenue 2024"
 # 실패 시 포기
 ```
 
-**성공률**: ~70%  
+**성공률**: ~70%
 **품질**: 중간
 
 ---
@@ -426,7 +426,7 @@ queries = [
 # 쿼리 성능 학습
 ```
 
-**성공률**: ~95%+  
+**성공률**: ~95%+
 **품질**: 높음
 
 ---
@@ -447,7 +447,7 @@ domain_synonyms:
     - teaching
     - academy
     - school
-  
+
   language:
     - linguistic
     - tongues
@@ -459,7 +459,7 @@ metric_synonyms:
     - income
     - turnover
     - earnings
-  
+
   market size:
     - market value
     - industry size
@@ -477,7 +477,7 @@ region_synonyms:
 ```python
 def expand_with_synonyms(base_query, synonyms):
     """동의어로 쿼리 확장
-    
+
     Returns:
         [
             "Korea adult language education market revenue 2024",
@@ -497,16 +497,16 @@ def expand_with_synonyms(base_query, synonyms):
 ```python
 def fetch_with_multi_query(request):
     """여러 쿼리 변형 시도
-    
+
     Strategy:
     1. 기본 쿼리
     2. 동의어 변형 2-3개
     3. 순서 변경 1-2개
-    
+
     → 각각 실행, 가장 좋은 결과 선택
     """
     queries = generate_variations(request)
-    
+
     results = []
     for query in queries:
         try:
@@ -519,10 +519,10 @@ def fetch_with_multi_query(request):
                 })
         except:
             continue
-    
+
     if not results:
         raise DataNotFoundError()
-    
+
     # 최고 품질 선택
     best = max(results, key=lambda r: r["quality"])
     return best["data"]
@@ -544,16 +544,16 @@ domains:
       - e-learning
       - online education
       - education market
-    
+
     data_sources:
       - education ministry
       - industry reports
       - market research
-    
+
     query_patterns:
       - "{domain} {region} EdTech market size {year}"
       - "{region} online education industry revenue {year}"
-  
+
   healthcare:
     preferred_terms:
       - HealthTech
@@ -565,7 +565,7 @@ domains:
 def build_domain_optimized_query(request, domain):
     """도메인별 최적화 쿼리"""
     strategy = load_domain_strategy(domain)
-    
+
     # 도메인 특화 용어 사용
     # 산업별 best practices
 ```
@@ -581,42 +581,42 @@ def build_domain_optimized_query(request, domain):
 ```python
 class QueryExpansionEngine:
     """쿼리 확장 엔진
-    
+
     기능:
     1. 동의어 확장
     2. 순서 변형
     3. 키워드 추가/제거
     4. 도메인 최적화
     """
-    
+
     def __init__(self):
         self.synonyms = self._load_synonyms()
         self.domain_strategies = self._load_domain_strategies()
-    
+
     def expand(self, base_query, context, max_variations=5):
         """쿼리 확장
-        
+
         Returns:
             최대 5개 변형
         """
         variations = [base_query]
-        
+
         # 동의어
         variations.extend(
             self._synonym_variations(base_query, max=2)
         )
-        
+
         # 순서 변경
         variations.append(
             self._reorder_variation(base_query)
         )
-        
+
         # 도메인 최적화
         if context.get("domain"):
             variations.append(
                 self._domain_optimized(base_query, context["domain"])
             )
-        
+
         return variations[:max_variations]
 ```
 
@@ -627,26 +627,26 @@ class QueryExpansionEngine:
 ```python
 class MultiQuerySearchSource(BaseSearchSource):
     """Multi-query 검색 (개선)"""
-    
+
     def __init__(self):
         super().__init__(...)
         self.query_engine = QueryExpansionEngine()
-    
+
     def fetch(self, request):
         """Multi-query로 수집"""
         base_query = self.build_search_query(request)
-        
+
         # 1. 쿼리 확장
         queries = self.query_engine.expand(base_query, request.context)
-        
+
         # 2. 각 쿼리 시도
         all_results = []
-        
+
         for query in queries:
             try:
                 results = self._search(query)
                 numbers = self.extract_numbers(results)
-                
+
                 if numbers:
                     all_results.append({
                         "query": query,
@@ -656,13 +656,13 @@ class MultiQuerySearchSource(BaseSearchSource):
                     })
             except:
                 continue
-        
+
         if not all_results:
             raise DataNotFoundError("No data from any query variation")
-        
+
         # 3. 최고 품질 선택
         best = max(all_results, key=lambda r: r["quality"])
-        
+
         # 4. EvidenceRecord 생성 (metadata에 시도한 쿼리들 기록)
         return EvidenceRecord(
             ...,
@@ -682,11 +682,11 @@ class MultiQuerySearchSource(BaseSearchSource):
 ```python
 class LLMQueryGenerator:
     """LLM 기반 쿼리 생성"""
-    
+
     def generate(self, request, context):
         """LLM으로 최적 쿼리 생성"""
         prompt = self._build_prompt(request, context)
-        
+
         response = llm_service.call_structured(
             prompt,
             schema={
@@ -699,32 +699,32 @@ class LLMQueryGenerator:
                 ]
             }
         )
-        
+
         return [q["query"] for q in response["queries"]]
-    
+
     def _build_prompt(self, request, context):
         """프롬프트 구성"""
         return f"""
         Generate optimal search queries for market research.
-        
+
         Context:
         - Industry: {context.domain}
         - Region: {context.region}
         - Target Metric: {request.metric_id}
         - Year: {context.year}
-        
+
         Generate 5 queries targeting:
         1. Market size reports
         2. Competitor revenue
         3. Industry statistics
         4. Government data
         5. News/press releases
-        
+
         Each query should be:
         - Specific (include industry terms)
         - Targeted (likely to return numbers)
         - Varied (different angles)
-        
+
         Return as structured JSON.
         """
 ```
@@ -785,6 +785,8 @@ class LLMQueryGenerator:
 
 ---
 
-**작성**: 2025-12-10  
-**현재**: Level 1/5 (기초)  
+**작성**: 2025-12-10
+**현재**: Level 1/5 (기초)
 **권장**: Phase 1 즉시 착수 (Level 2-3 달성)
+
+

@@ -35,12 +35,12 @@
 
 ---
 
-### Phase 2: ProjectContext & 버전
+### Phase 2: FocalActorContext & 버전
 
 **구현**:
 - ContextLearner (버전 관리)
 - update_project_context_from_outcome_api()
-- ProjectContext version/lineage
+- FocalActorContext version/lineage
 - Metric → baseline_state 매핑
 
 **테스트**: 5개
@@ -107,7 +107,7 @@
 
 ---
 
-### 3. ProjectContext 업데이트
+### 3. FocalActorContext 업데이트
 
 **버전 관리**:
 ```
@@ -236,3 +236,5 @@ Phase 2:  5/5 passed
 **완성도**: 80%
 
 **LearningEngine v1.0 (Phase 1+2) 완성!** 🎉
+
+

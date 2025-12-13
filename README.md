@@ -180,7 +180,7 @@ cmis config-validate         # 설정 검증
 **기능**:
 - Outcome vs 예측 비교
 - Pattern Benchmark 학습 (Context별)
-- ProjectContext 자동 업데이트
+- FocalActorContext 자동 업데이트
 - Metric Belief 조정
 - Outlier 감지
 
@@ -468,10 +468,10 @@ learning_engine.update_from_outcomes_api(['OUT-001'])
 ### Brownfield 분석
 
 ```python
-from cmis_core.types import ProjectContext
+from cmis_core.types import FocalActorContext
 
 # 우리 회사 정의
-project_context = ProjectContext(
+project_context = FocalActorContext(
     project_context_id="PRJ-my-company",
     baseline_state={
         "current_revenue": 5000000000,
@@ -604,7 +604,7 @@ jobs:
       domain_id: Market_A
       region: KR
     output: market_a.json
-  
+
   - workflow_id: structure_analysis
     inputs:
       domain_id: Market_B
@@ -748,6 +748,6 @@ MIT License
 
 ---
 
-**최종 업데이트**: 2025-12-11  
-**버전**: v3.3  
+**최종 업데이트**: 2025-12-11
+**버전**: v3.3
 **상태**: Production Ready ✅

@@ -51,14 +51,14 @@ keywords = [
 # Step 1: Rule-based Filtering (넓게 수집)
 candidates = [
     item for item in financials
-    if any(kw in item.get('account_nm', '') 
+    if any(kw in item.get('account_nm', '')
            for kw in ['매출', '수익', '영업'])
 ]
 
 # Step 2: Exclude (명확한 것만 제외)
 filtered = [
     c for c in candidates
-    if not any(ex in c.get('account_nm', '') 
+    if not any(ex in c.get('account_nm', '')
               for ex in ['자산', '부채', '원가'])
 ]
 
@@ -83,7 +83,7 @@ def _find_account_with_fallback(financials, target_metric):
     # 1. 포함 키워드 (일반 패턴)
     # 2. 제외 키워드 (명확)
     # 3. 가장 큰 금액 (Fallback)
-    
+
     # ✅ 하드코딩 없음
     # ✅ 새 케이스 자동 처리
     # ✅ 통계적으로 합리적
@@ -183,17 +183,17 @@ Edge cases (10%):
 ```python
 class AccountMatcher:
     """Rule + LLM Hybrid Matcher"""
-    
+
     def find_account(self, financials, target, use_llm=False):
         # Rule + Fallback (v1)
         candidates = rule_filter(financials, target)
-        
+
         if len(candidates) == 1:
             return candidates[0]  # 확실
-        
+
         if not use_llm:
             return fallback(candidates)  # 가장 큰 금액
-        
+
         # LLM 사용 (v2)
         return llm.select_best(candidates, target)
 ```
@@ -314,3 +314,5 @@ class AccountMatcher:
 
 **작성**: 2025-12-09
 **승인**: ✅ Production Ready (올바른 설계)
+
+

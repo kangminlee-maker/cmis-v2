@@ -123,13 +123,13 @@ class WorkflowOrchestrator:
     - role_id → policy_mode 해석
     - 엔진 간 데이터 전달
     """
-    
+
     def __init__(self, config_path: Optional[Path] = None):
         # canonical_workflows 로딩
         self.workflows = load_canonical_workflows(config_path)
         self.role_registry = load_role_plane(config_path)
         self.policy_engine = PolicyEngine(config_path)
-    
+
     def run_workflow(
         self,
         workflow_id: str,
@@ -139,7 +139,7 @@ class WorkflowOrchestrator:
     ) -> WorkflowResult:
         """
         Generic workflow 실행
-        
+
         프로세스:
         1. canonical_workflows에서 workflow 정의 로딩
         2. role_id → policy_mode 해석 (override 가능)
@@ -153,7 +153,7 @@ class WorkflowOrchestrator:
 def run_structure_analysis(self, inputs):
     """
     structure_analysis의 thin wrapper
-    
+
     실제로는:
     return self.run_workflow(
         workflow_id="structure_analysis",
@@ -213,14 +213,14 @@ cmis workflow run structure_analysis \
 ```python
 def cmd_workflow_run(args):
     orchestrator = WorkflowOrchestrator()
-    
+
     result = orchestrator.run_workflow(
         workflow_id=args.workflow_id,
         inputs=parse_inputs(args.input),
         role_id=args.role,
         policy_mode=args.policy
     )
-    
+
     format_output(result, args.format)
 ```
 
@@ -350,7 +350,7 @@ jobs:
     role_id: structure_analyst  # 선택
     policy_mode: reporting_strict  # 선택
     output: adult_lang_kr.json
-  
+
   - workflow_id: opportunity_discovery
     inputs:
       domain_id: Online_Tutoring_KR
@@ -1228,4 +1228,6 @@ cmis workflow run education_kr.custom_analysis --input ...
 **다음**: Phase 1 구현 착수
 
 **Workflow CLI v1.1 설계 완성!**
+
+
 

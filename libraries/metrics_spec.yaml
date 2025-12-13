@@ -1,0 +1,122 @@
+---
+schema_version: 1
+description: "CMIS metrics specification (definitions + metric sets)."
+
+metrics:
+  - metric_id: "MET-N_customers"
+    name: "Number of customers"
+    category: "structure_core_economics"
+    description: "Target customer count for the defined domain/region/segment."
+    direct_evidence_sources:
+      - "official_statistics"
+      - "industry_reports"
+      - "company_filings"
+    derived_paths: []
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "reporting_strict"
+
+  - metric_id: "MET-Revenue"
+    name: "Revenue"
+    category: "structure_core_economics"
+    description: "Annual revenue for the defined market context."
+    direct_evidence_sources:
+      - "company_filings"
+      - "official_statistics"
+      - "industry_reports"
+    derived_paths: []
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "reporting_strict"
+
+  - metric_id: "MET-Avg_price_per_unit"
+    name: "Average price per unit"
+    category: "structure_core_economics"
+    description: "Average unit price (revenue / customers) for the defined context."
+    direct_evidence_sources: []
+    derived_paths:
+      - id: "DER-avg_price_from_revenue_and_customers"
+        formula: "MET-Revenue / MET-N_customers"
+        inputs:
+          - "MET-Revenue"
+          - "MET-N_customers"
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "decision_balanced"
+
+  - metric_id: "MET-TAM"
+    name: "Total Addressable Market (TAM)"
+    category: "market_size"
+    description: "Top-down or bottom-up estimate of total addressable market."
+    direct_evidence_sources:
+      - "market_size_reports"
+      - "official_statistics"
+      - "industry_reports"
+    derived_paths: []
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "decision_balanced"
+
+  - metric_id: "MET-SAM"
+    name: "Serviceable Available Market (SAM)"
+    category: "market_size"
+    description: "Addressable market within current capabilities/constraints."
+    direct_evidence_sources:
+      - "market_size_reports"
+      - "industry_reports"
+    derived_paths:
+      - id: "DER-sam_from_tam_and_constraints"
+        formula: "MET-TAM * constraint_factor"
+        inputs:
+          - "MET-TAM"
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "decision_balanced"
+
+  - metric_id: "MET-SOM"
+    name: "Serviceable Obtainable Market (SOM)"
+    category: "market_size"
+    description: "Realistically obtainable market share in a time horizon."
+    direct_evidence_sources:
+      - "market_size_reports"
+      - "industry_reports"
+    derived_paths:
+      - id: "DER-som_from_sam_and_share"
+        formula: "MET-SAM * share_factor"
+        inputs:
+          - "MET-SAM"
+    resolution_protocol:
+      preference_order:
+        - "direct_evidence"
+        - "derived"
+        - "prior"
+    default_quality_profile: "decision_balanced"
+
+metric_sets:
+  structure_core_economics:
+    - "MET-N_customers"
+    - "MET-Revenue"
+    - "MET-Avg_price_per_unit"
+
+  opportunity_additional:
+    - "MET-TAM"
+    - "MET-SAM"
+    - "MET-SOM"
+
+  monitoring_core:
+    - "MET-Revenue"

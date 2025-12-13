@@ -12,7 +12,7 @@
 이 문서는 World Engine의 기존 Gap 분석에 다음을 추가한 고도화 설계입니다:
 
 1. **RealityGraphStore + ProjectOverlay 구조** - 세계 모델과 프로젝트 컨텍스트 분리
-2. **ingest_project_context 매핑 규칙** - ProjectContext → R-Graph 변환 명세
+2. **ingest_project_context 매핑 규칙** - FocalActorContext → R-Graph 변환 명세
 3. **as_of/segment 필터링 우선순위 상향** - Priority 4 → 2
 4. **서브그래프 추출 규칙** - N-hop, edge 타입 명시
 5. **canonical_workflows 연계** - 전체 시스템 내 역할 명확화
@@ -31,7 +31,7 @@
 
 **World Engine의 단일 책임**:
 - Reality Graph(R-Graph)의 **단일 소스(Single Source of Truth)**
-- Evidence/Seed/ProjectContext → R-Graph 변환 및 업데이트
+- Evidence/Seed/FocalActorContext → R-Graph 변환 및 업데이트
 - snapshot() API를 통한 R-Graph 서브그래프 제공
 
 ---
@@ -132,7 +132,7 @@ ProjectOverlayStore:
 ```
 
 **생성 경로**:
-- **ingest_project_context**: ProjectContext → ProjectOverlayStore
+- **ingest_project_context**: FocalActorContext → ProjectOverlayStore
   - focal_actor 생성/업데이트
   - baseline_state → State 노드
   - assets_profile → Actor traits/edges
@@ -152,19 +152,19 @@ def snapshot(domain, region, segment, as_of, project_context_id):
         domain=domain,
         region=region
     )
-    
+
     # 2. as_of 필터링
     filtered_graph = apply_as_of_filter(base_graph, as_of)
-    
+
     # 3. segment 필터링
     if segment:
         filtered_graph = apply_segment_filter(filtered_graph, segment)
-    
+
     # 4. ProjectOverlay 적용 (Brownfield)
     if project_context_id:
         overlay = project_overlay_store.get(project_context_id)
         combined_graph = merge_graphs(filtered_graph, overlay)
-        
+
         # 5. focal_actor 중심 서브그래프 추출
         final_graph = extract_subgraph(
             combined_graph,
@@ -173,7 +173,7 @@ def snapshot(domain, region, segment, as_of, project_context_id):
         )
     else:
         final_graph = filtered_graph
-    
+
     return RealityGraphSnapshot(graph=final_graph, meta={...})
 ```
 
@@ -208,8 +208,8 @@ def ingest_project_context(
     project_context_id: str
 ) -> tuple[str, list[str]]:
     """
-    ProjectContext → ProjectOverlayStore 투영
-    
+    FocalActorContext → ProjectOverlayStore 투영
+
     Returns:
         (focal_actor_id, updated_node_ids)
     """
@@ -218,7 +218,7 @@ def ingest_project_context(
 ### 3.2 focal_actor_id 소유권
 
 **규칙**:
-1. **ProjectContext가 소유**
+1. **FocalActorContext가 소유**
    - project_context.focal_actor_id가 이미 정의되어 있으면 사용
    - 없으면 World Engine이 생성 (ACT-{project_context_id})
 
@@ -234,7 +234,7 @@ def ingest_project_context(
 
 ### 3.3 baseline_state → State 노드 매핑
 
-**ProjectContext.baseline_state**:
+**FocalActorContext.baseline_state**:
 ```yaml
 baseline_state:
   current_revenue: 12000000000  # 120억
@@ -264,7 +264,7 @@ State:
 ```
 
 **매핑 테이블**:
-| ProjectContext 필드 | R-Graph | 노드 타입 | 속성 |
+| FocalActorContext 필드 | R-Graph | 노드 타입 | 속성 |
 |---------------------|---------|----------|------|
 | current_revenue | State | State | properties.revenue |
 | current_customers | State | State | properties.n_customers |
@@ -273,28 +273,28 @@ State:
 
 ### 3.4 assets_profile → Actor traits/edges 매핑
 
-**ProjectContext.assets_profile**:
+**FocalActorContext.assets_profile**:
 ```yaml
 assets_profile:
   capability_traits:
     - technology_domain: "AI_ML"
       maturity_level: "production_ready"
     - deployment_type: "cloud_native"
-  
+
   channels:
     - channel_type: "online"
       reach: 100000
     - channel_type: "mobile_app"
       reach: 50000
-  
+
   brand_assets:
     brand_awareness_level: "medium"
     brand_equity_score: 0.6
-  
+
   organizational_assets:
     team_size: 50
     org_maturity: "scaleup"
-  
+
   data_assets:
     customer_data_volume: 150000
 ```
@@ -385,7 +385,7 @@ State:
 def apply_as_of_filter(graph, as_of):
     """
     as_of 시점 기준 필터링
-    
+
     규칙:
     1. State: as_of <= 요청 시점 중 가장 최신만 포함
     2. MoneyFlow: timestamp <= 요청 시점만 포함
@@ -393,24 +393,24 @@ def apply_as_of_filter(graph, as_of):
     4. Actor/Resource/Contract: 생성일 <= 요청 시점
     """
     filtered_nodes = []
-    
+
     for node in graph.nodes:
         if node.type == "state":
             # State는 as_of 기준 최신 버전만
             if node.data["as_of"] <= as_of:
                 filtered_nodes.append(node)
-        
+
         elif node.type in ["money_flow", "event"]:
             # 시간 속성 있는 노드
             if node.data.get("timestamp", as_of) <= as_of:
                 filtered_nodes.append(node)
-        
+
         else:
             # Actor, Resource, Contract 등
             created_at = node.data.get("created_at", "1900-01-01")
             if created_at <= as_of:
                 filtered_nodes.append(node)
-    
+
     return InMemoryGraph(nodes=filtered_nodes, edges=...)
 ```
 
@@ -427,7 +427,7 @@ if as_of == "latest":
 def apply_segment_filter(graph, segment):
     """
     세그먼트 기준 필터링
-    
+
     규칙:
     1. Actor: kind="customer_segment"이고 segment trait 일치
     2. MoneyFlow: payer 또는 payee가 해당 세그먼트
@@ -438,16 +438,16 @@ def apply_segment_filter(graph, segment):
         if actor.data.get("kind") == "customer_segment"
         and actor.data.get("traits", {}).get("segment") == segment
     ]
-    
+
     segment_actor_ids = {a.id for a in segment_actors}
-    
+
     # MoneyFlow 필터링
     relevant_money_flows = [
         mf for mf in graph.nodes_by_type("money_flow")
         if mf.data.get("payer_id") in segment_actor_ids
         or mf.data.get("payee_id") in segment_actor_ids
     ]
-    
+
     # ...
 ```
 
@@ -457,7 +457,7 @@ def apply_segment_filter(graph, segment):
 ```python
 SUBGRAPH_EXTRACTION_RULES = {
     "n_hops": 2,  # focal_actor로부터 2-hop
-    
+
     "included_edge_types": [
         "actor_pays_actor",
         "actor_competes_with_actor",
@@ -465,11 +465,11 @@ SUBGRAPH_EXTRACTION_RULES = {
         "actor_offers_resource",
         "actor_has_contract_with_actor"
     ],
-    
+
     "excluded_edge_types": [
         # 너무 먼 관계는 제외
     ],
-    
+
     "always_include_for_focal_actor": [
         # focal_actor에 붙은 모든 노드 포함
         "state",      # 모든 State
@@ -484,7 +484,7 @@ SUBGRAPH_EXTRACTION_RULES = {
 def extract_subgraph(graph, focal_actor, n_hops=2):
     """
     focal_actor 중심 N-hop 서브그래프
-    
+
     프로세스:
     1. focal_actor의 직접 연결 노드 모두 포함 (State, MoneyFlow, Contract)
     2. N-hop BFS로 Actor 확장
@@ -493,7 +493,7 @@ def extract_subgraph(graph, focal_actor, n_hops=2):
     visited = {focal_actor}
     subgraph_nodes = {focal_actor}
     current_hop = {focal_actor}
-    
+
     # focal_actor의 State/MoneyFlow/Contract 모두 포함
     for node_type in ["state", "money_flow", "contract"]:
         related = graph.get_related_nodes(
@@ -501,11 +501,11 @@ def extract_subgraph(graph, focal_actor, n_hops=2):
             node_type=node_type
         )
         subgraph_nodes.update(related)
-    
+
     # N-hop BFS
     for hop in range(n_hops):
         next_hop = set()
-        
+
         for actor_id in current_hop:
             # included_edge_types만 따라감
             for edge_type in RULES["included_edge_types"]:
@@ -514,11 +514,11 @@ def extract_subgraph(graph, focal_actor, n_hops=2):
                     edge_type=edge_type
                 )
                 next_hop.update(neighbors - visited)
-        
+
         visited.update(next_hop)
         subgraph_nodes.update(next_hop)
         current_hop = next_hop
-    
+
     return graph.subgraph(subgraph_nodes)
 ```
 
@@ -567,7 +567,7 @@ def map_evidence_to_graph(evidence):
             revenue=evidence.value,
             as_of=evidence.context["fiscal_year"]
         )
-    
+
     elif evidence.metric_id.startswith("MET-Market_size"):
         # 시장규모 → State (market segment)
         return create_market_state(
@@ -575,7 +575,7 @@ def map_evidence_to_graph(evidence):
             market_size=evidence.value,
             as_of=evidence.as_of
         )
-    
+
     elif evidence.source_tier == "search":
         # 검색 Evidence → Actor 신규 생성
         return create_or_update_actor(
@@ -596,11 +596,11 @@ class ActorResolver:
     """
     Actor 동일성 판별 및 병합
     """
-    
+
     def resolve_actor_id(self, evidence_context):
         """
         Evidence context → 기존 Actor ID 또는 신규 ID
-        
+
         우선순위:
         1. 사업자등록번호 (company_registration_number)
         2. 증권코드 (stock_code)
@@ -612,27 +612,27 @@ class ActorResolver:
             existing = reality_store.find_actor_by_crn(crn)
             if existing:
                 return existing.id
-        
+
         # 2. 증권코드
         if "stock_code" in evidence_context:
             stock_code = evidence_context["stock_code"]
             existing = reality_store.find_actor_by_stock_code(stock_code)
             if existing:
                 return existing.id
-        
+
         # 3. Fuzzy matching
         company_name = evidence_context.get("company_name")
         similar = reality_store.find_similar_actors(company_name, threshold=0.9)
         if similar:
             return similar[0].id
-        
+
         # 4. 신규 생성
         return generate_new_actor_id()
-    
+
     def merge_actor_data(self, existing_actor, new_evidence):
         """
         기존 Actor + 새 Evidence 병합
-        
+
         규칙:
         - traits: 합집합 (conflict 시 최신 우선)
         - state: 시간별 분리 (as_of 다르면 별도 State)
@@ -640,7 +640,7 @@ class ActorResolver:
         # traits 병합
         updated_traits = {**existing_actor.traits}
         new_traits = extract_traits_from_evidence(new_evidence)
-        
+
         for key, value in new_traits.items():
             if key not in updated_traits:
                 updated_traits[key] = value
@@ -648,7 +648,7 @@ class ActorResolver:
                 # Conflict: 최신 Evidence 우선
                 if new_evidence.as_of > existing_actor.last_updated:
                     updated_traits[key] = value
-        
+
         # State는 시간별 분리
         if new_evidence.as_of != existing_actor.state_as_of:
             create_new_state(actor_id, new_evidence)
@@ -693,11 +693,11 @@ structure_analysis:
           domain_id: "@input.domain_id"
           region: "@input.region"
           segment: "@input.segment"
-    
+
     - call: pattern_engine.match_patterns
       with:
         graph_slice_ref: "@prev.graph_slice_ref"
-    
+
     - call: value_engine.evaluate_metrics
       with:
         metric_requests: "@metric_sets.structure_core_economics"
@@ -734,7 +734,7 @@ opportunity_discovery:
         scope:
           domain_id: "@input.domain_id"
           region: "@input.region"
-    
+
     - call: pattern_engine.discover_gaps
       with:
         graph_slice_ref: "@prev.graph_slice_ref"
@@ -754,7 +754,7 @@ opportunity_discovery:
     project_context_id: "PRJ-my-company"
 ```
 - focal_actor 중심 서브그래프에서 Gap 탐지
-- Execution Fit 계산 시 ProjectContext 활용
+- Execution Fit 계산 시 FocalActorContext 활용
 
 ### 6.3 strategy_design 워크플로우 (미래)
 
@@ -765,7 +765,7 @@ strategy_design:
     - call: world_engine.snapshot
       with:
         project_context_id: "@input.project_context_id"  # 필수
-    
+
     - call: strategy_engine.search_strategies
       with:
         goal_id: "@input.goal_id"
@@ -849,7 +849,7 @@ strategy_design:
 
 **Week 2**:
 5. **ProjectOverlayStore 구현** (1일)
-   - ProjectContext 저장
+   - FocalActorContext 저장
    - Overlay 적용 로직
 
 6. **서브그래프 추출 구현** (1.5일)
@@ -967,8 +967,8 @@ strategy_design:
 - [x] **EvidenceEngine**: evidence_store → ingest_evidence
 - [x] **PatternEngine**: R-Graph → trait 기반 매칭
 - [x] **ValueEngine**: R-Graph → derived Metric 계산
-- [x] **StrategyEngine**: ProjectContext + R-Graph → 전략 설계 (미래)
-- [x] **LearningEngine**: Outcome → ProjectContext 업데이트 (미래)
+- [x] **StrategyEngine**: FocalActorContext + R-Graph → 전략 설계 (미래)
+- [x] **LearningEngine**: Outcome → FocalActorContext 업데이트 (미래)
 
 ### 9.4 성능/확장성
 
@@ -1051,7 +1051,7 @@ strategy_design:
 
 **이유**:
 - 세계 모델(Global Reality)과 프로젝트별 정보를 논리적으로 분리
-- LearningEngine이 ProjectContext 업데이트 시 RealityGraphStore 영향 최소화
+- LearningEngine이 FocalActorContext 업데이트 시 RealityGraphStore 영향 최소화
 - 성능 및 버전 관리 이점
 
 **대안**:
@@ -1081,4 +1081,6 @@ strategy_design:
 **상태**: 설계 완료 (Enhanced)
 **기반**: WORLD_ENGINE_GAP_ANALYSIS.md + 피드백 반영
 **다음**: Phase A 구현 착수
+
+
 

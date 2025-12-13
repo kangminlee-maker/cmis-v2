@@ -14,7 +14,7 @@ LearningEngine은 **실제 Outcome과 예측을 비교하여 시스템을 자동
 - Outcome vs 예측 비교
 - Pattern Benchmark 업데이트
 - Metric 공식 보정
-- ProjectContext 업데이트
+- FocalActorContext 업데이트
 - Belief 조정
 
 **설계 원칙**:
@@ -68,7 +68,7 @@ learning_engine:
         outcome_ids: "list[outcome_id]"
       output:
         update_summary_ref
-    
+
     - name: update_project_context_from_outcome
       input:
         outcome_id
@@ -132,19 +132,19 @@ outcome_store:
 @dataclass
 class Outcome:
     """실제 실행 결과 (outcome_store)
-    
+
     Strategy/Scenario 실행 후 실제 측정된 결과
     """
     outcome_id: str
-    
+
     # 연결
     related_strategy_id: Optional[str] = None
     related_scenario_id: Optional[str] = None
     project_context_id: Optional[str] = None
-    
+
     # 실제 측정 시점
     as_of: str = ""  # 측정 완료 시점
-    
+
     # 실제 Metric 값
     metrics: Dict[str, Any] = field(default_factory=dict)
     # {
@@ -152,11 +152,11 @@ class Outcome:
     #   "MET-N_customers": 150000,
     #   "MET-Churn_rate": 0.06
     # }
-    
+
     # Context
     context: Dict[str, Any] = field(default_factory=dict)
     # {"domain_id": "...", "region": "...", "period": "..."}
-    
+
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
     # {"data_source": "internal_db", "quality": "verified"}
@@ -170,7 +170,7 @@ class LearningResult:
     """학습 결과"""
     learning_id: str
     outcome_id: str
-    
+
     # 비교 결과
     comparisons: List[Dict[str, Any]] = field(default_factory=list)
     # [
@@ -183,7 +183,7 @@ class LearningResult:
     #     "within_bounds": True
     #   }
     # ]
-    
+
     # 업데이트
     updates: Dict[str, Any] = field(default_factory=dict)
     # {
@@ -191,11 +191,11 @@ class LearningResult:
     #   "metric_formulas": [...],
     #   "project_context": {...}
     # }
-    
+
     # 학습 품질
     learning_quality: Dict[str, Any] = field(default_factory=dict)
     # {"confidence": 0.8, "sample_size": 1}
-    
+
     # Lineage
     lineage: Dict[str, Any] = field(default_factory=dict)
 ```
@@ -223,7 +223,7 @@ class LearningResult:
 ```python
 class OutcomeComparator:
     """Outcome 비교기"""
-    
+
     def compare_outcome_vs_prediction(
         self,
         outcome: Outcome,
@@ -231,29 +231,29 @@ class OutcomeComparator:
     ) -> List[Dict[str, Any]]:
         """
         실제 vs 예측 비교
-        
+
         Returns:
             비교 결과 리스트
         """
         comparisons = []
-        
+
         predicted = strategy.expected_outcomes
         actual = outcome.metrics
-        
+
         # 공통 Metric
         common_metrics = set(predicted.keys()) & set(actual.keys())
-        
+
         for metric_id in common_metrics:
             pred_value = predicted[metric_id]
             actual_value = actual[metric_id]
-            
+
             # Delta
             delta = actual_value - pred_value
             delta_pct = delta / pred_value if pred_value > 0 else 0
-            
+
             # 오차 범위 (±30%)
             within_bounds = abs(delta_pct) <= 0.3
-            
+
             comparison = {
                 "metric_id": metric_id,
                 "predicted": pred_value,
@@ -263,24 +263,24 @@ class OutcomeComparator:
                 "within_bounds": within_bounds,
                 "accuracy": 1 - abs(delta_pct)
             }
-            
+
             comparisons.append(comparison)
-        
+
         return comparisons
-    
+
     def calculate_prediction_accuracy(
         self,
         comparisons: List[Dict]
     ) -> float:
         """
         전체 예측 정확도
-        
+
         Returns:
             0.0 ~ 1.0
         """
         if not comparisons:
             return 0.0
-        
+
         accuracies = [c["accuracy"] for c in comparisons]
         return sum(accuracies) / len(accuracies)
 ```
@@ -299,7 +299,7 @@ class OutcomeComparator:
 ```python
 class PatternLearner:
     """Pattern 학습기"""
-    
+
     def update_pattern_benchmark(
         self,
         pattern_id: str,
@@ -309,31 +309,31 @@ class PatternLearner:
     ) -> Dict[str, Any]:
         """
         Pattern Benchmark 업데이트
-        
+
         Bayesian 업데이트 (간단한 버전):
         new_typical = (old_typical × α) + (actual × (1-α))
         """
         alpha = 0.8  # 기존 가중치 (보수적)
-        
+
         old_typical = current_benchmark.get("typical", [])
-        
+
         if isinstance(old_typical, list) and len(old_typical) == 2:
             old_avg = sum(old_typical) / 2
         else:
             old_avg = old_typical
-        
+
         # Bayesian 업데이트
         new_avg = old_avg * alpha + actual_value * (1 - alpha)
-        
+
         # 범위도 조정
         old_min = current_benchmark.get("min", actual_value * 0.5)
         old_max = current_benchmark.get("max", actual_value * 1.5)
-        
+
         new_min = min(old_min, actual_value * 0.9)
         new_max = max(old_max, actual_value * 1.1)
-        
+
         new_typical = [new_avg * 0.9, new_avg * 1.1]
-        
+
         updated_benchmark = {
             "min": new_min,
             "max": new_max,
@@ -342,37 +342,37 @@ class PatternLearner:
             "sample_size": current_benchmark.get("sample_size", 0) + 1,
             "last_updated": datetime.now().isoformat()
         }
-        
+
         return updated_benchmark
 ```
 
 ---
 
-## 6. ProjectContextUpdater 설계
+## 6. FocalActorContextUpdater 설계
 
 ### 6.1 Baseline State 업데이트
 
 **학습 대상**:
-- ProjectContext.baseline_state
+- FocalActorContext.baseline_state
 - 실제 달성한 매출, 고객수 등
 
 **코드**:
 ```python
-class ProjectContextUpdater:
-    """ProjectContext 업데이트"""
-    
+class FocalActorContextUpdater:
+    """FocalActorContext 업데이트"""
+
     def update_baseline_state(
         self,
-        project_context: ProjectContext,
+        project_context: FocalActorContext,
         outcome: Outcome
-    ) -> ProjectContext:
+    ) -> FocalActorContext:
         """
         baseline_state 업데이트
-        
+
         Outcome의 실제 값으로 업데이트
         """
         updated_baseline = dict(project_context.baseline_state)
-        
+
         # Outcome의 metrics를 baseline으로
         for metric_id, value in outcome.metrics.items():
             # MET-Revenue → current_revenue
@@ -384,12 +384,12 @@ class ProjectContextUpdater:
                 if "margin_structure" not in updated_baseline:
                     updated_baseline["margin_structure"] = {}
                 updated_baseline["margin_structure"]["gross_margin"] = value
-        
+
         # as_of 업데이트
         updated_baseline["as_of"] = outcome.as_of
-        
-        # 새 ProjectContext
-        updated_context = ProjectContext(
+
+        # 새 FocalActorContext
+        updated_context = FocalActorContext(
             project_context_id=project_context.project_context_id,
             scope=project_context.scope,
             assets_profile=project_context.assets_profile,
@@ -398,7 +398,7 @@ class ProjectContextUpdater:
             preference_profile=project_context.preference_profile,
             focal_actor_id=project_context.focal_actor_id
         )
-        
+
         return updated_context
 ```
 
@@ -412,30 +412,30 @@ class ProjectContextUpdater:
 ```python
 class LearningEngine:
     """Learning Engine v1
-    
+
     역할:
     - Outcome vs 예측 비교
     - Pattern Benchmark 업데이트
     - Metric 공식 보정
-    - ProjectContext 업데이트
+    - FocalActorContext 업데이트
     """
-    
+
     def __init__(self):
         self.outcome_comparator = OutcomeComparator()
         self.pattern_learner = PatternLearner()
-        self.context_updater = ProjectContextUpdater()
-        
+        self.context_updater = FocalActorContextUpdater()
+
         # Stores (Phase 1: 인메모리)
         self.outcomes: Dict[str, Outcome] = {}
         self.learning_history: List[LearningResult] = []
-    
+
     def update_from_outcomes_api(
         self,
         outcome_ids: List[str]
     ) -> str:
         """
         Public API (cmis.yaml 대응)
-        
+
         프로세스:
         1. outcome_store에서 Outcome 로딩
         2. 각 Outcome에 대해:
@@ -445,40 +445,40 @@ class LearningEngine:
         3. Pattern Benchmark 업데이트
         4. 학습 결과 저장
         5. update_summary_ref 반환
-        
+
         Args:
             outcome_ids: Outcome ID 리스트
-        
+
         Returns:
             update_summary_ref: "LEARN-{uuid}"
         """
         learning_results = []
-        
+
         for outcome_id in outcome_ids:
             # 1. Outcome 로딩
             outcome = self._load_outcome(outcome_id)
-            
+
             if not outcome:
                 continue
-            
+
             # 2. Strategy/예측 조회
             if outcome.related_strategy_id:
                 strategy = self._load_strategy(outcome.related_strategy_id)
-                
+
                 if strategy:
                     # 3. 비교
                     comparisons = self.outcome_comparator.compare_outcome_vs_prediction(
                         outcome,
                         strategy
                     )
-                    
+
                     # 4. 학습
                     updates = self._learn_from_comparisons(
                         comparisons,
                         strategy,
                         outcome
                     )
-                    
+
                     # 5. 결과 저장
                     learning_result = LearningResult(
                         learning_id=f"LEARN-{uuid.uuid4().hex[:8]}",
@@ -486,14 +486,14 @@ class LearningEngine:
                         comparisons=comparisons,
                         updates=updates
                     )
-                    
+
                     learning_results.append(learning_result)
-        
+
         # 6. Summary 저장
         summary_ref = self._save_learning_summary(learning_results)
-        
+
         return summary_ref
-    
+
     def update_project_context_from_outcome_api(
         self,
         outcome_id: str,
@@ -501,29 +501,29 @@ class LearningEngine:
     ) -> str:
         """
         Public API (cmis.yaml 대응)
-        
+
         프로세스:
         1. Outcome 로딩
-        2. ProjectContext 로딩
+        2. FocalActorContext 로딩
         3. baseline_state 업데이트 (실제 값으로)
         4. project_context_store 저장
         5. updated_context_ref 반환
         """
         # 1. Outcome
         outcome = self._load_outcome(outcome_id)
-        
-        # 2. ProjectContext
+
+        # 2. FocalActorContext
         project_context = self._load_project_context(project_context_id)
-        
+
         # 3. 업데이트
         updated_context = self.context_updater.update_baseline_state(
             project_context,
             outcome
         )
-        
+
         # 4. 저장
         updated_ref = self._save_project_context(updated_context)
-        
+
         return updated_ref
 ```
 
@@ -557,11 +557,11 @@ def _learn_from_comparisons(
         "metric_formulas": [],
         "confidence_adjustments": []
     }
-    
+
     for comp in comparisons:
         metric_id = comp["metric_id"]
         delta_pct = comp["delta_pct"]
-        
+
         # 오차가 크면 (±30% 초과)
         if abs(delta_pct) > 0.3:
             # Pattern Benchmark 업데이트
@@ -572,7 +572,7 @@ def _learn_from_comparisons(
                     actual_value=comp["actual"],
                     current_benchmark=...
                 )
-                
+
                 updates["pattern_benchmarks"].append({
                     "pattern_id": pattern_id,
                     "metric_id": metric_id,
@@ -580,7 +580,7 @@ def _learn_from_comparisons(
                     "new_value": comp["actual"],
                     "update": update
                 })
-    
+
     return updates
 ```
 
@@ -608,9 +608,9 @@ def _learn_from_comparisons(
 
 ---
 
-### Phase 2: ProjectContext (1주)
+### Phase 2: FocalActorContext (1주)
 
-**Day 1-3**: ProjectContextUpdater
+**Day 1-3**: FocalActorContextUpdater
 - update_baseline_state()
 - update_assets_profile()
 
@@ -643,7 +643,7 @@ def _learn_from_comparisons(
 - [x] **PatternEngine**: Benchmark 업데이트
 - [x] **ValueEngine**: Metric 공식 보정
 - [x] **StrategyEngine**: 개선된 예측
-- [x] **WorldEngine**: ProjectContext 업데이트
+- [x] **WorldEngine**: FocalActorContext 업데이트
 
 ---
 

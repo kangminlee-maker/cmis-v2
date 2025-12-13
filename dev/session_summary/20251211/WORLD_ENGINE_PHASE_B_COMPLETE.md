@@ -203,11 +203,11 @@ Node.data.lineage = {
 @dataclass
 class EvidenceRecord:
     # 기존 필드...
-    
+
     # Phase B 추가
     context: Dict[str, Any] = field(default_factory=dict)
     # {"company_name": "...", "domain_id": "...", "region": "..."}
-    
+
     as_of: Optional[str] = None  # 데이터 기준일
     timestamp: str = ...  # 수집 시점
 ```
@@ -371,13 +371,13 @@ world_engine.ingest_evidence(domain_id, evidence_list)
 snapshot = world_engine.snapshot(domain_id, region)
 ```
 
-**3. Brownfield (seed + ProjectContext)**:
+**3. Brownfield (seed + FocalActorContext)**:
 ```python
 world_engine.ingest_project_context(project_context)
 snapshot = world_engine.snapshot(domain_id, region, project_context_id)
 ```
 
-**4. Brownfield (Evidence + ProjectContext)** - Phase B 신규:
+**4. Brownfield (Evidence + FocalActorContext)** - Phase B 신규:
 ```python
 world_engine.ingest_evidence(domain_id, evidence_list)
 world_engine.ingest_project_context(project_context)
@@ -624,4 +624,6 @@ snapshot = world_engine.snapshot("My_Market", "KR", project_context_id="PRJ-001"
 **다음**: Phase C 또는 StrategyEngine
 
 **World Engine v2.0 (Phase A+B) 완성!**
+
+
 

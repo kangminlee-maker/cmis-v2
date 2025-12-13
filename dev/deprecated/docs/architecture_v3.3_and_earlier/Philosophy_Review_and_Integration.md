@@ -78,7 +78,7 @@ if stage == "prior":
 class Verifier:
     def check_prior_usage(self, ledgers):
         """Prior 사용 검증"""
-        for metric_id, metric in ledgers.task_ledger.metrics.items():
+        for metric_id, metric in ledgers.project_ledger.metrics.items():
             if metric.get("origin") == "prior":
                 # Belief Engine 거쳤는지 확인
                 if "belief_engine" not in metric.get("lineage", {}).get("engine_ids", []):
@@ -107,13 +107,13 @@ class Verifier:
 class Ledgers:
     def save_to_substrate(self):
         """Ledger → Substrate 영구 저장
-        
+
         재현성 보장.
         """
-        # TaskLedger → Evidence/Value Store
-        for metric_id, metric in self.task_ledger.metrics.items():
+        # ProjectLedger → Evidence/Value Store
+        for metric_id, metric in self.project_ledger.metrics.items():
             value_store.save(metric)
-        
+
         # DecisionLog → Memory Store
         for decision in self.decision_log:
             memory_store.save({
@@ -131,7 +131,7 @@ class Ledgers:
 class OrchestrationKernel:
     def finalize_execution(self):
         """실행 종료 시 Substrate 저장 강제"""
-        
+
         if not self.ledgers.is_saved_to_substrate():
             raise ValueError(
                 "Ledger가 Substrate에 저장되지 않음. "
@@ -160,20 +160,20 @@ def reconcile_loop():
     while not goal_achieved():
         # Desired State (Goal)
         desired = goal.success_predicate
-        
+
         # Observed State (Ledgers)
         observed = ledgers.get_current_state()
-        
+
         # Diff
         diff = verifier.compare(desired, observed)
-        
+
         # Task 생성 (동적!)
         if diff.has_gaps():
             tasks = replanner.generate_tasks(diff)
-        
+
         # Execute
         execute(tasks)
-        
+
         # Update Observed
         ledgers.update()
 ```
@@ -203,92 +203,92 @@ def reconcile_loop():
 ```python
 class OrchestrationKernel:
     """Orchestration Kernel
-    
+
     CMIS 철학 강제:
     - Evidence-first (Stage 추적)
     - Substrate SSOT (Ledger → Store 저장)
     - Objective-Oriented (Reconcile Loop)
     - Decision Logging (모든 결정 기록)
     """
-    
+
     def __init__(self, policy_engine):
         self.policy_engine = policy_engine
         self.ledgers = Ledgers()
         self.decision_log = []
-        
+
         # 철학 강제 플래그
         self.enforce_philosophy = True
-    
+
     def reconcile_loop(self, goal: Goal) -> Dict:
         """Reconcile Loop (철학 8 구현)"""
-        
+
         iteration = 0
         max_iterations = 20
-        
+
         while iteration < max_iterations:
             # Desired vs Observed
             verification = self.verifier.verify_goal(goal, self.ledgers)
-            
+
             if verification["satisfied"]:
                 break
-            
+
             # Diff → Tasks
             diff = verification["diff_report"]
             tasks = self.replanner.generate_tasks_from_diff(diff, goal, self.ledgers)
-            
+
             # 철학 4: Decision Logging
             self._log_decision("diff_to_tasks", {
                 "diff": diff,
                 "tasks": [t.task_id for t in tasks]
             })
-            
+
             # Execute
             for task in tasks:
                 result = self._execute_task(task)
                 self.ledgers.update_from_task_result(task, result)
-                
+
                 # 철학 1: Prior 사용 검증
                 if self.enforce_philosophy:
                     self._check_prior_usage(result)
-            
+
             iteration += 1
-        
+
         # 철학 1: Substrate 저장 강제
         if self.enforce_philosophy:
             self._ensure_substrate_saved()
-        
+
         return {
             "goal_satisfied": verification["satisfied"],
             "ledgers": self.ledgers.to_dict(),
             "decision_log": self.decision_log
         }
-    
+
     def _check_prior_usage(self, result: Dict):
         """철학 3: Prior는 Belief Engine만"""
-        
+
         if result.get("origin") == "prior":
             lineage = result.get("lineage", {})
             engine_ids = lineage.get("engine_ids", [])
-            
+
             if "belief_engine" not in engine_ids:
                 raise ValueError(
                     f"철학 위반: Prior는 Belief Engine을 통해서만 사용 가능. "
                     f"engine_ids: {engine_ids}"
                 )
-    
+
     def _ensure_substrate_saved(self):
         """철학 1: Substrate 기록 강제"""
-        
+
         if not self.ledgers.is_saved_to_substrate():
             # 경고만 (강제는 선택)
             self._emit_warning(
                 "substrate_not_saved",
                 "결론 확정 전 Substrate 저장 권장"
             )
-    
+
     def _log_decision(self, decision_type: str, data: Dict):
         """철학 4: Decision Logging (모든 결정)"""
-        
+
         self.decision_log.append({
             "timestamp": datetime.now().isoformat(),
             "decision_type": decision_type,
@@ -310,12 +310,12 @@ class OrchestrationKernel:
 
 class OrchestrationKernel:
     """Orchestration Kernel
-    
+
     CMIS 철학 구현:
     - 철학 1: Evidence-first (Stage 추적 + Policy)
     - 철학 2: SSOT (Ledger → Substrate)
     - 철학 8: Objective-Oriented (Reconcile Loop)
-    
+
     금지 규칙 강제:
     - Prior는 Belief Engine만
     - Decision Logging 필수
@@ -331,24 +331,24 @@ orchestration_kernel:
     - id: "evidence_first"
       philosophy_ref: "cmis_philosophy_concept_v2.md#철학1"
       implementation: "Stage 추적 + Policy Engine 연동"
-    
+
     - id: "substrate_ssot"
       philosophy_ref: "cmis_philosophy_concept_v2.md#철학2"
       implementation: "Ledgers → Substrate 저장"
-    
+
     - id: "objective_oriented"
       philosophy_ref: "cmis_philosophy_concept_v2.md#철학8"
       implementation: "Reconcile Loop (Desired ↔ Observed)"
-  
+
   prohibited_patterns:
     - pattern: "Prior without Belief Engine"
       enforcement: "runtime_check"
       error_message: "철학 3 위반"
-    
+
     - pattern: "Conclusion without Substrate"
       enforcement: "warning"
       error_message: "철학 1(금지 규칙 1) 위반"
-    
+
     - pattern: "Orchestration without Logging"
       enforcement: "mandatory"
       error_message: "철학 4(금지 규칙 4) 위반"
@@ -386,7 +386,7 @@ orchestration_kernel:
 ## 철학 2: 권위 있는 Substrate
 
 **구현**:
-- Ledgers (TaskLedger + ProgressLedger)
+- Ledgers (ProjectLedger + ProgressLedger)
 - save_to_substrate() (재현성)
 - DecisionLog → Memory Store
 
@@ -434,9 +434,9 @@ class OrchestrationKernel:
         context: Dict
     ) -> Dict:
         """재현성 검증 (철학 2, 10)
-        
+
         동일 질문 2회 실행 → 결과 비교
-        
+
         Returns:
             {
                 "reproducible": True/False,
@@ -448,26 +448,26 @@ class OrchestrationKernel:
         """
         # 1차 실행
         result1 = self.execute(query, context)
-        
+
         # 2차 실행 (즉시)
         result2 = self.execute(query, context)
-        
+
         # 비교
         if result1 == result2:
             return {"reproducible": True}
-        
+
         # 차이 설명
         changes = self._explain_changes(result1, result2)
-        
+
         return {
             "reproducible": False,
             "changes_explanation": changes,
             "acceptable": self._is_acceptable_change(changes)
         }
-    
+
     def _is_acceptable_change(self, changes: List[str]) -> bool:
         """변화가 허용 가능한가
-        
+
         철학: evidence/policy/context 변화만 허용
         """
         acceptable_types = [
@@ -477,7 +477,7 @@ class OrchestrationKernel:
             "pattern_graph",
             "value_graph"
         ]
-        
+
         return all(
             any(t in change for t in acceptable_types)
             for change in changes
@@ -501,14 +501,14 @@ class OrchestrationKernel:
 class OrchestrationKernel:
     def check_non_goals(self, result: Dict):
         """Non-goals 위반 검증"""
-        
+
         # Non-goal 1: 그럴듯한 답만
         if not result.get("decision_log"):
             raise ValueError(
                 "Non-goal 위반: Decision Log 없음. "
                 "근거/재현성 없는 답변 금지"
             )
-        
+
         # Non-goal 3: Agent가 사실 확정
         for metric in result.get("metrics", []):
             if metric.get("confirmed_by") == "agent":
@@ -566,33 +566,33 @@ class OrchestrationKernel:
 orchestration_kernel:
   philosophy_compliance:
     reference: "dev/docs/architecture/cmis_philosophy_concept_v2.md"
-    
+
     implemented_philosophies:
       - philosophy_id: 8
         name: "Objective-Oriented Orchestration"
         implementation: "Reconcile Loop (Desired ↔ Observed)"
-      
+
       - philosophy_id: 1
         name: "Evidence-first, Prior-last"
         implementation: "MetricStageTracker + Policy Engine 연동"
-      
+
       - philosophy_id: 2
         name: "권위 있는 Substrate"
         implementation: "Ledgers → Substrate 영구 저장"
-    
+
     prohibited_rules_enforcement:
       - rule_id: 1
         rule: "Substrate 기록 필수"
         enforcement: "finalize_execution() 검증"
-      
+
       - rule_id: 3
         rule: "Prior는 Belief Engine만"
         enforcement: "Lineage engine_ids 확인"
-      
+
       - rule_id: 4
         rule: "Orchestration Decision Logging"
         enforcement: "모든 Reconcile 단계 기록 (강제)"
-    
+
     non_goals_checks:
       - "Decision Log 존재 확인"
       - "Agent 확정 금지 확인"
@@ -607,7 +607,7 @@ orchestration_kernel:
 
 **철학 v2 → Orchestration Kernel**:
 
-1. **철학 8 (Objective-Oriented)** 
+1. **철학 8 (Objective-Oriented)**
    → Reconcile Loop로 완벽 구현
 
 2. **철학 1 (Evidence-first)**

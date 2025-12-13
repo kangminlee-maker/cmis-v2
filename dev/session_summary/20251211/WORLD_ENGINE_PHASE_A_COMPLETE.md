@@ -176,7 +176,7 @@ baseline_state: {
 - STATE-{project_context_id}-data
 
 **테스트**: 2개 통과
-- 기본 ProjectContext
+- 기본 FocalActorContext
 - baseline_state 포함
 
 **효과**:
@@ -311,8 +311,8 @@ snapshot = engine.snapshot(
 - ingest_project_context() 추가
 
 **2. cmis_core/types.py** (+15 라인)
-- ProjectContext.baseline_state 추가
-- ProjectContext.focal_actor_id 추가
+- FocalActorContext.baseline_state 추가
+- FocalActorContext.focal_actor_id 추가
 
 **3. cmis_core/graph.py** (+10 라인)
 - InMemoryGraph.__init__(nodes, edges) 지원
@@ -343,7 +343,7 @@ Phase A 테스트:        23/23 passed (100%)
 
 - ✅ as_of 필터링 정확성 (State 최신, MoneyFlow timestamp)
 - ✅ segment 필터링 정확성 (customer_segment + 거래 상대방)
-- ✅ ProjectContext → R-Graph 매핑 (focal_actor + State)
+- ✅ FocalActorContext → R-Graph 매핑 (focal_actor + State)
 - ✅ 서브그래프 추출 (1-hop, 2-hop, MoneyFlow, State 포함)
 - ✅ Greenfield/Brownfield 워크플로우
 
@@ -395,9 +395,9 @@ Phase A 테스트:        23/23 passed (100%)
 
 ### 3. ingest_project_context 매핑 규칙 구체화
 
-**ProjectContext → R-Graph 변환**:
+**FocalActorContext → R-Graph 변환**:
 
-| ProjectContext 필드 | R-Graph | 위치 |
+| FocalActorContext 필드 | R-Graph | 위치 |
 |---------------------|---------|------|
 | focal_actor_id | Actor | ACT-{project_context_id} |
 | baseline_state.current_revenue | State.properties.revenue | STATE-baseline |
@@ -634,4 +634,6 @@ Phase C: ⏳ 예정 (성능 최적화)
 **다음**: Phase B (ingest_evidence) 또는 StrategyEngine
 
 **World Engine v2.0 Phase A 완성!**
+
+
 

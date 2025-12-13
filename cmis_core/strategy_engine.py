@@ -20,7 +20,7 @@ from .types import (
     PatternMatch,
     GapCandidate,
     RealityGraphSnapshot,
-    ProjectContext
+    FocalActorContext
 )
 from .graph import InMemoryGraph
 from .world_engine import WorldEngine
@@ -34,16 +34,16 @@ from .strategy_library import StrategyLibrary
 
 class StrategyEngine:
     """Strategy Engine v1
-    
+
     역할:
     - Pattern 조합 → Strategy 생성
     - Execution Fit/ROI/Risk 평가
     - Portfolio 최적화
-    
+
     Phase 1: Core + Public API
     Phase 2: D-Graph 통합, Portfolio 고도화
     """
-    
+
     def __init__(self, project_root: Optional[Path] = None):
         """
         Args:
@@ -51,32 +51,32 @@ class StrategyEngine:
         """
         if project_root is None:
             project_root = Path(__file__).parent.parent
-        
+
         self.project_root = Path(project_root)
-        
+
         # Engines
         self.world_engine = WorldEngine(project_root)
         self.pattern_engine = PatternEngineV2()
         self.value_engine = ValueEngine()
-        
+
         # D-Graph (Phase 1: 인메모리)
         self.d_graph = InMemoryGraph()
-        
+
         # Core 컴포넌트
         self.generator = StrategyGenerator()
         self.evaluator = StrategyEvaluator(value_engine=self.value_engine)
         self.optimizer = PortfolioOptimizer()
-        
+
         # Strategy 저장소
         self.strategies_cache: Dict[str, Strategy] = {}
-        
+
         # Strategy Library (Phase 3)
         self.library = StrategyLibrary()
         try:
             self.library.load_templates()
         except Exception:
             pass
-    
+
     def search_strategies_api(
         self,
         goal_id: str,
@@ -84,54 +84,54 @@ class StrategyEngine:
         project_context_id: Optional[str] = None
     ) -> str:
         """Public API (cmis.yaml 대응)
-        
+
         프로세스:
         1. Goal 로딩 (D-Graph 또는 생성)
-        2. ProjectContext 로딩 (있으면)
+        2. FocalActorContext 로딩 (있으면)
         3. World/Pattern Engine 호출
         4. Core search_strategies() 호출
         5. D-Graph 저장
         6. strategy_set_ref 반환
-        
+
         Args:
             goal_id: Goal ID
             constraints: 제약 조건 (Greenfield용)
-            project_context_id: ProjectContext ID (Brownfield)
-        
+            project_context_id: FocalActorContext ID (Brownfield)
+
         Returns:
             strategy_set_ref: "STSET-{uuid}"
         """
         # 1. Goal 로딩 (Phase 1: 간단한 생성)
         goal = self._load_or_create_goal(goal_id, constraints)
-        
-        # 2. ProjectContext 로딩
+
+        # 2. FocalActorContext 로딩
         project_context = None
         if project_context_id:
             project_context = self._load_project_context(project_context_id)
-        
+
         # 3. World/Pattern Engine 호출
         scope = goal.scope
-        
+
         snapshot = self.world_engine.snapshot(
             domain_id=scope.get("domain_id", "Unknown"),
             region=scope.get("region", "KR"),
             project_context_id=project_context_id
         )
-        
+
         matches = self.pattern_engine.match_patterns(
             snapshot.graph,
             project_context_id=project_context_id
         )
-        
+
         gaps = self.pattern_engine.discover_gaps(
             snapshot.graph,
             project_context_id=project_context_id,
             precomputed_matches=matches
         )
-        
+
         # 4. Core 함수
         greenfield_constraints = constraints if not project_context else None
-        
+
         strategies = self.search_strategies_core(
             goal=goal,
             reality_snapshot=snapshot,
@@ -140,39 +140,39 @@ class StrategyEngine:
             project_context=project_context,
             greenfield_constraints=greenfield_constraints
         )
-        
+
         # 5. D-Graph 저장 + 캐시
         strategy_set_ref = self._save_strategies_to_d_graph(
             strategies,
             goal_id,
             project_context_id
         )
-        
+
         # 캐시에 저장
         for strategy in strategies:
             self.strategies_cache[strategy.strategy_id] = strategy
-        
+
         return strategy_set_ref
-    
+
     def search_strategies_core(
         self,
         goal: Goal,
         reality_snapshot: RealityGraphSnapshot,
         pattern_matches: List[PatternMatch],
         gaps: List[GapCandidate],
-        project_context: Optional[ProjectContext] = None,
+        project_context: Optional[FocalActorContext] = None,
         greenfield_constraints: Optional[Dict[str, Any]] = None
     ) -> List[Strategy]:
         """Core 전략 탐색 (내부 함수)
-        
+
         Args:
             goal: 목표
             reality_snapshot: R-Graph
             pattern_matches: 매칭된 Pattern
             gaps: Gap 후보
-            project_context: ProjectContext (Brownfield)
+            project_context: FocalActorContext (Brownfield)
             greenfield_constraints: Greenfield 제약
-        
+
         Returns:
             Strategy 리스트
         """
@@ -182,7 +182,7 @@ class StrategyEngine:
             gaps=gaps,
             goal=goal
         )
-        
+
         # 2. 평가 먼저 (Constraint 필터링 전에 outcomes 필요)
         for strategy in strategies:
             # Outcomes (필터링에 필요)
@@ -192,7 +192,7 @@ class StrategyEngine:
                 baseline_state=baseline,
                 horizon_years=int(goal.target_horizon[:-1]) if goal.target_horizon.endswith('y') else 3
             )
-        
+
         # 3. Constraint 필터링 (outcomes 계산 후)
         if project_context:
             # Brownfield
@@ -206,7 +206,7 @@ class StrategyEngine:
                 strategies,
                 greenfield_constraints
             )
-        
+
         # 4. 추가 평가 (Execution Fit, Risk, Preference)
         for strategy in strategies:
             # Execution Fit (Brownfield만)
@@ -215,21 +215,21 @@ class StrategyEngine:
                     strategy,
                     project_context
                 )
-            
+
             # Risk
             strategy.risks = self.evaluator.assess_risks(
                 strategy,
                 project_context,
                 pattern_matches
             )
-            
+
             # Preference (Brownfield만)
             if project_context and project_context.preference_profile:
                 strategy.adjusted_score = self._adjust_by_preferences(
                     strategy,
                     project_context.preference_profile
                 )
-        
+
         # 4. 정렬
         if project_context:
             # Brownfield: Execution Fit × adjusted_score
@@ -243,9 +243,9 @@ class StrategyEngine:
                 key=lambda s: s.expected_outcomes.get("roi", 0),
                 reverse=True
             )
-        
+
         return strategies
-    
+
     def _filter_by_greenfield_constraints(
         self,
         strategies: List[Strategy],
@@ -253,25 +253,25 @@ class StrategyEngine:
     ) -> List[Strategy]:
         """Greenfield 제약 필터링"""
         filtered = []
-        
+
         budget = greenfield_constraints.get("budget")
         timeline = greenfield_constraints.get("timeline_months")
-        
+
         for strategy in strategies:
             outcomes = strategy.expected_outcomes
-            
+
             # Budget
             if budget and outcomes.get("required_investment", 0) > budget:
                 continue
-            
+
             # Timeline
             if timeline and outcomes.get("required_timeline_months", 36) > timeline:
                 continue
-            
+
             filtered.append(strategy)
-        
+
         return filtered
-    
+
     def _filter_by_brownfield_constraints(
         self,
         strategies: List[Strategy],
@@ -279,34 +279,34 @@ class StrategyEngine:
     ) -> List[Strategy]:
         """Brownfield 제약 필터링"""
         filtered = []
-        
+
         hard_constraints = constraints_profile.get("hard_constraints", [])
-        
+
         for strategy in strategies:
             violates = False
-            
+
             for constraint in hard_constraints:
                 ctype = constraint.get("type")
                 dimension = constraint.get("dimension", "")
                 threshold = constraint.get("threshold")
-                
+
                 # financial + budget
                 if ctype == "financial" and "budget" in dimension:
                     if strategy.expected_outcomes.get("required_investment", 0) > threshold:
                         violates = True
                         break
-                
+
                 # temporal + timeline
                 elif ctype == "temporal" and "timeline" in dimension:
                     if strategy.expected_outcomes.get("required_timeline_months", 36) > threshold:
                         violates = True
                         break
-            
+
             if not violates:
                 filtered.append(strategy)
-        
+
         return filtered
-    
+
     def _adjust_by_preferences(
         self,
         strategy: Strategy,
@@ -314,33 +314,33 @@ class StrategyEngine:
     ) -> float:
         """Preference 반영 점수 조정"""
         score = strategy.execution_fit_score or 0.5
-        
+
         soft_preferences = preference_profile.get("soft_preferences", [])
-        
+
         for pref in soft_preferences:
             dimension = pref.get("dimension")
             value = pref.get("value")
             weight = pref.get("weight", 0.5)
-            
+
             if dimension == "prefer_patterns":
                 for pattern_id in strategy.pattern_composition:
                     if pattern_id in value:
                         score += 0.1 * weight
-            
+
             elif dimension == "avoid_patterns":
                 for pattern_id in strategy.pattern_composition:
                     if pattern_id in value:
                         score -= 0.2 * weight
-        
+
         return max(0.0, min(1.0, score))
-    
+
     def _load_or_create_goal(
         self,
         goal_id: str,
         constraints: Dict[str, Any]
     ) -> Goal:
         """Goal 로딩 또는 생성
-        
+
         Phase 1: 간단한 생성
         Phase 2: D-Graph에서 로딩
         """
@@ -351,23 +351,23 @@ class StrategyEngine:
             scope=constraints.get("scope", {}),
             target_horizon=constraints.get("horizon", "3y")
         )
-    
+
     def _load_project_context(
         self,
         project_context_id: str
-    ) -> ProjectContext:
-        """ProjectContext 로딩
-        
+    ) -> FocalActorContext:
+        """FocalActorContext 로딩
+
         Phase 1: 더미
         Phase 2: project_context_store에서 로딩
         """
-        return ProjectContext(
+        return FocalActorContext(
             project_context_id=project_context_id,
             scope={},
             assets_profile={},
             baseline_state={}
         )
-    
+
     def _save_strategies_to_d_graph(
         self,
         strategies: List[Strategy],
@@ -375,11 +375,11 @@ class StrategyEngine:
         project_context_id: Optional[str]
     ) -> str:
         """D-Graph에 Strategy 저장
-        
+
         Phase 3: strategy 노드 + edge 상세 저장
         """
         strategy_set_ref = f"STSET-{uuid.uuid4().hex[:8]}"
-        
+
         # 1. strategy_set 노드
         self.d_graph.upsert_node(
             strategy_set_ref,
@@ -391,7 +391,7 @@ class StrategyEngine:
                 "created_at": datetime.now().isoformat()
             }
         )
-        
+
         # 2. 각 strategy 노드 생성 (Phase 3)
         for strategy in strategies:
             # strategy 노드 (cmis.yaml 스키마)
@@ -414,14 +414,14 @@ class StrategyEngine:
                     }
                 }
             )
-            
+
             # 3. strategy_targets_goal edge
             self.d_graph.add_edge(
                 "strategy_targets_goal",
                 source=strategy.strategy_id,
                 target=goal_id
             )
-            
+
             # 4. strategy_uses_pattern edges
             for pattern_id in strategy.pattern_composition:
                 self.d_graph.add_edge(
@@ -430,9 +430,9 @@ class StrategyEngine:
                     target=pattern_id,  # P-Graph pattern 노드
                     data={"pattern_id": pattern_id}
                 )
-        
+
         return strategy_set_ref
-    
+
     def evaluate_portfolio_api(
         self,
         strategy_ids: List[str],
@@ -442,26 +442,26 @@ class StrategyEngine:
         """Public API: Portfolio 평가"""
         strategies = [self._load_strategy(sid) for sid in strategy_ids]
         strategies = [s for s in strategies if s is not None]
-        
+
         if not strategies:
             return "PEVAL-empty"
-        
+
         project_context = None
         if project_context_id:
             project_context = self._load_project_context(project_context_id)
-        
+
         policy_params = self._resolve_policy(policy_ref)
-        
+
         portfolio_eval = self.evaluate_portfolio_core(strategies, project_context, policy_params)
-        
+
         portfolio_eval_ref = self._save_portfolio_to_d_graph(portfolio_eval, strategy_ids, project_context_id)
-        
+
         return portfolio_eval_ref
-    
+
     def evaluate_portfolio_core(self, strategies, project_context, policy_params):
         """Core: Portfolio 평가"""
         portfolio_id = f"PORTFOLIO-{uuid.uuid4().hex[:8]}"
-        
+
         synergies = []
         for i, s1 in enumerate(strategies):
             for j, s2 in enumerate(strategies):
@@ -469,7 +469,7 @@ class StrategyEngine:
                     score = self.optimizer.analyze_synergy(s1, s2)
                     if score > 0.2:
                         synergies.append({"strategies": [s1.strategy_id, s2.strategy_id], "synergy_score": score})
-        
+
         conflicts = []
         for i, s1 in enumerate(strategies):
             for j, s2 in enumerate(strategies):
@@ -477,13 +477,13 @@ class StrategyEngine:
                     conflict = self.optimizer.detect_conflicts(s1, s2)
                     if conflict:
                         conflicts.append(conflict)
-        
+
         aggregate_roi = sum(s.expected_outcomes.get("roi", 0) for s in strategies) / len(strategies)
         aggregate_risk = sum(len(s.risks) for s in strategies) / (len(strategies) * 10)
         combined_score = aggregate_roi / (1 + aggregate_risk)
-        
+
         resources = self.optimizer.aggregate_resource_requirements(strategies)
-        
+
         return PortfolioEvaluation(
             portfolio_id=portfolio_id,
             strategy_ids=[s.strategy_id for s in strategies],
@@ -496,7 +496,7 @@ class StrategyEngine:
             policy_ref=policy_params.get("policy_ref", "decision_balanced"),
             project_context_id=project_context.project_context_id if project_context else None
         )
-    
+
     def _resolve_policy(self, policy_ref):
         """Policy 해석"""
         policies = {
@@ -520,11 +520,11 @@ class StrategyEngine:
             }
         }
         return policies.get(policy_ref, policies["decision_balanced"])
-    
+
     def _load_strategy(self, strategy_id):
         """Strategy 로딩"""
         return self.strategies_cache.get(strategy_id)
-    
+
     def _save_portfolio_to_d_graph(self, portfolio_eval, strategy_ids, project_context_id):
         """Portfolio D-Graph 저장"""
         self.d_graph.upsert_node(
@@ -537,3 +537,5 @@ class StrategyEngine:
             }
         )
         return portfolio_eval.portfolio_id
+
+

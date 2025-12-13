@@ -67,7 +67,7 @@ def snapshot(
 - cmis.yaml: focal_actor_id required
 
 **v2.0 해결**:
-- ProjectContext는 focal_actor_id를 이미 알고 있음
+- FocalActorContext는 focal_actor_id를 이미 알고 있음
 - WorldEngine은 focal_actor 반영/업데이트 역할
 - 스키마 변경 최소화
 

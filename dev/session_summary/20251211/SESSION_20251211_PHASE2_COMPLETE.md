@@ -114,7 +114,7 @@ pytest dev/tests/unit/test_pattern_engine_v2_phase2.py -v
 - TestContextArchetype (4개)
 - TestGapDiscovery (3개)
 - TestPatternEngineV2Phase2 (4개)
-- TestProjectContext (2개)
+- TestFocalActorContext (2개)
 - TestGapCandidateFields (1개)
 - TestIntegrationPhase2 (2개)
 

@@ -41,10 +41,10 @@ __all__ = [
 
 class DARTSource(BaseDataSource):
     """DART API Source
-    
+
     기존 DARTConnector를 BaseDataSource 인터페이스로 래핑
     """
-    
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Args:
@@ -59,21 +59,21 @@ class DARTSource(BaseDataSource):
                 "data_types": ["numeric", "table"]
             }
         )
-        
+
         try:
             self.connector = DARTConnector(api_key)
         except ValueError as e:
             raise SourceNotAvailableError(f"DART initialization failed: {e}")
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """Evidence 수집
-        
+
         Args:
             request: Evidence 요청
-        
+
         Returns:
             EvidenceRecord
-        
+
         Raises:
             DataNotFoundError: 데이터 없음
             SourceNotAvailableError: API 오류
@@ -81,23 +81,23 @@ class DARTSource(BaseDataSource):
         # Context에서 필요 정보 추출
         company_name = request.context.get("company_name")
         year = request.context.get("year")
-        
+
         if not company_name or not year:
             raise DataNotFoundError(
                 f"DART requires company_name and year in context"
             )
-        
+
         # DART connector 호출
         try:
             evidence = self.connector.fetch_company_revenue(company_name, year)
         except Exception as e:
             raise SourceNotAvailableError(f"DART API error: {e}")
-        
+
         if not evidence:
             raise DataNotFoundError(
                 f"No DART data for {company_name} {year}"
             )
-        
+
         # v9 Evidence → EvidenceRecord 변환
         return EvidenceRecord(
             evidence_id=evidence.evidence_id,
@@ -114,10 +114,10 @@ class DARTSource(BaseDataSource):
                 "corp_code": evidence.metadata.get("corp_code")
             }
         )
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """요청 처리 가능 여부
-        
+
         체크:
         - region: KR만 지원
         - company_name, year 필수
@@ -125,14 +125,14 @@ class DARTSource(BaseDataSource):
         # region 체크
         if request.context.get("region") != "KR":
             return False
-        
+
         # 필수 필드 체크
         if not request.context.get("company_name"):
             return False
-        
+
         if not request.context.get("year"):
             return False
-        
+
         return True
 
 
@@ -142,10 +142,10 @@ class DARTSource(BaseDataSource):
 
 class StubSource(BaseDataSource):
     """테스트용 stub source
-    
+
     실제 API 호출 없이 더미 데이터 반환
     """
-    
+
     def __init__(
         self,
         source_id: str,
@@ -168,7 +168,7 @@ class StubSource(BaseDataSource):
             }
         )
         self.stub_data = stub_data
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """더미 데이터 반환"""
         return EvidenceRecord(
@@ -182,7 +182,7 @@ class StubSource(BaseDataSource):
             retrieved_at=datetime.now(timezone.utc).isoformat(),
             lineage={"stub": True}
         )
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """모든 요청 처리 가능"""
         return True
@@ -194,10 +194,10 @@ class StubSource(BaseDataSource):
 
 class KOSISSource(BaseDataSource):
     """KOSIS (통계청) Source
-    
+
     v1: 스텁 구현 (향후 API 연동 예정)
     """
-    
+
     def __init__(self):
         super().__init__(
             source_id="KOSIS",
@@ -208,14 +208,14 @@ class KOSISSource(BaseDataSource):
                 "data_types": ["numeric", "table"]
             }
         )
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """v1: 스텁 구현
-        
+
         향후 KOSIS OpenAPI 연동 예정
         """
         raise DataNotFoundError("KOSIS integration not yet implemented")
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """v1: 기본 체크만"""
         return request.context.get("region") == "KR"
@@ -227,10 +227,10 @@ class KOSISSource(BaseDataSource):
 
 class MarketResearchSource(BaseDataSource):
     """시장 리서치 Source
-    
+
     v1: 스텁 구현 (향후 문서 저장소 연동 예정)
     """
-    
+
     def __init__(self):
         super().__init__(
             source_id="MarketResearch",
@@ -241,15 +241,17 @@ class MarketResearchSource(BaseDataSource):
                 "data_types": ["numeric", "table", "raw_document"]
             }
         )
-    
+
     def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
         """v1: 스텁 구현
-        
+
         향후 S3/문서 저장소 연동 예정
         """
         raise DataNotFoundError("MarketResearch integration not yet implemented")
-    
+
     def can_handle(self, request: EvidenceRequest) -> bool:
         """v1: 모든 region 지원"""
         return True
+
+
 

@@ -1,0 +1,11 @@
+---
+schema_version: 1
+description: "Value Graph (V-Graph) schema. Placeholder v1."
+
+graph:
+  id: "V"
+  name: "Value Graph"
+  ontology_ref: "schemas/ontology.yaml"
+  node_types: []
+  edge_types: []
+  metrics_spec_ref: "libraries/metrics_spec.yaml"

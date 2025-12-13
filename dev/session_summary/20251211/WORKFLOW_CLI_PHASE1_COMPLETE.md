@@ -40,7 +40,7 @@ class WorkflowOrchestrator:
     def __init__(self):
         # canonical_workflows 로딩 (cmis.yaml)
         self.workflows = self._load_canonical_workflows()
-        
+
         # Role → Policy 매핑
         self.role_policy_map = {
             "structure_analyst": "reporting_strict",
@@ -59,7 +59,7 @@ def run_workflow(
 ) -> Dict[str, Any]:
     """
     canonical_workflows 기반 Generic 실행
-    
+
     프로세스:
     1. canonical_workflows에서 workflow 정의 로딩
     2. role_id → policy_mode 해석
@@ -301,7 +301,7 @@ Policy: reporting_strict (default)
 def format_json(result, include_lineage=True, pretty=True):
     """
     Lineage 포함 JSON 출력
-    
+
     출력:
     {
       "meta": {...},
@@ -633,4 +633,6 @@ Phase 3: ⏳ 예정 (Advanced)
 **다음**: Phase 2 (batch-analysis, report-generate) 또는 StrategyEngine
 
 **Workflow CLI Phase 1 완성!**
+
+
 

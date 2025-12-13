@@ -226,10 +226,10 @@ def _fetch_stat_data(self, org_id, tbl_id, context):
         'format': 'json',
         'jsonVD': 'Y'
     }
-    
+
     response = requests.get(self.base_url, params=params)
     data = response.json()
-    
+
     # 간단한 파싱
     for row in data.get('data', []):
         value = float(row['DT'].replace(',', ''))
@@ -244,7 +244,7 @@ def _fetch_stat_data(self, org_id, tbl_id, context):
 def _fetch_stat_data_sdmx(self, org_id, tbl_id, context):
     """KOSIS 통계 조회 (SDMX)"""
     import sdmx
-    
+
     params = {
         'method': 'getList',
         'apiKey': self.api_key,
@@ -252,12 +252,12 @@ def _fetch_stat_data_sdmx(self, org_id, tbl_id, context):
         'tblId': tbl_id,
         'format': 'sdmx'
     }
-    
+
     response = requests.get(self.base_url, params=params)
-    
+
     # SDMX 파싱
     msg = sdmx.read_sdmx(response.content)
-    
+
     # 구조 파악 필요
     for dataset in msg.data:
         for series in dataset.series:
@@ -286,31 +286,31 @@ def _fetch_stat_data_sdmx(self, org_id, tbl_id, context):
 ```python
 class KOSISSource(BaseDataSource):
     """KOSIS API Source (JSON 형식)"""
-    
+
     def _fetch_stat_data(self, org_id, tbl_id, context):
         params = {
             'format': 'json',  # ← JSON 사용
             'jsonVD': 'Y',     # Value + Description
             ...
         }
-        
+
         response = requests.get(self.base_url, params=params)
         data = response.json()  # ← 간단 파싱
-        
+
         return data
-    
+
     def _parse_stat_data(self, data, request):
         """JSON 데이터 파싱 (간단)"""
         for row in data.get('data', []):
             value = float(row['DT'].replace(',', ''))
-            
+
             # 메타데이터 선별 저장
             metadata = {
                 'year': row.get('C1'),
                 'unit': row.get('UNIT_NM'),
                 'stat_name': row.get('C1_NM')
             }
-            
+
             return value, metadata
 ```
 
@@ -333,4 +333,6 @@ class KOSISSource(BaseDataSource):
 
 **작성**: 2025-12-09
 **권장**: JSON (v1/v2), SDMX (v3+)
+
+
 

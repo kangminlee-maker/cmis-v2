@@ -14,7 +14,7 @@ tables:
       - n_customers
       - population
       - 인구
-    
+
   - stat_type: household
     orgId: "101"
     tblId: "DT_1B04005N"
@@ -29,3 +29,5 @@ tables:
 
 # 향후 추가할 통계표는 여기에 추가
 # (코드 수정 불필요)
+
+

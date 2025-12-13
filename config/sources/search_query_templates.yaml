@@ -9,25 +9,25 @@ templates:
     keywords:
       - market size
       - total addressable market
-  
+
   MET-SAM:
     template: "{domain} {region} serviceable available market {year}"
     keywords:
       - market size
       - serviceable market
-  
+
   MET-Revenue:
     template: "{domain} {region} market size revenue {year}"
     keywords:
       - market size
       - revenue
-  
+
   MET-GDP:
     template: "{region} GDP gross domestic product {year}"
     keywords:
       - GDP
       - gross domestic product
-  
+
   MET-CPI:
     template: "{region} consumer price index inflation {year}"
     keywords:
@@ -42,3 +42,5 @@ default:
     - market size
 
 # 향후 Metric별 최적 쿼리는 여기에 추가
+
+

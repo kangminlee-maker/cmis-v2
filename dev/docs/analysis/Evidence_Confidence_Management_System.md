@@ -1,7 +1,7 @@
 # Evidence 신뢰도 관리 체계 분석
 
-**작성일**: 2025-12-10  
-**버전**: CMIS v2.1  
+**작성일**: 2025-12-10
+**버전**: CMIS v2.1
 **상태**: 현황 분석
 
 ---
@@ -277,8 +277,8 @@ hint = {
 ```python
 # reporting_strict: OFFICIAL tier 또는 conf > 0.8만
 if policy == "reporting_strict":
-    evidence = [e for e in evidence if 
-                e.source_tier == "official" or 
+    evidence = [e for e in evidence if
+                e.source_tier == "official" or
                 e.confidence > 0.8]
 
 # exploration_friendly: confidence > 0.4면 OK
@@ -402,7 +402,7 @@ DART 매출: 0.95 (170.37조원)
 
 **Google Search**:
 ```
-3개 결과, CV=0.15: 
+3개 결과, CV=0.15:
   base 0.50 + count 0.15 + variance 0.21 = 0.86 → 0.85 (cap)
 
 1개 결과:
@@ -575,6 +575,8 @@ CMIS는 **3단계 신뢰도 관리 체계**를 갖추고 있습니다:
 
 ---
 
-**작성**: 2025-12-10  
+**작성**: 2025-12-10
 **결론**: 견고한 3단계 신뢰도 체계 운영 중
+
+
 

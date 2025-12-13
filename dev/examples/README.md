@@ -8,7 +8,7 @@
 
 ### 1. project_context_examples.yaml
 
-**목적**: ProjectContext 입력 예시
+**목적**: FocalActorContext 입력 예시
 
 **시나리오** (3개):
 1. Greenfield (신규 진입, 자본 제약)
@@ -32,7 +32,7 @@ engine = WorldEngine()
 snapshot = engine.snapshot('Adult_Language_Education_KR', 'KR')
 ```
 
-**Note**: 
+**Note**:
 - Production에서는 Evidence 기반 권장 (seed 불필요)
 - Development에서는 빠른 테스트/데모에 유용
 
@@ -82,3 +82,5 @@ patterns = pattern_engine.match_patterns(snapshot.graph)
 
 **작성**: 2025-12-11
 **용도**: 테스트, 데모, 예시
+
+

@@ -208,8 +208,8 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 
 ## [v3.3] - 2025-12-11
 
-**작업 시간**: 12시간 (09:00 - 21:00)  
-**주요 성과**: World Engine, Strategy Engine, Learning Engine, Workflow CLI 완성  
+**작업 시간**: 12시간 (09:00 - 21:00)
+**주요 성과**: World Engine, Strategy Engine, Learning Engine, Workflow CLI 완성
 **완성도**: 40% → 89%
 
 ---
@@ -223,7 +223,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
   - RealityGraphStore 클래스
   - apply_as_of_filter() - State 최신 버전, MoneyFlow/Event timestamp 필터링
   - apply_segment_filter() - customer_segment 기반 필터링
-  
+
 - `cmis_core/project_overlay_store.py` (420 라인)
   - ProjectOverlayStore, ProjectOverlay 클래스
   - ingest_project_context() - focal_actor 생성, baseline_state → State 매핑
@@ -292,7 +292,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 - `cmis_cli/commands/batch_analysis.py` (186 라인)
   - 병렬 처리 (ProcessPoolExecutor)
   - Completeness 레벨 (full/partial/failed)
-  
+
 - `cmis_cli/commands/report_generate.py` (86 라인)
   - Markdown 템플릿 (4-Part 구조)
   - Lineage 포함 옵션
@@ -374,7 +374,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 
 **Phase 2: Context**
 - `cmis_core/context_learner.py` (120 라인)
-  - ProjectContext 버전 관리
+  - FocalActorContext 버전 관리
   - baseline_state 업데이트
   - Lineage 추적
 
@@ -446,7 +446,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 ### ♻️ Changed (변경)
 
 #### cmis_core/types.py
-- ProjectContext 확장 (baseline_state, focal_actor_id, version, lineage)
+- FocalActorContext 확장 (baseline_state, focal_actor_id, version, lineage)
 - EvidenceRecord 확장 (context, as_of, timestamp)
 - 신규 타입 추가:
   - Goal, Strategy, PortfolioEvaluation (StrategyEngine)
@@ -604,7 +604,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 - ✅ Policy별 threshold (reporting_strict/decision_balanced/exploration_friendly)
 - ✅ Strategy-linked/unlinked 분기
 - ✅ Pattern Benchmark 학습 (Context별)
-- ✅ ProjectContext 버전 관리 (version, previous_version_id, lineage)
+- ✅ FocalActorContext 버전 관리 (version, previous_version_id, lineage)
 - ✅ Metric Belief 조정
 - ✅ Outlier 감지 (±3σ)
 - ✅ LearningPolicy (sample_size, learning_rate)
@@ -626,7 +626,7 @@ BeliefEngine은 신규 엔진으로, 기존 기능에 영향 없음.
 - cmis.yaml 완전 정렬
 - D-Graph 스키마 준수
 - project_context_store 스키마 준수
-- 버전 관리 (ProjectContext)
+- 버전 관리 (FocalActorContext)
 - Lineage 완전 추적
 
 #### 코드 품질
@@ -858,7 +858,7 @@ snapshot = engine.snapshot('Domain', 'KR')
 ```
 
 #### validation 폴더
-**이전**: `dev/scripts/validation/validate_yaml_integrity.py`  
+**이전**: `dev/scripts/validation/validate_yaml_integrity.py`
 **신규**: `dev/validation/validate_yaml_integrity.py`
 
 ---
@@ -892,6 +892,6 @@ snapshot = engine.snapshot('Domain', 'KR')
 
 ---
 
-**작성**: 2025-12-11  
-**버전**: v3.3  
+**작성**: 2025-12-11
+**버전**: v3.3
 **다음 버전**: v4.0 (Production 배포)

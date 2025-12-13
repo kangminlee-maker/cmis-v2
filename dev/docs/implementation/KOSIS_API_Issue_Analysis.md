@@ -233,3 +233,5 @@ Tier 3 (Commercial):
 **상태**: KOSIS 이슈 분석 완료
 **권장**: JSON + v2 연기
 
+
+

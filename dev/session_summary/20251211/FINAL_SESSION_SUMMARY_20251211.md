@@ -110,7 +110,7 @@ StrategyEngine:   1,730 라인
 - 시장 전체 관점
 
 **Brownfield**:
-- ProjectContext 제약
+- FocalActorContext 제약
 - Execution Fit 계산
 - 우리 회사 관점
 
@@ -199,3 +199,5 @@ Linter 오류:   0개
 **다음**: LearningEngine 또는 Workflow CLI Phase 2
 
 **역대급 하루였습니다!** 🎉🚀✨🏆
+
+

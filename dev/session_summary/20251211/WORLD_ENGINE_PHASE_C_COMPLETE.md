@@ -495,10 +495,10 @@ domains = ["Market_A", "Market_B", "Market_C"]
 for domain in domains:
     # Evidence 수집
     evidence = evidence_engine.fetch_for_metrics(...)
-    
+
     # R-Graph 생성 및 저장
     engine.ingest_evidence(domain, evidence.records)
-    
+
     # snapshot (백엔드에서 로딩/저장)
     snapshot = engine.snapshot(domain, "KR")
 
@@ -649,4 +649,6 @@ Phase A+B+C: 100% ✅
 **테스트**: 13/13 (100%) + 전체 306/307 (99.7%)
 
 **World Engine v2.0 완전 완성!** 🎉🚀
+
+
 

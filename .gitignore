@@ -17,6 +17,7 @@ ENV/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -33,3 +34,6 @@ output/*.json
 # CMIS v3.5 specific
 data/artifacts/
 data/value_store/
+
+# CMIS Cursor Agent Interface v2 runtime
+.cmis/

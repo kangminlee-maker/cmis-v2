@@ -188,7 +188,7 @@ snapshot:
 - 실무 가치 매우 높음 (focal_actor 중심 분석)
 
 **의존성**:
-- ProjectContext 데이터 모델 (✅ 이미 구현됨)
+- FocalActorContext 데이터 모델 (✅ 이미 구현됨)
 - R-Graph Actor/State 노드 (✅ 이미 구현됨)
 
 **예상 효과**:
@@ -253,7 +253,7 @@ snapshot:
 
 **작업**:
 1. `ingest_project_context()` 구현
-   - ProjectContext → focal_actor 생성
+   - FocalActorContext → focal_actor 생성
    - baseline_state → State 노드 추가
    - assets_profile → Actor traits 매핑
 

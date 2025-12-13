@@ -476,10 +476,10 @@ class NewSource(BaseDataSource):
             source_tier=SourceTier.COMMERCIAL,
             capabilities={...}
         )
-    
+
     def fetch(self, request):
         ...
-    
+
     def can_handle(self, request):
         ...
 
@@ -496,7 +496,7 @@ registry.register_source("NewSource", "commercial", NewSource())
 class PostgreSQLBackend(StorageBackend):
     def save(self, key, value, ttl):
         ...
-    
+
     def get(self, key):
         ...
 
@@ -562,4 +562,6 @@ store = EvidenceStore(PostgreSQLBackend(...))
 **완료일**: 2025-12-09
 **버전**: 1.0.0
 **승인**: ✅ Production Deployment Ready
+
+
 
