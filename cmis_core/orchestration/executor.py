@@ -288,6 +288,7 @@ class TaskExecutor:
                 {
                     "ts": ts,
                     "tool_id": tool_id,
+                    "operation": "evidence_fetch",
                     "source_id": source_id,
                     "source_tier": source_tier,
                     "count": n,

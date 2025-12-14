@@ -255,6 +255,7 @@ class OrchestrationKernel:
         ]
         queue.enqueue(initial_tasks)
         emit_decision("initial_plan", {"tasks": [t.task_id for t in initial_tasks]})
+        ledgers.record_planned_tasks(goal.goal_id, initial_tasks, reason="initial_plan")
 
         # Budgets
         budget = Budget(
@@ -287,6 +288,7 @@ class OrchestrationKernel:
                     queue.enqueue(replan.tasks)
                     progress_ledger.replanning_count += 1
                     emit_decision("replanned", {"reason": replan.reason, "tasks": [t.task_id for t in replan.tasks]})
+                    ledgers.record_planned_tasks(goal.goal_id, replan.tasks, reason=replan.reason)
                     ledgers.set_next_step_suggestion(
                         {
                             "reason": replan.reason,
@@ -304,6 +306,25 @@ class OrchestrationKernel:
                         ledgers.set_next_step_suggestion({"action": "stop", "reason": stall_reason})
                         break
 
+                # 2.5) run_mode gates (Phase 1)
+                if str(request.run_mode) == "approval_required":
+                    planned = [
+                        {"task_id": t.task_id, "task_type": t.task_type.value, "depends_on": list(t.depends_on)}
+                        for t in queue.all_tasks()
+                    ]
+                    progress_ledger.loop_flags["waiting_approval"] = True
+                    progress_ledger.overall_status = "incomplete"
+                    ledgers.set_next_step_suggestion(
+                        {
+                            "action": "approve_and_rerun",
+                            "reason": "approval_required",
+                            "planned_tasks": planned,
+                            "hint": "승인 후 동일 요청을 autopilot/manual로 재실행하세요.",
+                        }
+                    )
+                    emit_decision("waiting_approval", {"planned_tasks": planned})
+                    break
+
                 # 3) Pick next task
                 task = queue.next_runnable(completed_task_ids)
                 if task is None:
@@ -314,6 +335,27 @@ class OrchestrationKernel:
                         emit_decision("stalled", {"reason": stall_reason})
                         break
                     continue
+
+                # manual mode: 1 task 실행 후 pause (다음 task 실행 전 중단)
+                if str(request.run_mode) == "manual" and iteration >= 1:
+                    planned = [
+                        {"task_id": t.task_id, "task_type": t.task_type.value, "depends_on": list(t.depends_on)}
+                        for t in queue.all_tasks()
+                        if t.status.value == "pending"
+                    ]
+                    progress_ledger.loop_flags["manual_pause"] = True
+                    progress_ledger.overall_status = "incomplete"
+                    if progress_ledger.next_step_suggestion is None:
+                        ledgers.set_next_step_suggestion(
+                            {
+                                "action": "rerun_manual",
+                                "reason": "manual_task_limit_reached",
+                                "planned_tasks": planned,
+                                "hint": "다음 스텝을 위해 동일 요청을 manual로 재실행하세요(Phase 1).",
+                            }
+                        )
+                    emit_decision("manual_pause", {"iteration": iteration, "planned_tasks": planned})
+                    break
 
                 # 4) Budget guard
                 stop_reason = self.governor.should_stop(ledgers, iteration=iteration, start_time=start_time, budget=budget)
@@ -350,11 +392,19 @@ class OrchestrationKernel:
 
                 tool_calls = result.get("tool_calls") or []
                 if isinstance(tool_calls, list):
+                    clean_tool_calls: List[Dict[str, Any]] = []
                     for tc in tool_calls:
                         if isinstance(tc, dict):
-                            progress_ledger.last_tool_calls.append(dict(tc))
+                            clean = dict(tc)
+                            clean_tool_calls.append(clean)
+                            progress_ledger.last_tool_calls.append(clean)
                     progress_ledger.last_tool_calls = progress_ledger.last_tool_calls[-20:]
                     progress_ledger.touch()
+                    if clean_tool_calls:
+                        emit_event(
+                            "tool_calls",
+                            {"task_id": task.task_id, "task_type": task.task_type.value, "tool_calls": clean_tool_calls},
+                        )
 
                 value_program = result.get("value_program") or {}
                 if isinstance(value_program, dict):

@@ -166,8 +166,118 @@ class Ledgers:
             "progress_ledger": self.progress_ledger.to_dict(),
         }
 
+    def record_planned_tasks(self, goal_id: str, tasks: List[Task], *, reason: Optional[str] = None) -> None:
+        """TaskQueue에 enqueue된 task를 goal_graph에 upsert합니다.
+
+        Phase 1:
+        - D-Graph 별도 store가 없으므로, project_ledger.goal_graph를 "Goal-centric D-View"로 확장합니다.
+        - idempotent: 동일 task_id / edge(from,to,type)는 중복 추가하지 않습니다.
+
+        Args:
+            goal_id: Goal node id (GOL-*)
+            tasks: enqueue된 task 리스트
+            reason: plan/replan reason (선택)
+        """
+        g = self.project_ledger.goal_graph
+        if not isinstance(g, dict):
+            return
+
+        nodes = g.get("nodes")
+        if not isinstance(nodes, list):
+            nodes = []
+            g["nodes"] = nodes
+
+        edges = g.get("edges")
+        if not isinstance(edges, list):
+            edges = []
+            g["edges"] = edges
+
+        node_by_id: Dict[str, Dict[str, Any]] = {}
+        for n in nodes:
+            if isinstance(n, dict):
+                nid = n.get("id")
+                if isinstance(nid, str) and nid:
+                    node_by_id[nid] = n
+
+        edge_keys = set()
+        for e in edges:
+            if not isinstance(e, dict):
+                continue
+            ek = (e.get("from"), e.get("to"), e.get("type"))
+            edge_keys.add(ek)
+
+        def ensure_edge(src: str, dst: str, etype: str, data: Optional[Dict[str, Any]] = None) -> None:
+            key = (src, dst, etype)
+            if key in edge_keys:
+                return
+            edge = {"from": src, "to": dst, "type": etype}
+            if isinstance(data, dict) and data:
+                edge["data"] = dict(data)
+            edges.append(edge)
+            edge_keys.add(key)
+
+        for t in tasks:
+            if not isinstance(t, Task):
+                continue
+            tid = str(t.task_id or "")
+            if not tid:
+                continue
+
+            node = node_by_id.get(tid)
+            if node is None:
+                node = {"id": tid, "type": "task", "data": {}}
+                nodes.append(node)
+                node_by_id[tid] = node
+
+            data = node.get("data")
+            if not isinstance(data, dict):
+                data = {}
+                node["data"] = data
+
+            data.update(
+                {
+                    "task_type": t.task_type.value,
+                    "status": t.status.value,
+                    "created_at": t.created_at,
+                    "started_at": t.started_at,
+                    "completed_at": t.completed_at,
+                    "attempt": t.attempt,
+                    "max_retries": t.max_retries,
+                    "last_error": t.last_error,
+                    "inputs": dict(t.inputs),
+                    "depends_on": list(t.depends_on),
+                }
+            )
+            if reason:
+                data["reason"] = str(reason)
+
+            # goal → task (plans)
+            ensure_edge(str(goal_id), tid, "plans")
+
+            # task → task (depends_on)
+            for dep in list(t.depends_on or []):
+                dep_id = str(dep or "")
+                if dep_id:
+                    ensure_edge(tid, dep_id, "depends_on")
+
+            # task → metric (produces / targets)
+            if t.task_type == TaskType.COMPUTE_METRIC:
+                metric_id = str(t.inputs.get("metric_id") or "")
+                if metric_id:
+                    ensure_edge(tid, metric_id, "produces", data={"kind": "metric"})
+            elif t.task_type == TaskType.COLLECT_EVIDENCE:
+                for mid in list(t.inputs.get("target_metrics") or []):
+                    metric_id = str(mid or "")
+                    if metric_id:
+                        ensure_edge(tid, metric_id, "produces", data={"kind": "evidence"})
+
+        g["updated_at"] = datetime.now(timezone.utc).isoformat()
+
     def mark_task_status(self, task: Task, status: TaskStatus) -> None:
         self.progress_ledger.task_statuses[task.task_id] = status.value
+        goal_id = self._infer_goal_id_from_goal_graph()
+        if goal_id:
+            self.record_planned_tasks(goal_id, [task])
         self.progress_ledger.touch()
 
     def add_step(self, step: StepRecord) -> None:
@@ -193,6 +303,20 @@ class Ledgers:
         """Verifier diff report를 ProgressLedger에 누적 기록"""
         self.progress_ledger.diff_reports.append(dict(diff_report))
         self.progress_ledger.touch()
+
+    def _infer_goal_id_from_goal_graph(self) -> Optional[str]:
+        g = self.project_ledger.goal_graph
+        if not isinstance(g, dict):
+            return None
+        nodes = g.get("nodes") or []
+        if not isinstance(nodes, list):
+            return None
+        for n in nodes:
+            if not isinstance(n, dict):
+                continue
+            if n.get("type") == "goal" and n.get("id"):
+                return str(n.get("id"))
+        return None
 
     def record_project_insights_from_diff(self, diff_report: Dict[str, Any]) -> None:
         """Diff report를 기반으로 ProjectLedger의 evidence_plan/open_questions를 보강합니다.

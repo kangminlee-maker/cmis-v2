@@ -57,6 +57,7 @@ def test_run_store_and_exporter_smoke(project_root: Path, tmp_path: Path, monkey
     assert run is not None
     assert run["run_id"] == result.run_id
     assert run["policy_id"] == "exploration_friendly"
+    assert any((e.get("type") == "tool_calls") for e in run_store.list_events(result.run_id))
 
     # ledger snapshot exists
     snapshot = ledger_store.get_latest_snapshot(result.run_id)
@@ -89,6 +90,14 @@ def test_run_store_and_exporter_smoke(project_root: Path, tmp_path: Path, monkey
     ]:
         assert key in progress_ledger
 
+    # D-Graph view (Phase 1): goal_graph includes planned task nodes/edges
+    goal_graph = project_ledger.get("goal_graph") or {}
+    assert isinstance(goal_graph, dict)
+    nodes = goal_graph.get("nodes") or []
+    edges = goal_graph.get("edges") or []
+    assert any(isinstance(n, dict) and n.get("type") == "task" for n in nodes)
+    assert any(isinstance(e, dict) and e.get("type") == "plans" for e in edges)
+
     # export view created
     exporter = RunExporter(project_root=project_root)
     run_dir = exporter.export_run(
@@ -115,6 +124,104 @@ def test_run_store_and_exporter_smoke(project_root: Path, tmp_path: Path, monkey
     with open(run_dir / "request.yaml", "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     assert data["run_id"] == result.run_id
+
+    run_store.close()
+    ledger_store.close()
+
+
+def test_kernel_run_mode_approval_required_plans_but_does_not_execute(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+
+    run_store = RunStore(project_root=project_root)
+    ledger_store = LedgerStore(project_root=project_root)
+    policy_engine = PolicyEngine(project_root=project_root)
+
+    kernel = OrchestrationKernel(
+        project_root=project_root,
+        policy_engine=policy_engine,
+        run_store=run_store,
+        ledger_store=ledger_store,
+        enable_stub_source=True,
+    )
+
+    req = RunRequest(
+        query="한국 어학 시장 분석",
+        interface_id="cursor_agent",
+        policy_id="exploration_friendly",
+        run_mode="approval_required",
+        budgets={"max_iterations": 5, "max_time_sec": 30},
+        context={
+            "domain_id": "Adult_Language_Education_KR",
+            "region": "KR",
+        },
+    )
+
+    result = kernel.execute(req)
+
+    assert result.status == "incomplete"
+    assert result.iterations == 0
+
+    snapshot = ledger_store.get_latest_snapshot(result.run_id)
+    assert snapshot is not None
+    progress = snapshot["progress_ledger"]
+    assert progress.get("overall_status") == "incomplete"
+    assert (progress.get("loop_flags") or {}).get("waiting_approval") is True
+    assert progress.get("steps") == []
+
+    project_ledger = snapshot["project_ledger"]
+    goal_graph = project_ledger.get("goal_graph") or {}
+    assert isinstance(goal_graph, dict)
+    nodes = goal_graph.get("nodes") or []
+    assert any(isinstance(n, dict) and n.get("type") == "task" for n in nodes)
+
+    run_store.close()
+    ledger_store.close()
+
+
+def test_kernel_run_mode_manual_executes_single_task_then_pauses(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+
+    run_store = RunStore(project_root=project_root)
+    ledger_store = LedgerStore(project_root=project_root)
+    policy_engine = PolicyEngine(project_root=project_root)
+
+    kernel = OrchestrationKernel(
+        project_root=project_root,
+        policy_engine=policy_engine,
+        run_store=run_store,
+        ledger_store=ledger_store,
+        enable_stub_source=True,
+    )
+
+    req = RunRequest(
+        query="한국 어학 시장 분석",
+        interface_id="cursor_agent",
+        policy_id="exploration_friendly",
+        run_mode="manual",
+        budgets={"max_iterations": 10, "max_time_sec": 30},
+        context={
+            "domain_id": "Adult_Language_Education_KR",
+            "region": "KR",
+        },
+    )
+
+    result = kernel.execute(req)
+
+    assert result.status == "incomplete"
+    assert result.iterations == 1
+
+    snapshot = ledger_store.get_latest_snapshot(result.run_id)
+    assert snapshot is not None
+    progress = snapshot["progress_ledger"]
+    assert progress.get("overall_status") == "incomplete"
+    assert (progress.get("loop_flags") or {}).get("manual_pause") is True
+    assert len(progress.get("steps") or []) >= 1
+
+    project_ledger = snapshot["project_ledger"]
+    goal_graph = project_ledger.get("goal_graph") or {}
+    assert isinstance(goal_graph, dict)
+    nodes = goal_graph.get("nodes") or []
+    assert any(isinstance(n, dict) and n.get("type") == "task" for n in nodes)
 
     run_store.close()
     ledger_store.close()
