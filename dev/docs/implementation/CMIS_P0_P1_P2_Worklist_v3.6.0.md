@@ -251,10 +251,10 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
     - `corp_reg_no`: string (하이픈/공백 제거 후 digits-only로 정규화)
     - `year`: int (예: 2024)
   - **지원 오퍼레이션(Phase 1 최소)**
-    - 요약 재무정보: `getIncoStat_V2` 중심으로 1차 통합
+    - 요약 재무정보: `getSummFinaStat_V2` 중심으로 1차 통합
     - (Phase 2+) 재무상태표/손익계산서 상세 오퍼레이션 추가
   - **Metric mapping(Phase 1 최소)**
-    - `MET-Revenue` ← 요약/손익계산서의 매출액 필드(단위/스케일은 metadata로 보존)
+    - `MET-Revenue` ← `enpSaleAmt` (단위/스케일은 metadata로 보존)
   - **EvidenceRecord 정책**
     - `source_tier="official"`
     - `source_id="FSC_CorpFinancialInfo"`
