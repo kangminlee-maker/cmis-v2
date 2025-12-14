@@ -1,7 +1,7 @@
 ---
 cmis:
   meta:
-    version: "3.4.0"
+    version: "3.6.0"
     updated: "2025-12-13"
     status: "blueprint"
     codename: "Evidence-Ledger Graph OS"

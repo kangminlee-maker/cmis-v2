@@ -21,7 +21,7 @@
 - **Plane**: 구조적 분리 (정적 경계)
   - "어느 계층에 속하는가"
   - Interaction/Role/Cognition/Substrate와 일관
-  
+
 - **Kernel**: 실행 제어의 핵 (core runtime)
   - "무엇이 실제로 실행을 통제하는가"
   - 스케줄링, 거버넌스, 상태 관리
@@ -52,13 +52,13 @@
 1. **용어 복잡도 증가**
    - 2개 용어 (Plane + Kernel)
    - 초보자: "뭐가 달라?"
-   
+
    **대응**: 명확한 정의 문서화 (Section 1.1)
 
 2. **일관성 약간 약화**
    - 다른 Plane은 단일 용어
    - Orchestration만 이중
-   
+
    **대응**: "특수성" 강조 (실행 핵심이므로)
 
 **결론**: ✅ **사용자 제안 채택**
@@ -84,7 +84,7 @@ planes:
 # cmis_core/ (구현 레벨)
 class OrchestrationKernel:
     """Orchestration Kernel
-    
+
     Orchestration Plane의 핵심 런타임.
     Goal → Plan → Execute → Verify → Replan
     """
@@ -127,8 +127,8 @@ class OrchestrationKernel:
    ```
    "Project Ledger"
    → "프로젝트 상태" (명확)
-   
-   "Task Ledger"  
+
+   "Task Ledger"
    → "Task 목록?" vs "문제 공간?" (혼란)
    ```
 
@@ -148,14 +148,14 @@ class OrchestrationKernel:
    - Magentic-One: Task Ledger
    - CMIS: Project Ledger
    - 레퍼런스 용어와 다름
-   
+
    **대응**: CMIS 맥락에 맞는 것이 우선
 
 2. **"Progress Ledger"와 대칭성**
    - Task vs Progress (대칭적?)
    - Project vs Progress (덜 대칭?)
-   
-   **대응**: 
+
+   **대응**:
    - 의미가 대칭보다 중요
    - Problem Space vs Process Control (실제 대비)
 
@@ -181,7 +181,7 @@ class OrchestrationKernel:
 ```python
 class Ledgers:
     """2-Ledger 구조"""
-    
+
     def __init__(self):
         self.project_ledger = ProjectLedger()  # 상태
         self.progress_ledger = ProgressLedger()  # 제어
@@ -231,7 +231,7 @@ class Ledgers:
 일관성을 위해 "Task Ledger"
 → 혼동 비용 높음 ❌
 
-명확성을 위해 "Project Ledger"  
+명확성을 위해 "Project Ledger"
 → 즉시 이해 ✅
 ```
 
@@ -278,7 +278,7 @@ CMIS 적합 용어 (Project Ledger)
 ```markdown
 ## CMIS 용어 사전
 
-**Orchestration Plane**: 
+**Orchestration Plane**:
   - 아키텍처 레벨 용어
   - 4 Planes 중 하나 (실행 제어 계층)
 

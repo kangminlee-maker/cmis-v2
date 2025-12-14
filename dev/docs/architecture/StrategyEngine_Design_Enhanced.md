@@ -1,9 +1,11 @@
 # StrategyEngine 설계 (Enhanced)
 
 **작성일**: 2025-12-11
+**최종 업데이트**: 2025-12-14
 **버전**: v1.1 (피드백 반영)
 **기반**: Strategy_Engine_Design.md + 피드백
 **상태**: 설계 완료
+**비고**: (v3.6 문서 정리) Greenfield/Brownfield/Constraints 보조 문서는 본 문서로 통합하고 deprecated로 이동
 
 ---
 
@@ -833,36 +835,36 @@ def search_strategies_api(
 
 ### 반영된 7개 주요 피드백
 
-1. ✅ **API 레벨 분리**
+1. **API 레벨 분리**
    - Public API (cmis.yaml 대응)
    - Core 함수 (내부 로직)
    - Orchestration Layer
 
-2. ✅ **D-Graph 스키마 정렬**
+2. **D-Graph 스키마 정렬**
    - cmis.yaml 최신 스키마 사용
    - Strategy → D-Graph 매핑 테이블
    - Edge 기반 관계 표현
 
-3. ✅ **ValueEngine ROI 연동**
+3. **ValueEngine ROI 연동**
    - ValueEngine이 ROI 계산 담당
    - Pattern Prior → ValueEngine
    - ValueRecord 형식 사용
 
-4. ✅ **Constraints 스키마 정렬**
+4. **Constraints 스키마 정렬**
    - project_context_store 스키마 기준
    - type/dimension/threshold 구조
    - Greenfield → constraints_profile 변환
 
-5. ✅ **PolicyEngine 통합**
+5. **PolicyEngine 통합**
    - evaluate_portfolio에 policy_ref 추가
    - policy_ref → 파라미터 해석
    - risk_tolerance, prior_usage 반영
 
-6. ✅ **Preference Profile 정렬**
+6. **Preference Profile 정렬**
    - soft_preferences 스키마 사용
    - dimension/value/weight 구조
 
-7. ✅ **Explore/Decide 모드**
+7. **Explore/Decide 모드**
    - mode 인자 추가
    - OpportunityDesigner vs StrategyArchitect
 
@@ -958,7 +960,7 @@ def search_strategies_api(
 ---
 
 **작성**: 2025-12-11
-**상태**: 설계 완료 (Enhanced) ✅
+**상태**: 설계 완료 (Enhanced)
 **기반**: 피드백 7개 완전 반영
 **다음**: Phase 1 구현 착수
 

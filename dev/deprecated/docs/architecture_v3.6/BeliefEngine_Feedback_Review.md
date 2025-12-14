@@ -60,26 +60,26 @@ from datetime import datetime
 @dataclass
 class BeliefRecord:
     """Belief/Prior Distribution 통합 레코드"""
-    
+
     # 식별
     belief_id: str  # "BELIEF-xxxx" 또는 "PRIOR-xxxx"
     metric_id: str
     context: Dict[str, Any]  # {domain_id, region, segment, ...}
-    
+
     # 분포
     distribution: Dict[str, Any]  # {type, params, percentiles}
     confidence: float  # 0~1
     source: str  # "pattern_benchmark" | "uninformative" | "learned" | "domain_expert"
-    
+
     # 관측/업데이트
     observations: List[Dict[str, Any]]  # [{value, weight, source}, ...]
     n_observations: int  # 관측 횟수
-    
+
     # 메타
     created_at: str  # ISO datetime
     updated_at: str  # ISO datetime
     lineage: Dict[str, Any]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """dict로 직렬화"""
         return {
@@ -95,7 +95,7 @@ class BeliefRecord:
             "updated_at": self.updated_at,
             "lineage": self.lineage
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BeliefRecord":
         """dict에서 복원"""
@@ -116,13 +116,13 @@ class PriorManager:
         """항상 BeliefRecord 반환"""
         context_hash = self._hash_context(context)
         key = f"{metric_id}:{context_hash}"
-        
+
         belief_dict = self.priors.get(key)
         if belief_dict is None:
             return None
-        
+
         return BeliefRecord.from_dict(belief_dict)
-    
+
     def save_belief(
         self,
         metric_id: str,
@@ -132,7 +132,7 @@ class PriorManager:
         prior: Optional[BeliefRecord] = None
     ) -> BeliefRecord:
         """BeliefRecord 생성/업데이트"""
-        
+
         # 새 BeliefRecord 생성
         belief = BeliefRecord(
             belief_id=f"BELIEF-{uuid.uuid4().hex[:8]}",
@@ -153,12 +153,12 @@ class PriorManager:
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
         )
-        
+
         # 저장 (다음 조회 시 Prior로 사용)
         context_hash = self._hash_context(context)
         key = f"{metric_id}:{context_hash}"
         self.priors[key] = belief.to_dict()
-        
+
         return belief
 ```
 
@@ -205,34 +205,34 @@ class PriorManager:
         self.value_store_path.mkdir(parents=True, exist_ok=True)
         self._cache: Dict[str, BeliefRecord] = {}  # 메모리 캐시
         self._cache_ttl = 3600  # 1시간
-    
+
     def get_prior(
         self,
         metric_id: str,
         context: Dict[str, Any]
     ) -> Optional[BeliefRecord]:
         """value_store에서 Prior ValueRecord 조회"""
-        
+
         # 1. 캐시 확인
         cache_key = self._make_cache_key(metric_id, context)
         if cache_key in self._cache:
             return self._cache[cache_key]
-        
+
         # 2. value_store 조회
         belief = self._load_from_value_store(metric_id, context)
-        
+
         # 3. 캐싱
         if belief:
             self._cache[cache_key] = belief
-        
+
         return belief
-    
+
     def save_belief(
         self,
         belief: BeliefRecord
     ) -> None:
         """value_store에 저장"""
-        
+
         # ValueRecord 형식으로 변환
         value_record = {
             "value_id": f"VAL-{belief.belief_id}",
@@ -249,12 +249,12 @@ class PriorManager:
             "lineage": belief.lineage,
             "stored_at": belief.updated_at
         }
-        
+
         # 파일 저장
         filepath = self.value_store_path / f"{belief.belief_id}.json"
         with open(filepath, "w") as f:
             json.dump(value_record, f, indent=2)
-        
+
         # 캐시 업데이트
         cache_key = self._make_cache_key(belief.metric_id, belief.context)
         self._cache[cache_key] = belief
@@ -267,7 +267,7 @@ ids_and_lineage:
   id_prefixes:
     value: "VAL-"
     # VAL-PRIOR-* 또는 VAL-BELIEF-*로 Prior/Belief 표현
-  
+
   lineage_schema:
     from_prior_id: { type: "string", required: false }  # 추가
     from_outcome_ids: { type: "list", required: false }  # 추가
@@ -296,28 +296,28 @@ class BeliefEngine:
         policy_ref: Optional[str] = None
     ) -> Dict[str, Any]:
         """Policy별 Prior 조정"""
-        
+
         # 1. 기본 Prior 조회/생성
         prior = self.prior_manager.get_prior(metric_id, context)
         if prior is None:
             prior = self._generate_prior_from_pattern(metric_id, context)
         if prior is None:
             prior = self._generate_uninformative_prior(metric_id)
-        
+
         # 2. Policy별 조정
         policy_mode = policy_ref or "decision_balanced"
-        
+
         if policy_mode == "reporting_strict":
             # reporting_strict: Prior 사용 최소화
             # confidence 낮춤, spread 넓힘
             prior.confidence *= 0.5  # 신뢰도 절반
             prior.distribution = self._widen_distribution(
-                prior.distribution, 
+                prior.distribution,
                 factor=2.0  # 분포 2배 확대
             )
             # 메타데이터에 표시
             prior.lineage["policy_adjustment"] = "reporting_strict_conservative"
-        
+
         elif policy_mode == "exploration_friendly":
             # exploration_friendly: Prior 적극 활용
             # confidence 유지, spread 약간만 넓힘
@@ -326,11 +326,11 @@ class BeliefEngine:
                 factor=1.2  # 분포 20% 확대
             )
             prior.lineage["policy_adjustment"] = "exploration_friendly_permissive"
-        
+
         else:  # decision_balanced
             # 기본값 유지
             prior.lineage["policy_adjustment"] = "decision_balanced_default"
-        
+
         return {
             "prior_id": prior.belief_id,
             "metric_id": prior.metric_id,
@@ -352,18 +352,18 @@ def _apply_quality_constraints(
     metric_spec: Dict
 ) -> BeliefRecord:
     """metrics_spec의 quality_requirements 적용"""
-    
+
     quality_profile = metric_spec.get("default_quality_profile", "decision_balanced")
-    
+
     # cmis.yaml policies.quality_profiles 참조
     quality_limits = {
         "reporting_strict": {"max_spread_ratio": 0.3, "min_confidence": 0.7},
         "decision_balanced": {"max_spread_ratio": 0.5, "min_confidence": 0.5},
         "exploration_friendly": {"max_spread_ratio": 0.7, "min_confidence": 0.3}
     }
-    
+
     limits = quality_limits.get(quality_profile, quality_limits["decision_balanced"])
-    
+
     # spread_ratio 제한
     current_spread = self._calculate_spread(prior.distribution)
     if current_spread > limits["max_spread_ratio"]:
@@ -372,12 +372,12 @@ def _apply_quality_constraints(
             prior.distribution,
             target_spread=limits["max_spread_ratio"]
         )
-    
+
     # confidence 하한
     if prior.confidence < limits["min_confidence"]:
         prior.confidence = limits["min_confidence"]
         prior.lineage["quality_adjustment"] = f"confidence_raised_to_{limits['min_confidence']}"
-    
+
     return prior
 ```
 
@@ -400,50 +400,50 @@ def _generate_prior_from_pattern(
     context: Dict[str, Any]
 ) -> Optional[BeliefRecord]:
     """Context 기반 Pattern Benchmark 필터링"""
-    
+
     # 1. 유사 Pattern 찾기 (context 전달)
     similar_patterns = self.pattern_engine.match_patterns(
         graph_slice_ref=None,  # Greenfield
         target_context=context  # 추가
     )
-    
+
     if not similar_patterns:
         return None
-    
+
     # 2. Context 유사도 기반 가중치 조정
     benchmark_values = []
     for pattern_match in similar_patterns:
         pattern_id = pattern_match["pattern_id"]
         benchmark = self.prior_manager.load_pattern_benchmark(pattern_id)
-        
+
         if benchmark and metric_id in benchmark["metrics"]:
             # Context 유사도 계산
             context_similarity = self._calculate_context_similarity(
-                context, 
+                context,
                 benchmark["context"]
             )
-            
+
             # 구조 적합도 × Context 유사도
             combined_weight = pattern_match["score"] * context_similarity
-            
+
             benchmark_values.append({
                 "value": benchmark["metrics"][metric_id]["median"],
                 "weight": combined_weight,
                 "pattern_id": pattern_id,
                 "context_similarity": context_similarity
             })
-    
+
     if not benchmark_values:
         return None
-    
+
     # 3. 가중 평균 (Context 유사도 반영)
     total_weight = sum(b["weight"] for b in benchmark_values)
     if total_weight == 0:
         return None
-    
+
     weighted_mean = sum(b["value"] * b["weight"] for b in benchmark_values) / total_weight
     weighted_std = np.std([b["value"] for b in benchmark_values]) * 1.5  # 보수적
-    
+
     # 4. BeliefRecord 생성
     belief = BeliefRecord(
         belief_id=f"PRIOR-{uuid.uuid4().hex[:8]}",
@@ -468,7 +468,7 @@ def _generate_prior_from_pattern(
             "created_at": datetime.now(timezone.utc).isoformat()
         }
     )
-    
+
     return belief
 
 def _calculate_context_similarity(
@@ -477,7 +477,7 @@ def _calculate_context_similarity(
     context2: Dict[str, Any]
 ) -> float:
     """Context 유사도 계산 (0~1)"""
-    
+
     # 주요 키 정의
     key_weights = {
         "domain_id": 0.4,      # 도메인 일치 중요
@@ -485,7 +485,7 @@ def _calculate_context_similarity(
         "segment": 0.2,        # 세그먼트
         "scale_tier": 0.1      # 규모
     }
-    
+
     similarity = 0.0
     for key, weight in key_weights.items():
         if key in context1 and key in context2:
@@ -494,7 +494,7 @@ def _calculate_context_similarity(
             elif key == "region" and self._is_similar_region(context1[key], context2[key]):
                 similarity += weight * 0.5  # 유사 지역 절반
         # 키 없으면 0점
-    
+
     return similarity
 ```
 
@@ -519,13 +519,13 @@ def _should_update_belief(
     delta: Dict[str, Any]
 ) -> bool:
     """Metric별 업데이트 기준 판단"""
-    
+
     # 1. metrics_spec에서 target_convergence 조회
     metric_spec = self._get_metric_spec(metric_id)
-    
+
     resolution_protocol = metric_spec.get("resolution_protocol", {})
     target_convergence = resolution_protocol.get("target_convergence")
-    
+
     # 2. 기준 추출
     if target_convergence:
         # "±30% 이내 수렴" → 0.3
@@ -533,10 +533,10 @@ def _should_update_belief(
     else:
         # 기본값: 20%
         threshold = 0.2
-    
+
     # 3. 오차율 비교
     error_pct = abs(delta["error_pct"])
-    
+
     return error_pct > threshold
 
 def _update_beliefs_from_outcome(
@@ -545,17 +545,17 @@ def _update_beliefs_from_outcome(
     comparison: Dict
 ) -> List[str]:
     """Outcome 기반 Belief 업데이트 (기준 적용)"""
-    
+
     from cmis_core.belief_engine import BeliefEngine
-    
+
     belief_engine = BeliefEngine()
     updated_belief_ids = []
-    
+
     for metric_id, delta in comparison["deltas"].items():
         # Metric별 기준 판단
         if not self._should_update_belief(metric_id, delta):
             continue
-        
+
         # Observation 구성
         observations = [{
             "value": outcome["metrics"][metric_id],
@@ -563,7 +563,7 @@ def _update_beliefs_from_outcome(
             "source": outcome["outcome_id"],
             "timestamp": outcome["as_of"]
         }]
-        
+
         # Belief 업데이트
         result = belief_engine.update_belief_api(
             metric_id=metric_id,
@@ -571,13 +571,13 @@ def _update_beliefs_from_outcome(
             observations=observations,
             update_mode="bayesian"
         )
-        
+
         updated_belief_ids.append(result["belief_id"])
-        
+
         # drift_alert 생성 (큰 변화 시)
         if abs(result["delta"]["mean_shift"]) > 0.5:
             self._create_drift_alert(metric_id, result)
-    
+
     return updated_belief_ids
 ```
 
@@ -602,24 +602,24 @@ import asteval  # 안전한 expression evaluator
 class UncertaintyPropagator:
     def __init__(self):
         self.evaluator = asteval.Interpreter()
-    
+
     def _evaluate_formula(
-        self, 
-        formula: str, 
+        self,
+        formula: str,
         var_values: Dict[str, float]
     ) -> float:
         """AST 기반 안전한 공식 평가"""
-        
+
         # 1. 공식 파싱 (예: "Revenue = N_customers * ARPU")
         if "=" in formula:
             expr = formula.split("=")[1].strip()
         else:
             expr = formula
-        
+
         # 2. 변수 설정
         for var, val in var_values.items():
             self.evaluator.symtable[var] = val
-        
+
         # 3. 안전한 평가
         try:
             result = self.evaluator(expr)
@@ -628,7 +628,7 @@ class UncertaintyPropagator:
             return float(result)
         except Exception as e:
             raise ValueError(f"Invalid formula: {formula}, error: {e}")
-    
+
     def monte_carlo(
         self,
         formula: str,
@@ -636,21 +636,21 @@ class UncertaintyPropagator:
         n_samples: int = 10000
     ) -> Dict:
         """Monte Carlo (samples는 저장소에, 요약만 반환)"""
-        
+
         # 1. 샘플 생성
         samples = {}
         for var_name, dist in input_distributions.items():
             samples[var_name] = self._sample_distribution(dist, n_samples)
-        
+
         # 2. 공식 평가
         output_samples = []
         for i in range(n_samples):
             var_values = {var: samples[var][i] for var in samples}
             output = self._evaluate_formula(formula, var_values)
             output_samples.append(output)
-        
+
         output_samples = np.array(output_samples)
-        
+
         # 3. 요약 통계만 반환 (raw samples는 제외)
         result = {
             "percentiles": {
@@ -669,7 +669,7 @@ class UncertaintyPropagator:
             },
             "n_samples": n_samples
         }
-        
+
         # 4. raw samples는 별도 저장 (선택적)
         # artifact_store 또는 memory_store에 저장 후 ref만 반환
         samples_ref = self._save_samples_to_store(
@@ -678,9 +678,9 @@ class UncertaintyPropagator:
             input_distributions
         )
         result["samples_ref"] = samples_ref
-        
+
         return result
-    
+
     def _save_samples_to_store(
         self,
         samples: np.ndarray,
@@ -688,9 +688,9 @@ class UncertaintyPropagator:
         input_distributions: Dict
     ) -> str:
         """Samples를 artifact_store에 저장"""
-        
+
         artifact_id = f"ART-samples-{uuid.uuid4().hex[:8]}"
-        
+
         artifact = {
             "artifact_id": artifact_id,
             "type": "monte_carlo_samples",
@@ -699,12 +699,12 @@ class UncertaintyPropagator:
             "samples": samples.tolist(),
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        
+
         # 파일 저장
         filepath = self.artifact_store_path / f"{artifact_id}.json"
         with open(filepath, "w") as f:
             json.dump(artifact, f)
-        
+
         return artifact_id
 ```
 
@@ -729,13 +729,13 @@ class BeliefUpdater:
         observations: List[Dict]
     ) -> Dict:
         """직접 대체 (numpy 사용)"""
-        
+
         values = np.array([obs["value"] for obs in observations])
         weights = np.array([obs["weight"] for obs in observations])
-        
+
         mean = np.average(values, weights=weights)
         std = np.sqrt(np.average((values - mean)**2, weights=weights))
-        
+
         return {
             "type": "normal",
             "params": {
@@ -756,18 +756,18 @@ def save_belief(
     observations: List[Dict]
 ) -> BeliefRecord:
     """lineage 정확하게 구분"""
-    
+
     # Evidence/Outcome 분리
     evidence_ids = []
     outcome_ids = []
-    
+
     for obs in observations:
         source = obs.get("source", "")
         if source.startswith("EVD-"):
             evidence_ids.append(source)
         elif source.startswith("OUT-"):
             outcome_ids.append(source)
-    
+
     lineage = {
         "from_evidence_ids": evidence_ids,
         "from_outcome_ids": outcome_ids,  # 명시적 분리
@@ -775,7 +775,7 @@ def save_belief(
         "engine_ids": ["belief_engine"],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    
+
     ...
 ```
 
@@ -832,7 +832,7 @@ api:
     output:
       proposal_id: "string"
       proposed_belief: "belief_record"
-  
+
   - name: "approve_belief_update"
     description: "제안 승인 (실제 반영 ✅)"
     input:
@@ -864,7 +864,7 @@ api:
 ```python
 def suggest_evidence_priorities(self) -> List[Dict]:
     """불확실성 높은 Metric 우선 수집 제안"""
-    
+
     priorities = []
     for metric_id, belief in self.prior_manager.all_beliefs():
         if belief.confidence < 0.3 or belief.source == "uninformative":
@@ -874,7 +874,7 @@ def suggest_evidence_priorities(self) -> List[Dict]:
                 "reason": f"low_confidence_{belief.confidence}",
                 "urgency": "high"
             })
-    
+
     return sorted(priorities, key=lambda x: x["urgency"])
 ```
 
@@ -893,9 +893,9 @@ def _create_drift_alert(
     belief_update_result: Dict
 ) -> str:
     """큰 Belief 변화 시 drift_alert 생성"""
-    
+
     delta = belief_update_result["delta"]
-    
+
     if abs(delta["mean_shift"]) > 0.5 or abs(delta["sigma_reduction"]) > 0.5:
         alert = {
             "memory_id": f"MEM-drift-{uuid.uuid4().hex[:8]}",
@@ -907,7 +907,7 @@ def _create_drift_alert(
             "content": f"Large belief shift detected for {metric_id}: mean {delta['mean_shift']:+.1%}, sigma {delta['sigma_reduction']:+.1%}",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        
+
         # memory_store 저장
         self.memory_store.save(alert)
         return alert["memory_id"]
@@ -985,16 +985,16 @@ cmis:
         description: "Prior/Belief 관리 및 불확실성 정량화"
         version: "v1.0"
         status: "production_ready"
-        
+
         inputs:
           - "substrate_plane.graphs.pattern_graph"
           - "substrate_plane.graphs.value_graph"
           - "substrate_plane.stores.value_store"  # ✅ 추가
-        
+
         outputs:
           - "prior_distributions (ValueRecord origin=prior)"
           - "belief_updates (ValueRecord origin=learned)"
-        
+
         api:
           - name: "query_prior"
             input:
@@ -1003,7 +1003,7 @@ cmis:
               policy_ref: "policy_ref"
             output:
               prior: "BeliefRecord (as ValueRecord)"
-          
+
           - name: "update_belief"
             input:
               metric_id: "metric_id"
@@ -1011,7 +1011,7 @@ cmis:
               update_mode: "bayesian"
             output:
               updated_belief: "BeliefRecord"
-          
+
           - name: "propagate_uncertainty"
             input:
               formula: "string"
@@ -1019,7 +1019,7 @@ cmis:
             output:
               output_distribution: "distribution"
               samples_ref: "artifact_id"  # ✅ 추가
-        
+
         core_components:
           - id: "prior_manager"
             storage: "value_store"  # ✅ 명시
@@ -1037,7 +1037,7 @@ cmis:
   ids_and_lineage:
     id_prefixes:
       # VAL-PRIOR-*, VAL-BELIEF-* 형식으로 Prior/Belief 표현
-    
+
     lineage_schema:
       from_prior_id: { type: "string", required: false }
       from_outcome_ids: { type: "list", required: false }  # ✅ 추가

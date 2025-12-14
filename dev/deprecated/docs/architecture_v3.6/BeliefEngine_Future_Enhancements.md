@@ -29,7 +29,7 @@ belief_engine:
         proposal_id: "string"
         proposed_belief: "belief_record"
         impact_assessment: "dict"
-    
+
     - name: "approve_belief_update"
       description: "제안 승인 (실제 반영 ✅)"
       input:
@@ -38,7 +38,7 @@ belief_engine:
         notes: "string (optional)"
       output:
         belief_id: "string"
-    
+
     - name: "reject_belief_update"
       description: "제안 거부"
       input:
@@ -56,7 +56,7 @@ class BeliefEngine:
     def __init__(self):
         # ...
         self.proposals: Dict[str, Dict] = {}  # proposal_id → proposal
-    
+
     def propose_belief_update_api(
         self,
         metric_id: str,
@@ -64,20 +64,20 @@ class BeliefEngine:
         observations: List[Dict]
     ) -> Dict:
         """Belief 업데이트 제안"""
-        
+
         # 1. 현재 Prior
         prior = self.prior_manager.get_prior(metric_id, context)
-        
+
         # 2. 예상 Posterior 계산
         proposed_posterior = self.belief_updater.bayesian_update(
             prior.distribution,
             observations
         )
-        
+
         # 3. Impact 평가
         delta = self._calculate_delta(prior.distribution, proposed_posterior)
         impact = self._assess_impact(metric_id, delta)
-        
+
         # 4. Proposal 저장
         proposal_id = f"PROPOSAL-{uuid.uuid4().hex[:8]}"
         self.proposals[proposal_id] = {
@@ -92,9 +92,9 @@ class BeliefEngine:
             "status": "pending",
             "created_at": datetime.now().isoformat()
         }
-        
+
         return self.proposals[proposal_id]
-    
+
     def approve_belief_update_api(
         self,
         proposal_id: str,
@@ -102,11 +102,11 @@ class BeliefEngine:
         notes: Optional[str] = None
     ) -> Dict:
         """Proposal 승인 및 실제 반영"""
-        
+
         proposal = self.proposals.get(proposal_id)
         if not proposal or proposal["status"] != "pending":
             raise ValueError(f"Invalid proposal: {proposal_id}")
-        
+
         # 실제 Belief 업데이트
         belief = self.prior_manager.save_belief(
             metric_id=proposal["metric_id"],
@@ -115,13 +115,13 @@ class BeliefEngine:
             observations=proposal["observations"],
             prior=BeliefRecord.from_dict(proposal["prior"])
         )
-        
+
         # Proposal 상태 업데이트
         proposal["status"] = "approved"
         proposal["approved_by"] = approved_by
         proposal["approved_at"] = datetime.now().isoformat()
         proposal["notes"] = notes
-        
+
         return {
             "belief_id": belief.belief_id,
             "proposal_id": proposal_id,
@@ -138,28 +138,28 @@ def _assess_impact(
     delta: Dict
 ) -> Dict:
     """Belief 변화의 영향 평가"""
-    
+
     impact = {
         "magnitude": "low",  # low | medium | high
         "affected_metrics": [],  # 연관 Metric
         "risk_level": "low"
     }
-    
+
     # Mean shift 크기
     mean_shift_pct = abs(delta.get("mean_shift_pct", 0))
     if mean_shift_pct > 0.5:
         impact["magnitude"] = "high"
     elif mean_shift_pct > 0.2:
         impact["magnitude"] = "medium"
-    
+
     # 연관 Metric 찾기
     # (metrics_spec에서 formula 추적)
     impact["affected_metrics"] = self._find_dependent_metrics(metric_id)
-    
+
     # Risk 평가
     if impact["magnitude"] == "high" and len(impact["affected_metrics"]) > 3:
         impact["risk_level"] = "high"
-    
+
     return impact
 ```
 
@@ -202,11 +202,11 @@ python3 -m cmis_cli belief-approve --proposal-id PROPOSAL-xxx --by analyst
 @dataclass
 class JointBeliefRecord:
     """여러 Metric의 Joint Belief"""
-    
+
     joint_belief_id: str
     metric_ids: List[str]  # ["MET-TAM", "MET-SAM", "MET-SOM"]
     context: Dict
-    
+
     # Joint Distribution
     distribution: Dict
     # {
@@ -216,7 +216,7 @@ class JointBeliefRecord:
     #     "cov": [[...], [...], [...]]     # Covariance matrix
     #   }
     # }
-    
+
     # 또는 Copula
     # {
     #   "type": "gaussian_copula",
@@ -226,7 +226,7 @@ class JointBeliefRecord:
     #   },
     #   "correlation": [[1.0, 0.8], [0.8, 1.0]]
     # }
-    
+
     confidence: float
     source: str
     ...
@@ -241,23 +241,23 @@ def query_joint_prior_api(
     context: Dict
 ) -> Dict:
     """여러 Metric의 Joint Prior 조회"""
-    
+
     # 1. 개별 Prior 조회
     marginals = {}
     for metric_id in metric_ids:
         prior = self.query_prior_api(metric_id, context)
         marginals[metric_id] = prior["distribution"]
-    
+
     # 2. Correlation 추정
     corr = self._estimate_correlation(metric_ids, context)
-    
+
     # 3. Copula 구성
     joint_dist = {
         "type": "gaussian_copula",
         "marginals": marginals,
         "correlation": corr
     }
-    
+
     return joint_dist
 
 def _estimate_correlation(
@@ -266,12 +266,12 @@ def _estimate_correlation(
     context: Dict
 ) -> np.ndarray:
     """Metric 간 Correlation 추정"""
-    
+
     # Pattern Benchmark 또는 공식 기반
     # TAM → SAM: 0.95
     # SAM → SOM: 0.90
     # Revenue ↔ N_customers: 0.85
-    
+
     pass
 ```
 
@@ -290,7 +290,7 @@ def _estimate_correlation(
 ```python
 def suggest_evidence_priorities_api(self) -> List[Dict]:
     """불확실성 높은 Metric 우선 수집 제안
-    
+
     Returns:
         [
             {
@@ -304,7 +304,7 @@ def suggest_evidence_priorities_api(self) -> List[Dict]:
         ]
     """
     priorities = []
-    
+
     for belief in self.prior_manager.all_beliefs():
         # 낮은 confidence
         if belief.confidence < 0.3:
@@ -316,7 +316,7 @@ def suggest_evidence_priorities_api(self) -> List[Dict]:
                 "urgency": "high" if voi > 0.7 else "medium",
                 "expected_value_of_information": voi
             })
-        
+
         # Uninformative source
         if belief.source == "uninformative":
             priorities.append({
@@ -326,21 +326,21 @@ def suggest_evidence_priorities_api(self) -> List[Dict]:
                 "urgency": "high",
                 "expected_value_of_information": 0.9
             })
-    
+
     # 우선순위 정렬
     priorities.sort(key=lambda x: x["expected_value_of_information"], reverse=True)
-    
+
     return priorities
 
 def _calculate_voi(self, belief: BeliefRecord) -> float:
     """Value of Information 계산"""
-    
+
     # 간단 버전: (1 - confidence) × importance
     # importance: 해당 Metric이 다른 Metric에 미치는 영향
-    
+
     importance = self._get_metric_importance(belief.metric_id)
     voi = (1 - belief.confidence) * importance
-    
+
     return voi
 ```
 
@@ -398,29 +398,29 @@ def do_intervention_api(
     context: Dict
 ) -> Dict:
     """Do-intervention 시뮬레이션
-    
+
     "MET-SAM을 50%로 증가시키면 Revenue는?"
-    
+
     Args:
         metric_id: "MET-SAM"
         intervention_value: 1.5 (50% 증가)
         context: {...}
-    
+
     Returns:
         affected_distributions: {
             "MET-SOM": {...},
             "MET-Revenue": {...}
         }
     """
-    
+
     # 1. Causal DAG에서 downstream Metric 찾기
     downstream = self._find_downstream_metrics(metric_id)
-    
+
     # 2. Do-calculus 적용
     # P(Revenue | do(SAM = 1.5*SAM))
-    
+
     # 3. 결과 분포 반환
-    
+
     pass
 ```
 
