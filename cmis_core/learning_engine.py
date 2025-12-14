@@ -20,6 +20,8 @@ from .context_learner import ContextLearner
 from .metric_learner import MetricLearner
 from .learning_policy import LearningPolicy
 from .config import CMISConfig
+from .stores.outcome_store import OutcomeStore
+from .stores.project_context_store import ProjectContextStore
 
 
 class LearningEngine:
@@ -38,7 +40,10 @@ class LearningEngine:
     def __init__(
         self,
         config: Optional[CMISConfig] = None,
-        project_root: Optional[Path] = None
+        project_root: Optional[Path] = None,
+        *,
+        outcome_store: Optional[OutcomeStore] = None,
+        project_context_store: Optional[ProjectContextStore] = None,
     ):
         """
         Args:
@@ -66,6 +71,10 @@ class LearningEngine:
         self.strategies: Dict[str, Strategy] = {}
         self.project_contexts: Dict[str, FocalActorContext] = {}
         self.learning_history: List[LearningResult] = []
+
+        # Authoritative stores (Phase 1: optional wiring)
+        self.outcome_store = outcome_store
+        self.project_context_store = project_context_store
 
         # memory_store (Phase 3: 간단한 버전)
         self.memory_store: List[Dict[str, Any]] = []
@@ -387,7 +396,11 @@ class LearningEngine:
 
     def _load_outcome(self, outcome_id: str) -> Optional[Outcome]:
         """Outcome 로딩"""
-        return self.outcomes.get(outcome_id)
+        if outcome_id in self.outcomes:
+            return self.outcomes.get(outcome_id)
+        if self.outcome_store is not None:
+            return self.outcome_store.get(outcome_id)
+        return None
 
     def _load_strategy(self, strategy_id: str) -> Optional[Strategy]:
         """Strategy 로딩"""
@@ -412,6 +425,8 @@ class LearningEngine:
     def register_outcome(self, outcome: Outcome) -> None:
         """Outcome 등록 (테스트용)"""
         self.outcomes[outcome.outcome_id] = outcome
+        if self.outcome_store is not None:
+            self.outcome_store.save(outcome)
 
     def register_strategy(self, strategy: Strategy) -> None:
         """Strategy 등록 (테스트용)"""
@@ -420,6 +435,8 @@ class LearningEngine:
     def register_project_context(self, project_context: FocalActorContext) -> None:
         """FocalActorContext 등록 (테스트용)"""
         self.project_contexts[project_context.project_context_id] = project_context
+        if self.project_context_store is not None:
+            self.project_context_store.save(project_context)
 
     def update_project_context_from_outcome_api(
         self,
@@ -463,6 +480,8 @@ class LearningEngine:
 
         # 4. 저장 (Phase 2: 캐시)
         self.project_contexts[updated_context.project_context_id] = updated_context
+        if self.project_context_store is not None:
+            self.project_context_store.save(updated_context)
 
         return updated_context.project_context_id
 
@@ -471,4 +490,8 @@ class LearningEngine:
         project_context_id: str
     ) -> Optional[FocalActorContext]:
         """FocalActorContext 로딩"""
-        return self.project_contexts.get(project_context_id)
+        if project_context_id in self.project_contexts:
+            return self.project_contexts.get(project_context_id)
+        if self.project_context_store is not None:
+            return self.project_context_store.get_latest(project_context_id)
+        return None

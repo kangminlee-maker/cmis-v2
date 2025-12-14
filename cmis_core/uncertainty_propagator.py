@@ -15,6 +15,8 @@ import numpy as np
 import uuid
 import json
 
+from cmis_core.stores.sqlite_base import StoragePaths
+
 try:
     import asteval
     HAS_ASTEVAL = True
@@ -52,18 +54,19 @@ class UncertaintyPropagator:
         # → {"percentiles": {...}, "statistics": {...}, "samples_ref": "ART-..."}
     """
 
-    def __init__(self, artifact_store_path: Optional[Path] = None):
+    def __init__(self, artifact_store_path: Optional[Path] = None, *, project_root: Optional[Path] = None):
         """Initialize Uncertainty Propagator
 
         Args:
             artifact_store_path: artifact_store 경로 (Phase 3)
+            project_root: `.cmis` 루트 계산용 프로젝트 루트(선택)
         """
         # Phase 3: artifact_store
         if artifact_store_path:
             self.artifact_store_path = artifact_store_path
             self.artifact_store_path.mkdir(parents=True, exist_ok=True)
         else:
-            self.artifact_store_path = Path(__file__).parent.parent / "data" / "artifacts"
+            self.artifact_store_path = StoragePaths.resolve(project_root).cmis_dir / "artifacts"
             self.artifact_store_path.mkdir(parents=True, exist_ok=True)
 
         # Phase 3: AST evaluator

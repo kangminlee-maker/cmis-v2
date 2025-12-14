@@ -17,8 +17,10 @@ Phase 2+:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from cmis_core.stores.project_context_store import ProjectContextStore
 from cmis_core.types import FocalActorContext
 
 
@@ -80,32 +82,51 @@ class FocalActorContextBinding:
         return list(prefs) if isinstance(prefs, list) else []
 
 
-def resolve_focal_actor_context_binding(project_context_id: str) -> FocalActorContextBinding:
-    """FocalActorContextBinding 로딩(스텁).
+def resolve_focal_actor_context_binding(
+    project_context_id: str,
+    *,
+    project_root: Optional[Path] = None,
+) -> FocalActorContextBinding:
+    """FocalActorContextBinding 로딩.
 
-    Phase 1: Store 미구현 → 최소 레코드 생성
-    Phase 2+: project_context_store/focal_actor_context_store에서 로딩
+    Phase 1:
+    - store가 있으면 우선 로딩 (ProjectContextStore)
+    - 없으면 최소 레코드 생성(스텁)으로 fallback
 
     Args:
-        project_context_id: PRJ-* ID
+        project_context_id: PRJ-* (또는 PRJ-*-vN)
+        project_root: 프로젝트 루트(선택). 미지정 시 CWD를 기준으로 `.cmis`를 사용합니다.
 
     Returns:
         FocalActorContextBinding
     """
 
-    record = FocalActorContext(
-        project_context_id=project_context_id,
-        scope={},
-        assets_profile={
-            "capability_traits": [],
-            "channels": [],
-            "brand_assets": {},
-            "organizational_assets": {},
-        },
-        baseline_state={},
-        constraints_profile={},
-        preference_profile={},
-        focal_actor_id=None,
-        lineage={},
-    )
+    record: Optional[FocalActorContext] = None
+    store: Optional[ProjectContextStore] = None
+    try:
+        store = ProjectContextStore(project_root=project_root)
+        record = store.get_latest(project_context_id)
+    except Exception:
+        record = None
+    finally:
+        if store is not None:
+            store.close()
+
+    if record is None:
+        record = FocalActorContext(
+            project_context_id=project_context_id,
+            scope={},
+            assets_profile={
+                "capability_traits": [],
+                "channels": [],
+                "brand_assets": {},
+                "organizational_assets": {},
+            },
+            baseline_state={},
+            constraints_profile={},
+            preference_profile={},
+            focal_actor_id=None,
+            lineage={},
+        )
+
     return FocalActorContextBinding.from_record(record)
