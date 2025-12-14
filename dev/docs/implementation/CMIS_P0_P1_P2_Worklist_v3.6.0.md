@@ -282,6 +282,103 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
   - 스펙: [공공데이터포털 API 명세(getIncoStat_V2)](https://www.data.go.kr/data/15043459/openapi.do#/API%20%EB%AA%A9%EB%A1%9D/getIncoStat_V2)
   - 메타데이터: [DCAT 15043459](https://www.data.go.kr/dcat/metadata/15043459)
 
+## P3: Production Hardening (Phase 1.5 백로그)
+
+P0~P2의 “동작 가능한 최소 구현” 이후, 아래 항목들은 **미구현(실패/스텁/항상 None)** 또는 **프로덕션 품질(신뢰성/관측성/일관성) 미달**로 판정된 영역입니다.
+이 섹션은 이를 해결하기 위한 추가 개발 작업리스트입니다.
+
+### P3-1. 레거시/스텁/POC 코드 격리 및 중복 정리
+
+- **문제**
+  - `cmis_core/*_poc.py`가 core 패키지에 존재(구 `umis_v9` 스펙 의존/POC 성격)
+  - `cmis_core/evidence/sources.py` 내 일부 Source가 “스텁(항상 not implemented)”로 남아 있어 실제 구현(`cmis_core/evidence/kosis_source.py` 등)과 혼동 가능
+
+- **D**
+  - core 패키지(`cmis_core/`)에는 “프로덕션 경로”만 남기고, POC/레거시/실험 코드는 `dev/deprecated/` 또는 `cmis_core/experimental/`로 격리
+  - `cmis_core/evidence/sources.py`는 다음 원칙으로 정리
+    - 테스트 유틸(StubSource 등) + 호환 wrapper만 유지
+    - 실제 구현이 있는 소스(KOSIS 등)는 **실제 구현을 re-export**하여 동일 import가 동작하도록 정합성 유지
+    - 미구현 소스는 명확히 `experimental` 또는 `not_implemented`로 라벨링
+
+- **I**
+  - `cmis_core/*_poc.py` 이동/격리 및 문서 참조 정리(필요 시)
+  - `cmis_core/evidence/sources.py`의 스텁/중복 제거 및 re-export 정리
+  - 단위 테스트: `cmis_core.evidence.sources`의 호환 import(StubSource/DARTSource 등) 깨지지 않음을 확인
+
+- **완료 기준**
+  - core 패키지에서 POC/레거시 파일이 제거되거나 `experimental/deprecated`로 격리됨
+  - `cmis_core.evidence.sources`에서 “동일 이름인데 동작이 다른” 중복/스텁이 제거됨(또는 호환 re-export로 일원화)
+
+### P3-2. SearchStrategy v2 실행 스텁 제거(Experimental 유지)
+
+- **문제**
+  - `cmis_core/experimental/search_strategy_v2/search_executor.py::_execute_single_query()`가 `return None` 스텁이라 SearchStrategy v2는 사실상 동작하지 않음
+
+- **D**
+  - SearchStrategy v2는 **experimental 유지**하되, 최소 실행 가능 경로를 제공
+  - `SearchStep.data_source_id` → (GoogleSearch/DuckDuckGo 등) 실제 검색 소스 매핑 규칙 정의
+  - 외부 네트워크는 테스트에서 차단하고, `requests`/검색 클라이언트를 mocking하여 파서/흐름만 검증
+
+- **I**
+  - `_execute_single_query()`에 최소 실행 구현(소스별 adapter) + RawSearchResult 생성
+  - 단위 테스트: `_execute_single_query()`가 stub이 아니고 결과를 생성함(mocking)
+
+- **완료 기준**
+  - SearchStrategy v2가 “항상 None” 상태가 아니며, 최소 1개 소스로 RawSearchResult를 생성 가능
+
+### P3-3. Evidence 소스 실행 품질 표준화 (RateLimit/Retry/Timeout/관측성)
+
+- **문제**
+  - 소스들이 `requests.get()` 등을 개별 호출하며 rate limit/backoff/retry 정책이 분산됨
+  - 운영 시 일시적 장애/429/timeout에 취약, 동일 정책/로그 포맷으로 관측하기 어려움
+
+- **D**
+  - 공통 HTTP Client 유틸 도입(Phase 1.5)
+    - timeout 기본값, retry/backoff(429/5xx/timeout), error taxonomy 통일
+    - `config/sources/rate_limits.yaml` 기반 `RateLimiter`를 공통 경로로 적용
+  - tool_calls 이벤트/lineage에 source별 호출 요약을 일관된 스키마로 기록
+
+- **I**
+  - 공통 유틸 구현 후, 주요 소스부터 순차 마이그레이션(KOSIS/ECOS/WorldBank/FSC/GoogleSearch 등)
+  - 단위 테스트: rate limit/재시도 분기(HTTP status/timeout mocking)
+
+- **완료 기준**
+  - 최소 2개 이상의 HTTP 기반 소스가 공통 유틸을 사용
+  - 429/timeout/5xx에 대한 retry/backoff가 작동하고, 관측 가능한 lineage가 남음
+
+### P3-4. Prior/Belief 영속화 및 재현성 강화 (PriorManager 고도화)
+
+- **문제**
+  - PriorManager가 파일 스캔 기반(value_store/*.json) + 관측치 복원 제한 등으로 규모/동시성/재현성에 취약
+
+- **D**
+  - 분포(distribution)와 `distribution_ref`를 “정본 store”로 영속화(SSoT)하고 조회를 인덱스로 수행
+  - (Phase 1.5) 최소 요구: (metric_id, context_hash) 기반 최신 prior 조회가 O(1)~O(log n)
+
+- **I**
+  - Prior 저장/조회용 sqlite store(또는 기존 store 확장) 설계/구현
+  - PriorManager를 store-first로 전환 + 회귀 테스트 추가
+
+- **완료 기준**
+  - 파일 전체 스캔 없이 최신 prior를 조회 가능
+  - 동일 입력(metric_id+context)에 대해 재현 가능한 distribution_ref를 제공
+
+### P3-5. NativeLLM 프로덕션화 또는 비활성화 정책 확정
+
+- **문제**
+  - `NativeLLM`이 placeholder 응답으로 남아 있어, 프로덕션 경로에서 사용되면 품질/신뢰성 문제가 발생
+
+- **D**
+  - 선택지:
+    - (A) NativeLLM을 실제 실행 환경(Cursor/IDE) 연동으로 구현
+    - (B) 프로덕션에서는 native provider를 기본 providers 리스트에서 제외(옵션으로만 사용)
+
+- **I**
+  - 선택한 정책에 따라 구현/비활성화 및 테스트(“placeholder가 프로덕션에서 기본 사용되지 않음”을 강제)
+
+- **완료 기준**
+  - 프로덕션 기본 경로에서 placeholder 응답이 사용되지 않음(명시적으로만 사용 가능)
+
 ---
 
 ## 가이드 A/B/C 직접 항목 (추적)
