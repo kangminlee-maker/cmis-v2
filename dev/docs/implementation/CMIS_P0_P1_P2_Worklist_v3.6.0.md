@@ -1,6 +1,6 @@
 # CMIS 실행 구현 작업리스트 (v3.6.0)
 
-**작성일**: 2025-12-14
+**작성일**: 2025-12-13
 **범위**: `P0 → P1 → P2` (우선순위) + `20251213_NEXT_SESSION_GUIDE.md`의 A/B/C 포함
 
 ---
@@ -194,7 +194,7 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
   - **적용 지점(Phase 1 최소)**
     - EvidenceEngine 소스 구성 시:
       - `web_search` 미허용 → GoogleSearchSource 등록 금지
-      - `http_fetch` 미허용 → KOSIS/ECOS/WorldBank 등록 금지
+      - `http_fetch` 미허용 → KOSIS/ECOS/WorldBank/FSC 기업재무정보 등록 금지
     - (Phase 2+) LLM/외부 도구 호출까지 동일한 원칙으로 확장
   - **표준 tool_calls 이벤트 (run_store.events)**
     - event.type = `tool_calls`
@@ -227,6 +227,60 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
 
 - **I**
   - 선택한 방향으로 구현/정리 + 최소 테스트
+
+### P2-4. EvidenceEngine Tier-1(OFFICIAL) 데이터소스 확장: 금융위원회 기업 재무정보 (data.go.kr)
+
+- **D**
+  - DART(상장사/대형 중심) 대비 **국내 대부분 법인 커버**를 목표로 하는 Tier-1(OFFICIAL) 소스를 추가
+  - 입력 계약(Phase 1):
+    - `EvidenceRequest.context.region == "KR"`
+    - `corp_reg_no`(법인등록번호) + `year`(재무연도) 필수
+  - 출력/매핑(Phase 1 최소):
+    - 요약재무제표/손익계산서에서 **`MET-Revenue`(매출액)** 추출을 우선 지원
+    - 추가 재무 항목(자산/부채/영업이익/순이익 등)은 우선 `metadata.raw_fields`로 보존(확장 대비)
+  - 인증/키:
+    - `.env`의 `DATAGOKR_API_KEY`를 사용 (env.example 동기화 유지)
+  - Tool registry 연동:
+    - `http_fetch`가 미허용이면 source를 registry에 등록하지 않음(P2-1 규칙 준수)
+  - lineage/감사:
+    - 요청 파라미터(법인등록번호/연도/operation), endpoint, retrieved_at을 `lineage`/`metadata`에 기록
+
+- **v1 스펙(Phase 1, 명시 규칙)**
+  - **Source ID(제안)**: `FSC_CorpFinancialInfo`
+  - **필수 context 키**
+    - `corp_reg_no`: string (하이픈/공백 제거 후 digits-only로 정규화)
+    - `year`: int (예: 2024)
+  - **지원 오퍼레이션(Phase 1 최소)**
+    - 요약 재무정보: `getIncoStat_V2` 중심으로 1차 통합
+    - (Phase 2+) 재무상태표/손익계산서 상세 오퍼레이션 추가
+  - **Metric mapping(Phase 1 최소)**
+    - `MET-Revenue` ← 요약/손익계산서의 매출액 필드(단위/스케일은 metadata로 보존)
+  - **EvidenceRecord 정책**
+    - `source_tier="official"`
+    - `source_id="FSC_CorpFinancialInfo"`
+    - `metadata`: `corp_reg_no`, `year`, `statement`("summary"|"bs"|"is"), `account_name`, `unit`, `raw_fields`
+    - `lineage.query`: 호출 파라미터 dict
+  - **의존성(후속 제공 예정)**
+    - 법인등록번호 자동 해소 API가 아직 없으므로, Phase 1에서는 caller가 `corp_reg_no`를 직접 제공해야 함
+
+- **I**
+  - `cmis_core/evidence/fsc_financial_info_source.py` 구현 (connector+source 분리 가능)
+    - requests 호출 + timeout + 오류/빈결과 처리(재시도는 최소)
+  - `cmis_core/orchestration/executor.py::build_default_source_registry`에 OFFICIAL 소스로 등록(allow_http_fetch 조건 하)
+  - 단위 테스트(네트워크 없이):
+    - `can_handle()` 필수 필드 검증
+    - API 응답 파싱(매출액 추출) - `requests` mocking
+  - 통합 테스트(선택, 네트워크 없이):
+    - ValueEngine + EvidenceEngine 경로에서 `MET-Revenue`가 `evidence_direct`로 채워지는지 확인(mock)
+
+- **완료 기준**
+  - `corp_reg_no`+`year`가 주어졌을 때 EvidenceEngine이 `MET-Revenue`에 대해 Tier-1(OFFICIAL) evidence를 반환
+  - `http_fetch` 미허용이면 해당 source가 registry에 등록되지 않음
+  - 모든 테스트는 외부 네트워크 없이 재현 가능
+
+- **참고**
+  - 스펙: [공공데이터포털 API 명세(getIncoStat_V2)](https://www.data.go.kr/data/15043459/openapi.do#/API%20%EB%AA%A9%EB%A1%9D/getIncoStat_V2)
+  - 메타데이터: [DCAT 15043459](https://www.data.go.kr/dcat/metadata/15043459)
 
 ---
 
