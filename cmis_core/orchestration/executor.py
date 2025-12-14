@@ -25,6 +25,7 @@ from cmis_core.evidence_store import create_evidence_store
 from cmis_core.evidence.kosis_source import KOSISSource
 from cmis_core.evidence.ecos_source import ECOSSource
 from cmis_core.evidence.worldbank_source import WorldBankSource
+from cmis_core.evidence.fsc_financial_info_source import FSCCorpFinancialInfoSource
 from cmis_core.evidence.google_search_source import GoogleSearchSource
 
 from .task import Task, TaskType
@@ -65,6 +66,7 @@ def build_default_source_registry(config: CMISConfig, enable_stub_source: bool =
             (lambda: KOSISSource(), SourceTier.OFFICIAL),
             (lambda: ECOSSource(), SourceTier.OFFICIAL),
             (lambda: WorldBankSource(), SourceTier.OFFICIAL),
+            (lambda: FSCCorpFinancialInfoSource(), SourceTier.OFFICIAL),
         ]:
             try:
                 src = ctor()
