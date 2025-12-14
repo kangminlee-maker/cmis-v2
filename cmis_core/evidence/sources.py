@@ -192,10 +192,12 @@ class StubSource(BaseDataSource):
 # OfficialSource (스텁, 향후 확장)
 # ========================================
 
-class KOSISSource(BaseDataSource):
-    """KOSIS (통계청) Source
+class _LegacyKOSISSourceStub(BaseDataSource):
+    """Legacy stub for KOSISSource.
 
-    v1: 스텁 구현 (향후 API 연동 예정)
+    NOTE:
+    - 실제 KOSIS OpenAPI 구현은 `cmis_core.evidence.kosis_source.KOSISSource`에 존재합니다.
+    - 이 스텁은 fallback 용도로만 유지합니다.
     """
 
     def __init__(self):
@@ -219,6 +221,13 @@ class KOSISSource(BaseDataSource):
     def can_handle(self, request: EvidenceRequest) -> bool:
         """v1: 기본 체크만"""
         return request.context.get("region") == "KR"
+
+
+# Prefer real KOSIS OpenAPI implementation (keep import compatibility).
+try:
+    from cmis_core.evidence.kosis_source import KOSISSource as KOSISSource  # type: ignore
+except Exception:
+    KOSISSource = _LegacyKOSISSourceStub  # type: ignore
 
 
 # ========================================
