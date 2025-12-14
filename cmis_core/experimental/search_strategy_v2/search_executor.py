@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
-from .types import SearchPlan, SearchStep, SearchContext
+from cmis_core.types import SearchPlan, SearchStep, SearchContext
 from .query_generator_llm import LLMQueryGenerator
 
 

@@ -8,8 +8,8 @@ LLM 기반 검색 쿼리 동적 생성 (한국어, 영어, 일본어 등)
 from __future__ import annotations
 
 from typing import Dict, List
-from .types import SearchContext
-from .llm.service import LLMService
+from cmis_core.types import SearchContext
+from cmis_core.llm.service import LLMService
 
 
 class LLMQueryGenerator:

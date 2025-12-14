@@ -11,8 +11,8 @@ import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-from .types import MetricRequest, SearchContext, SearchPlan, SearchStep
-from .config import CMISConfig
+from cmis_core.types import MetricRequest, SearchContext, SearchPlan, SearchStep
+from cmis_core.config import CMISConfig
 
 
 class SearchPlanner:
@@ -34,7 +34,7 @@ class SearchPlanner:
 
     def _load_search_strategy_spec(self) -> Dict:
         """search_strategy_spec.yaml 로딩"""
-        config_path = Path(__file__).parent.parent / "config" / "search_strategy_spec.yaml"
+        config_path = self.config.project_root / "config" / "search_strategy_spec.yaml"
 
         if not config_path.exists():
             return {}
