@@ -139,15 +139,16 @@ dev/
 
 ## 📖 문서 구조 (dev/docs/)
 
-### architecture/ (18개 - Active)
+### architecture/ (Active)
 
-**핵심 (4개)**:
-- cmis_philosophy_concept.md (철학)
-- CMIS_Architecture_Blueprint_v3.4_km.md (전체 아키텍처)
-- CMIS_Orchestration_Kernel_Design.md (Reconcile Loop)
-- Blueprint_v3.4_Review.md (검토 문서)
+**Core (2개)**:
+- CMIS_Architecture_Blueprint_v3.6.0_km.md (통합: 철학/용어/폴더구조/전체 아키텍처)
+- CMIS_Orchestration_Kernel_Design.md (Reconcile Loop 기반 Orchestration Kernel 설계)
 
-**엔진별 (7개)**:
+**Interfaces (1개)**:
+- CMIS_Cursor_Agent_Interface_Design.md
+
+**Engines (7개)**:
 - BeliefEngine_Design_Enhanced.md
 - World_Engine_Enhanced_Design.md
 - PatternEngine_Design_Final.md
@@ -156,17 +157,20 @@ dev/
 - Workflow_CLI_Design_Enhanced.md
 - Search_Strategy_Design_v2.md
 
-**보조 (7개)**:
-- BeliefEngine 관련 3개
-- StrategyEngine 관련 2개
+**Cross-cutting (1개)**:
 - cmis_project_context_layer_design.md
+
+**Index**:
 - README.md
 
 ---
 
-### deprecated/docs/architecture_v3.3_and_earlier/ (25개)
+### deprecated/docs/architecture_*/ (버전별 보관)
 
-**v3.3 문서**: Blueprint, Implementation Status, Roadmap
+**주요 폴더**:
+- deprecated/docs/architecture_v3.3_and_earlier/ (구버전/중간본)
+- deprecated/docs/architecture_v3.4/ (Blueprint v3.4 보관)
+- deprecated/docs/architecture_v3.6/ (문서 정리/통합 산출물 보관)
 
 **구버전 엔진 설계**: World v1-v2, Pattern v1.1, Strategy v1, Learning v1, Workflow v1
 

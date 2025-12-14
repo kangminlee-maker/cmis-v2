@@ -314,10 +314,10 @@ python3 -m cmis_cli config-validate --check-all
 ## 📚 문서
 
 ### 아키텍처
-- [Architecture Blueprint v3.3](dev/docs/architecture/CMIS_Architecture_Blueprint_v3.3.md) - 전체 시스템 개요
-- [Implementation Status v3.3](dev/docs/architecture/CMIS_Implementation_Status_v3.3.md) - 구현 현황
-- [Roadmap v3.3](dev/docs/architecture/CMIS_Roadmap_v3.3.md) - 로드맵
-- [Philosophy](dev/docs/architecture/cmis_philosophy_concept.md) - 설계 철학
+- [Architecture Index](dev/docs/architecture/README.md) - 아키텍처 문서 인덱스
+- [Architecture Blueprint v3.6.0](dev/docs/architecture/CMIS_Architecture_Blueprint_v3.6.0_km.md) - 통합 블루프린트(사람용 SSoT)
+- [Orchestration Kernel](dev/docs/architecture/CMIS_Orchestration_Kernel_Design.md) - Reconcile Loop 설계
+- [Cursor Agent Interface](dev/docs/architecture/CMIS_Cursor_Agent_Interface_Design.md) - Cursor 인터페이스 설계
 
 ### 엔진별 설계
 - [Pattern Engine](dev/docs/architecture/PatternEngine_Design_Final.md)

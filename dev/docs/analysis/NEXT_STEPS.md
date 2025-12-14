@@ -236,8 +236,8 @@
 
 **설계**:
 - `cmis.yaml` (전체 스펙)
-- `CMIS_Architecture_Blueprint.md`
-- `cmis_philosophy_concept.md`
+- `dev/docs/architecture/README.md`
+- `dev/docs/architecture/CMIS_Architecture_Blueprint_v3.6.0_km.md`
 
 **구현**:
 - `Evidence_Engine_Design_Revision.md`
