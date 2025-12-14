@@ -7,8 +7,9 @@ SearchPlan을 실행하여 검색 결과 수집
 
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, List, Optional
 
 from cmis_core.types import SearchPlan, SearchStep, SearchContext
 from .query_generator_llm import LLMQueryGenerator
@@ -24,6 +25,9 @@ class RawSearchResult:
     timestamp: str
 
 
+SearchBackend = Callable[[str, str, str, int], List[Dict[str, Any]]]
+
+
 class SearchExecutor:
     """SearchPlan 실행자
 
@@ -34,9 +38,23 @@ class SearchExecutor:
     - Raw 결과 수집
     """
 
-    def __init__(self):
-        """초기화"""
-        self.llm_generator = LLMQueryGenerator()
+    def __init__(
+        self,
+        llm_generator: Optional[LLMQueryGenerator] = None,
+        *,
+        search_backend: Optional[SearchBackend] = None,
+        max_results: int = 5,
+    ) -> None:
+        """초기화.
+
+        NOTE:
+        - SearchStrategy v2는 experimental 상태입니다.
+        - 네트워크 호출은 테스트에서 mocking으로 대체할 수 있도록 search_backend injection을 지원합니다.
+        """
+
+        self.llm_generator = llm_generator or LLMQueryGenerator()
+        self.search_backend = search_backend
+        self.max_results = int(max_results)
 
     def execute(self, plan: SearchPlan) -> List[RawSearchResult]:
         """SearchPlan 실행
@@ -137,10 +155,53 @@ class SearchExecutor:
         Returns:
             RawSearchResult or None
         """
-        # 실제 검색은 Source에서 수행
-        # 여기서는 구조만 정의
+        ts = datetime.now(timezone.utc).isoformat()
 
-        # Phase 2에서 실제 Source 호출 구현
-        return None
+        backend = self.search_backend or self._default_search_backend
+        items = backend(query, language, source_id, timeout)
+        if not items:
+            return None
+
+        return RawSearchResult(
+            query=query,
+            language=language,
+            source_id=source_id,
+            content=items,
+            timestamp=ts,
+        )
+
+    def _default_search_backend(
+        self,
+        query: str,
+        language: str,
+        source_id: str,
+        timeout: int,
+    ) -> List[Dict[str, Any]]:
+        """최소 검색 backend (Phase 1.5).
+
+        - ddgs(또는 duckduckgo_search) 설치 시 DuckDuckGo 텍스트 검색을 지원합니다.
+        - 그 외/미설치 환경에서는 빈 결과를 반환합니다.
+        """
+
+        _ = (language, timeout)  # reserved (future)
+
+        if source_id not in {"GenericWebSearch", "DuckDuckGo", "DuckDuckGoSearch"}:
+            return []
+
+        try:
+            try:
+                from ddgs import DDGS  # type: ignore
+            except ImportError:
+                from duckduckgo_search import DDGS  # type: ignore
+        except ImportError:
+            return []
+
+        try:
+            ddgs = DDGS()
+            results = list(ddgs.text(query, max_results=self.max_results))
+        except Exception:
+            return []
+
+        return [r for r in results if isinstance(r, dict)]
 
 

@@ -7,9 +7,12 @@ LLM 기반 검색 쿼리 동적 생성 (한국어, 영어, 일본어 등)
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+from cmis_core.config import CMISConfig
 from cmis_core.types import SearchContext
-from cmis_core.llm.service import LLMService
+from cmis_core.llm.service import LLMService, create_llm_service
+from cmis_core.llm.types import CMISTaskType
 
 
 class LLMQueryGenerator:
@@ -22,13 +25,21 @@ class LLMQueryGenerator:
     - 도메인 적응
     """
 
-    def __init__(self, llm_service: LLMService = None):
+    def __init__(
+        self,
+        llm_service: Optional[LLMService] = None,
+        *,
+        llm_mode: str = "mock",
+        config: Optional[CMISConfig] = None,
+    ) -> None:
         """
         Args:
-            llm_service: LLM 서비스 (None이면 기본 생성)
+            llm_service: LLM 서비스 (None이면 create_llm_service로 생성)
+            llm_mode: create_llm_service mode ("mock" 권장: 테스트/무네트워크)
+            config: CMISConfig (None이면 기본 로드)
         """
         if llm_service is None:
-            llm_service = LLMService()
+            llm_service = create_llm_service(config=config, mode=llm_mode)
 
         self.llm_service = llm_service
 
@@ -101,33 +112,56 @@ class LLMQueryGenerator:
         # 프롬프트 구성
         prompt = self._build_prompt(context, language, num_queries)
 
-        # LLM 호출
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "queries": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "rationale": {"type": "string"},
+                            "target_source": {"type": "string"},
+                        },
+                    },
+                }
+            },
+        }
+
+        # LLM 호출 (실패/빈 결과 시 fallback)
         try:
             response = self.llm_service.call_structured(
+                task_type=CMISTaskType.VALIDATION_SANITY_CHECK,
                 prompt=prompt,
-                response_schema={
-                    "type": "object",
-                    "properties": {
-                        "queries": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "query": {"type": "string"},
-                                    "rationale": {"type": "string"},
-                                    "target_source": {"type": "string"}
-                                }
-                            }
-                        }
-                    }
-                }
+                schema=response_schema,
+                context={
+                    "domain_id": context.domain_id,
+                    "region": context.region,
+                    "metric_id": context.metric_id,
+                    "year": context.year,
+                    "language": language,
+                },
             )
 
-            return [q["query"] for q in response.get("queries", [])]
+            queries: List[str] = []
+            if isinstance(response, dict):
+                raw_queries = response.get("queries", [])
+                if isinstance(raw_queries, list):
+                    for q in raw_queries:
+                        if isinstance(q, dict):
+                            qq = q.get("query")
+                            if isinstance(qq, str) and qq.strip():
+                                queries.append(qq.strip())
+
+            if not queries:
+                return [self._build_fallback_query(context, language)]
+
+            cap = max(1, int(num_queries))
+            return queries[:cap]
 
         except Exception as e:
             print(f"LLM query generation failed: {e}")
-            # Fallback: 기본 쿼리
             return [self._build_fallback_query(context, language)]
 
     def _build_prompt(
