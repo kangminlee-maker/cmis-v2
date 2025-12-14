@@ -138,7 +138,7 @@ def test_full_pipeline_with_google(config, full_evidence_engine, simple_graph):
     ]
 
     # 실행
-    results, program = value_engine.evaluate_metrics(
+    results, program, _metric_evals = value_engine.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=True

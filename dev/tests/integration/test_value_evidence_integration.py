@@ -140,7 +140,7 @@ def test_value_engine_without_evidence(config, simple_graph):
     ]
 
     # use_evidence_engine=False로 R-Graph만 사용
-    results, program = value_engine.evaluate_metrics(
+    results, program, _metric_evals = value_engine.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=False
@@ -168,7 +168,7 @@ def test_value_engine_with_evidence(value_engine_with_evidence, simple_graph):
     ]
 
     # use_evidence_engine=True (기본값)
-    results, program = value_engine_with_evidence.evaluate_metrics(
+    results, program, _metric_evals = value_engine_with_evidence.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=True
@@ -206,7 +206,7 @@ def test_value_engine_evidence_fallback(value_engine_with_evidence, simple_graph
         )
     ]
 
-    results, program = value_engine_with_evidence.evaluate_metrics(
+    results, program, _metric_evals = value_engine_with_evidence.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=True
@@ -244,7 +244,7 @@ def test_value_engine_multiple_metrics_mixed(value_engine_with_evidence, simple_
         )
     ]
 
-    results, program = value_engine_with_evidence.evaluate_metrics(
+    results, program, _metric_evals = value_engine_with_evidence.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=True
@@ -315,18 +315,18 @@ def test_value_program_tracking(value_engine_with_evidence, simple_graph):
     ]
 
     # EvidenceEngine 사용
-    results1, program1 = value_engine_with_evidence.evaluate_metrics(
+    results1, program1, _metric_evals1 = value_engine_with_evidence.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=True
     )
 
-    assert program1["engine"] == "ValueEngine_v2"
+    assert program1["engine"] == "ValueEngine_v3"
     assert program1["use_evidence_engine"] == True
     assert len(program1["evidence_metrics"]) >= 1
 
     # EvidenceEngine 미사용
-    results2, program2 = value_engine_with_evidence.evaluate_metrics(
+    results2, program2, _metric_evals2 = value_engine_with_evidence.evaluate_metrics(
         simple_graph,
         requests,
         use_evidence_engine=False
