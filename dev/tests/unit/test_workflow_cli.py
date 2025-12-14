@@ -96,6 +96,50 @@ class TestWorkflowOrchestrator:
 
         assert result["meta"]["policy_mode"] == "exploration_friendly"
 
+    def test_run_workflow_strategy_design_smoke(self, project_root):
+        """Generic run_workflow (strategy_design) - step runner smoke"""
+        orchestrator = WorkflowOrchestrator(project_root=project_root)
+
+        result = orchestrator.run_workflow(
+            workflow_id="strategy_design",
+            inputs={
+                "goal_id": "GOL-test",
+                "constraints": {
+                    "scope": {"domain_id": "Adult_Language_Education_KR", "region": "KR"},
+                    "horizon": "3y",
+                },
+                "project_context_id": None,
+            },
+        )
+
+        assert result["meta"]["workflow_id"] == "strategy_design"
+        assert "steps" in result
+        assert result["steps"][0]["status"] == "ok"
+        assert "outputs" in result
+        assert "strategy_set_ref" in result["outputs"]
+        assert isinstance(result["outputs"].get("strategy_ids"), list)
+
+    def test_run_workflow_reality_monitoring_smoke(self, project_root):
+        """Generic run_workflow (reality_monitoring) - auto snapshot + evaluate_metrics smoke"""
+        orchestrator = WorkflowOrchestrator(project_root=project_root)
+
+        result = orchestrator.run_workflow(
+            workflow_id="reality_monitoring",
+            inputs={
+                "domain_id": "Adult_Language_Education_KR",
+                "region": "KR",
+                "outcome_ids": [],
+            },
+        )
+
+        assert result["meta"]["workflow_id"] == "reality_monitoring"
+        assert "steps" in result
+        assert len(result["steps"]) >= 1
+        assert "outputs" in result
+        # evaluate_metrics가 실행되면 value_records가 생김
+        if any(s.get("call") == "value_engine.evaluate_metrics" and s.get("status") == "ok" for s in result["steps"]):
+            assert "value_records" in result["outputs"]
+
 
 class TestOpportunityDiscovery:
     """opportunity_discovery 워크플로우 테스트"""
