@@ -222,6 +222,18 @@ class CMISConfig:
                 return t
         return None
 
+    def get_llm_runtime(self) -> Dict[str, Any]:
+        """cognition_plane.llm_runtime 설정을 반환합니다.
+
+        v3.6.0 contract:
+        - cmis.planes.cognition_plane.llm_runtime
+        """
+
+        planes = self.cmis.get("planes", {}) or {}
+        cognition_plane = planes.get("cognition_plane", {}) or {}
+        llm_runtime = cognition_plane.get("llm_runtime", {}) or {}
+        return llm_runtime if isinstance(llm_runtime, dict) else {}
+
 
 # 싱글톤 패턴 (선택적)
 _global_config: Optional[CMISConfig] = None
