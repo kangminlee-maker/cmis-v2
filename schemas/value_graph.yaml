@@ -9,4 +9,3 @@ graph:
   node_types: []
   edge_types: []
   metrics_spec_ref: "libraries/metrics_spec.yaml"
-

@@ -54,6 +54,3 @@ archetype:
       - pattern_id: "PAT-viral_growth"
         weight: 0.35
         rationale: "초기 성장 전략"
-
-
-

@@ -562,6 +562,3 @@ store = EvidenceStore(PostgreSQLBackend(...))
 **완료일**: 2025-12-09
 **버전**: 1.0.0
 **승인**: ✅ Production Deployment Ready
-
-
-

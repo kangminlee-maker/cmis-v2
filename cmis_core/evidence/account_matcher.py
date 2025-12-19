@@ -189,5 +189,3 @@ class AccountMatcher:
             return int(match.group())
 
         return None
-
-

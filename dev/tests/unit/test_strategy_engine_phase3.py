@@ -209,5 +209,3 @@ class TestIntegrationPhase3:
 
         # Library에서 조회
         assert len(engine.library.strategies_history) >= 0
-
-

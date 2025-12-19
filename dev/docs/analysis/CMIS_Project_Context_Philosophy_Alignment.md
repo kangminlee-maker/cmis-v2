@@ -29,7 +29,7 @@
 **개선점**:
 ```yaml
 # Project Context도 "세계 모델의 일부"임을 명시
-project_context:
+focal_actor_context_id:
   philosophical_role: "focal_actor의 현재 상태를 모델로 표현"
   model_components:
     - baseline_state: "현재 숫자들의 전제 조건"
@@ -60,7 +60,7 @@ PH00_project_context_setup:
       - ERP_revenue_data → EVD-internal-001
       - CRM_customer_data → EVD-internal-002
       - Financial_statements → EVD-internal-003
-    
+
     declaration_with_evidence:
       - assets_profile.capabilities → 검증 가능한 증거 (프로젝트 이력, 팀 이력서 등)
       - constraints_profile.budget → 재무제표/이사회 결의
@@ -80,9 +80,9 @@ PH00_project_context_setup:
 
 **Project Context Layer 설계**:
 - **새로운 5번째 그래프를 추가하지 않음** ✅
-- Substrate Plane의 `stores`에 `project_context_store`만 추가
+- Substrate Plane의 `stores`에 `focal_actor_context_store`만 추가
 - R-Graph: focal_actor는 Actor primitive로 표현
-- D-Graph: Goal/Strategy에 `project_context_id` 필드만 추가
+- D-Graph: Goal/Strategy에 `focal_actor_context_id` 필드만 추가
 - P-Graph/V-Graph: 구조 유지, API 입력만 확장
 
 **정합성**: ✅ **완전 일치**
@@ -94,12 +94,12 @@ design_principle:
   what_not_to_do:
     - "Project Graph 신설 ❌"
     - "R/P/V/D 통합 ❌"
-  
+
   what_to_do:
     - "R-Graph에 focal_actor를 Actor로 표현 ✅"
     - "D-Graph에 project_context 연결 ✅"
-    - "Store에 project_context_store 추가 ✅"
-    - "Engine API에 project_context_id 인자 추가 ✅"
+    - "Store에 focal_actor_context_store 추가 ✅"
+    - "Engine API에 focal_actor_context_id 인자 추가 ✅"
 ```
 
 ---
@@ -136,7 +136,7 @@ assets_profile:
         technology_domain: "AI_speech_synthesis"
         maturity_level: "production_ready"
         scale_capacity: "10K+ concurrent users"
-    
+
     - capability_id: "CAP-EdTech_design"
       traits:
         domain_expertise: "education"
@@ -153,7 +153,7 @@ pattern:
   constraints:
     required_traits:  # R-Graph 시장 구조
       - market_trait: "digital_learning_acceptance > 0.3"
-    
+
     required_capability_traits:  # focal_actor 역량
       - capability_trait: "technology_domain in [AI_ML, NLP, Speech]"
       - capability_trait: "maturity_level >= early"
@@ -164,7 +164,7 @@ pattern:
 def execution_fit_score(pattern, project_context):
     required = pattern.constraints.required_capability_traits
     available = project_context.assets_profile.capability_traits
-    
+
     # Trait 기반 유사도 계산 (고정 문자열 비교 ❌)
     match_score = trait_similarity(required, available)
     return match_score
@@ -211,16 +211,16 @@ def execution_fit_score(pattern, project_context):
 
 **Project Context도 버전 관리 가능**:
 ```yaml
-project_context:
-  project_context_id: "PRJ-Startup_EdTech_001_v3"
+focal_actor_context_id:
+  focal_actor_context_id: "PRJ-Startup_EdTech_001_v3"
   version: 3
   previous_version_id: "PRJ-Startup_EdTech_001_v2"
-  
+
   baseline_state:
     as_of: "2025-12-05"
     revenue: 500M KRW
     # v2 대비 revenue 100M 증가
-  
+
   changed_since_v2:
     - "available_capital: 300M → 500M"
     - "team_size: 2 → 3"
@@ -232,13 +232,13 @@ project_context:
 # v2 시점 기회 발굴
 opportunities_v2 = opportunity_discovery_for_project(
     domain_id="Adult_Language_KR",
-    project_context_id="PRJ-Startup_EdTech_001_v2"
+    focal_actor_context_id="PRJ-Startup_EdTech_001_v2"
 )
 
 # v3 시점 (자본 증가, 역량 추가 후)
 opportunities_v3 = opportunity_discovery_for_project(
     domain_id="Adult_Language_KR",
-    project_context_id="PRJ-Startup_EdTech_001_v3"
+    focal_actor_context_id="PRJ-Startup_EdTech_001_v3"
 )
 
 # 차이 비교
@@ -383,7 +383,7 @@ assets_profile:
         maturity_level: "production_ready"
         scale_tier: "10K_users"
         deployment_type: "cloud_native"
-    
+
     - capability_id: "CAP-002"
       trait_set:
         domain_expertise: "education_content"
@@ -399,11 +399,11 @@ pattern:
   constraints:
     required_market_traits:
       - "digital_learning_acceptance >= 0.3"
-    
+
     required_capability_traits:
       - "technology_domain in [AI_ML, NLP, speech_synthesis]"
       - "maturity_level >= mvp"
-    
+
     incompatible_traits:
       - "delivery_channel == purely_offline"
 ```
@@ -424,27 +424,27 @@ pattern:
 **설계 명확화**:
 
 ```yaml
-project_context:
-  
+focal_actor_context_id:
+
   constraints_profile:  # 객관적, Evidence 기반, 위반 불가
     hard_constraints:
       - constraint_id: "CNS-budget"
         type: "financial"
         max_initial_investment: 500M KRW
         evidence_id: "EVD-internal-board_resolution"
-      
+
       - constraint_id: "CNS-timeline"
         type: "temporal"
         mvp_deadline: "2026-06-01"
         evidence_id: "EVD-internal-roadmap"
-  
+
   preference_profile:  # 주관적, Prior/휴리스틱, 위반 가능 (패널티)
     soft_preferences:
       - pref_id: "PREF-growth_vs_profit"
         dimension: "strategic_priority"
         value: "growth_oriented"
         weight: 0.7
-      
+
       - pref_id: "PREF-segment"
         dimension: "target_customer"
         preferred: ["office_worker", "professional"]
@@ -474,13 +474,13 @@ outcome:
   related_project_id: "PRJ-Startup_EdTech_001"
   related_strategy_id: "STR-AI_Coaching_MVP"
   as_of: "2026-03-31"
-  
+
   actual_metrics:
     - metric_id: "MET-Revenue"
       predicted: 200M KRW  # Scenario 예상
       actual: 150M KRW     # 실제
       delta: -25%
-    
+
     - metric_id: "MET-Churn_rate"
       predicted: 0.08
       actual: 0.12
@@ -494,7 +494,7 @@ project_context_v4:
   baseline_state:  # 업데이트
     current_revenue: 150M KRW  # v3: 0 → v4: 150M
     current_churn: 0.12
-  
+
   learned_patterns:  # 새로 추가
     - pattern_id: "PAT-AI_personalized_learning"
       our_performance:
@@ -510,7 +510,7 @@ project_context_v4:
 # v4 (실적 반영 후) 다시 기회 발굴
 opportunities_v4 = opportunity_discovery_for_project(
     domain_id="Adult_Language_KR",
-    project_context_id="PRJ-Startup_EdTech_001_v4"
+    focal_actor_context_id="PRJ-Startup_EdTech_001_v4"
 )
 
 # 이전 예측이 틀렸던 부분을 반영한 더 현실적인 기회 제시
@@ -582,11 +582,11 @@ ontology:
       technology_domain:
         value_type: "enum"
         allowed_values: ["AI_ML", "NLP", "speech_synthesis", "platform_tech", ...]
-      
+
       maturity_level:
         value_type: "enum"
         allowed_values: ["concept", "mvp", "early", "production_ready", "mature"]
-      
+
       scale_tier:
         value_type: "enum"
         allowed_values: ["poc", "startup", "enterprise", "hyperscale"]
@@ -596,13 +596,13 @@ ontology:
 
 **설계 명확화**:
 ```yaml
-project_context:
-  
+focal_actor_context_id:
+
   constraints_profile:  # 위반 불가, Evidence 필수
     type: "hard_constraints"
     evidence_required: true
     violation_handling: "filter_out"
-  
+
   preference_profile:  # 위반 가능, Evidence 선택적
     type: "soft_preferences"
     evidence_required: false
@@ -617,11 +617,11 @@ cognition_plane:
   engines:
     learning_engine:
       api:
-        - name: "update_project_context_from_outcome"
+        - name: "update_focal_actor_context_from_outcome"
           description: "실제 Outcome 기반 Project Context baseline/learned_patterns 업데이트"
           input:
             outcome_id: "outcome_id"
-            project_context_id: "project_context_id"
+            focal_actor_context_id: "focal_actor_context_id"
           output:
             updated_project_context_version: "project_context_ref"
 ```
@@ -636,7 +636,7 @@ cognition_plane:
 > "시장/비즈니스 세계를 그래프로 재표현한 Market Intelligence OS"
 
 **확장 정체성**:
-> "시장 세계(R/P/V)와 사용자 상황(Project Context)을 함께 그래프로 표현하고,  
+> "시장 세계(R/P/V)와 사용자 상황(Project Context)을 함께 그래프로 표현하고,
 > 그 위에서 이해·발굴·설계·학습을 수행하는 **Contextual Market Intelligence OS**"
 
 ### 6.2 새로운 능력 추가
@@ -678,11 +678,11 @@ cognition_plane:
 # 1. Project Context Store 추가
 substrate_plane:
   stores:
-    project_context_store:
+    focal_actor_context_store:
       id_prefix: "PRJ-"
       schema:
         fields:
-          project_context_id: { type: "string", required: true }
+          focal_actor_context_id: { type: "string", required: true }
           focal_actor_id: { type: "actor_id", required: true }
           mode: { type: "enum", values: ["greenfield","brownfield","hybrid"] }
           baseline_state: { type: "dict", required: true }
@@ -690,7 +690,7 @@ substrate_plane:
           constraints_profile: { type: "constraint_profile_ref", required: true }
           preference_profile: { type: "preference_profile_ref", required: false }
           version: { type: "int", default: 1 }
-          previous_version_id: { type: "project_context_id", required: false }
+          previous_version_id: { type: "focal_actor_context_id", required: false }
 
 # 2. Capability Trait 정의
 ontology:
@@ -708,7 +708,7 @@ substrate_plane:
         goal:
           fields:
             # 기존 필드 유지
-            project_context_id: { type: "project_context_id", required: false }  # 추가
+            focal_actor_context_id: { type: "focal_actor_context_id", required: false }  # 추가
 
 # 4. Engine API 확장
 cognition_plane:
@@ -718,39 +718,39 @@ cognition_plane:
         - name: "snapshot"
           input:
             # 기존 인자 유지
-            project_context_id: { type: "project_context_id", required: false }  # 추가
-    
+            focal_actor_context_id: { type: "focal_actor_context_id", required: false }  # 추가
+
     pattern_engine:
       api:
         - name: "match_patterns"
           output:
             # structure_fit_score 추가
             execution_fit_score: { type: "float", required: false }  # project_context 있을 때만
-    
+
     value_engine:
       metrics_spec:
         metric_level_types:
           - "market"   # domain_id만 필요
-          - "project"  # project_context_id 필요
+          - "project"  # focal_actor_context_id 필요
 ```
 
 ### 7.2 Workflow 확장
 
 ```yaml
 canonical_workflows:
-  
+
   # 기존 (Greenfield)
   - id: "structure_analysis"
     input_schema:
       required: ["domain_id", "region"]
       optional: []
-  
+
   # 추가 (Brownfield)
   - id: "structure_analysis_for_project"
     input_schema:
-      required: ["domain_id", "region", "project_context_id"]
+      required: ["domain_id", "region", "focal_actor_context_id"]
       optional: []
-    
+
     phases:
       - id: "PH00"
         name: "Project Context Setup"
@@ -773,25 +773,25 @@ workflows:
         name: "프로젝트 컨텍스트 설정"
         owner: "structure_analyst"
         duration: "2-4 hours"
-        
+
         inputs:
           - type: "user_input"
             content: "조직/프로젝트 현황 인터뷰/폼"
           - type: "internal_data"
             content: "ERP/CRM/재무 데이터 (선택적)"
-        
+
         activities:
           - "조직 현황 파악 (사업/매출/조직/역량)"
           - "내부 데이터 수집 요청 (Reality Monitor)"
           - "focal_actor R-Graph 구성 (World Engine)"
           - "Project Context 객체 생성"
-        
+
         outputs:
           - type: "project_context"
             id: "PRJ-*"
           - type: "r_graph_extension"
             content: "focal_actor + 관련 서브그래프"
-        
+
         validation:
           - "constraints_profile에 Evidence 연결 확인"
           - "baseline_state의 핵심 Metric 계산 가능 확인"
@@ -830,9 +830,9 @@ workflows:
 ### 📋 실행 우선순위
 
 **즉시 (이번 세션)**:
-1. umis_v9.yaml에 project_context_store 스키마 추가
+1. umis_v9.yaml에 focal_actor_context_store 스키마 추가
 2. capability_traits 정의
-3. Engine API에 project_context_id 인자 추가
+3. Engine API에 focal_actor_context_id 인자 추가
 
 **Sprint 1 (1주)**:
 1. PH00 Phase 상세 설계 및 템플릿

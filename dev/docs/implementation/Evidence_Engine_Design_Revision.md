@@ -62,7 +62,7 @@
         │  ┌────────────────────────┐  │
         │  │ Tier 1: official       │  │ ← DART, KOSIS
         │  │ Tier 2: curated        │  │ ← 내부 검증 DB
-        │  │ Tier 3: commercial     │  │ ← Market Research
+        │  │ Tier 3: commercial     │  │ ← web_search (공개 웹에서 수집)
         │  └────────────────────────┘  │
         └──────────────────────────────┘
                        │
@@ -699,7 +699,7 @@ class EvidenceExecutor:
 EvidenceEngine:
   - Tier 1: official (DART, KOSIS, Gov Stats)
   - Tier 2: curated_internal (내부 검증 DB)
-  - Tier 3: commercial (Market Research, Consulting, Brokerage)
+  - Tier 3: commercial (web_search: 공개 리포트/문서/기사)
 
 ValueEngine.prior_estimation:
   - Pattern 기반 추정 (PatternEngine 호출)
@@ -964,6 +964,3 @@ class EvidenceExecutor:
 
 **개정 완료**: 2025-12-09
 **다음 문서**: Evidence_Engine_Implementation_v1.md (구현 가이드)
-
-
-

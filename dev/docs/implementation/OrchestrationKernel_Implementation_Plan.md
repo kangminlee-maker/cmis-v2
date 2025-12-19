@@ -223,7 +223,7 @@ class Goal:
     success_predicate: Optional[GoalPredicate] = None
 
     # Context
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None
 
     # Metadata
     created_at: Optional[str] = None
@@ -236,7 +236,7 @@ class Goal:
             "description": self.description,
             "target_metrics": list(self.target_metrics),
             "success_predicate": self.success_predicate.to_dict() if self.success_predicate else None,
-            "project_context_id": self.project_context_id,
+            "focal_actor_context_id": self.focal_actor_context_id,
             "created_at": self.created_at,
             "created_by_role": self.created_by_role
         }

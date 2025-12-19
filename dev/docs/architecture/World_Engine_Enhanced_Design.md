@@ -12,7 +12,7 @@
 이 문서는 World Engine의 기존 Gap 분석에 다음을 추가한 고도화 설계입니다:
 
 1. **RealityGraphStore + ProjectOverlay 구조** - 세계 모델과 프로젝트 컨텍스트 분리
-2. **ingest_project_context 매핑 규칙** - FocalActorContext → R-Graph 변환 명세
+2. **ingest_focal_actor_context 매핑 규칙** - FocalActorContext → R-Graph 변환 명세
 3. **as_of/segment 필터링 우선순위 상향** - Priority 4 → 2
 4. **서브그래프 추출 규칙** - N-hop, edge 타입 명시
 5. **canonical_workflows 연계** - 전체 시스템 내 역할 명확화
@@ -43,7 +43,7 @@
 │                    World Engine API                          │
 │  snapshot(domain, region, segment, as_of, project_context)  │
 │  ingest_evidence(evidence_ids)                               │
-│  ingest_project_context(project_context_id)                  │
+│  ingest_focal_actor_context(focal_actor_context_id)                  │
 └─────────────────────────────────────────────────────────────┘
                           │
         ┌─────────────────┼─────────────────┐
@@ -120,7 +120,7 @@ RealityGraphStore:
 **저장 내용**:
 ```python
 ProjectOverlayStore:
-  - project_context_id: "PRJ-my-company"
+  - focal_actor_context_id: "PRJ-my-company"
   - focal_actor_id: "ACT-my-company"
   - overlay_nodes:
       - Actor: focal_actor (회사 자체)
@@ -132,7 +132,7 @@ ProjectOverlayStore:
 ```
 
 **생성 경로**:
-- **ingest_project_context**: FocalActorContext → ProjectOverlayStore
+- **ingest_focal_actor_context**: FocalActorContext → ProjectOverlayStore
   - focal_actor 생성/업데이트
   - baseline_state → State 노드
   - assets_profile → Actor traits/edges
@@ -141,12 +141,12 @@ ProjectOverlayStore:
 
 **역할**:
 - RealityGraphStore + ProjectOverlayStore 결합
-- scope, as_of, segment, project_context_id 기반 필터링
+- scope, as_of, segment, focal_actor_context_id 기반 필터링
 - 최종 RealityGraphSnapshot 생성
 
 **프로세스**:
 ```python
-def snapshot(domain, region, segment, as_of, project_context_id):
+def snapshot(domain, region, segment, as_of, focal_actor_context_id):
     # 1. RealityGraphStore에서 기본 그래프 로딩
     base_graph = reality_store.get_graph(
         domain=domain,
@@ -161,8 +161,8 @@ def snapshot(domain, region, segment, as_of, project_context_id):
         filtered_graph = apply_segment_filter(filtered_graph, segment)
 
     # 4. ProjectOverlay 적용 (Brownfield)
-    if project_context_id:
-        overlay = project_overlay_store.get(project_context_id)
+    if focal_actor_context_id:
+        overlay = project_overlay_store.get(focal_actor_context_id)
         combined_graph = merge_graphs(filtered_graph, overlay)
 
         # 5. focal_actor 중심 서브그래프 추출
@@ -199,13 +199,13 @@ RealityGraphSnapshot (우리 회사 중심 뷰)
 
 ---
 
-## 3. ingest_project_context 매핑 규칙
+## 3. ingest_focal_actor_context 매핑 규칙
 
 ### 3.1 API 시그니처
 
 ```python
-def ingest_project_context(
-    project_context_id: str
+def ingest_focal_actor_context(
+    focal_actor_context_id: str
 ) -> tuple[str, list[str]]:
     """
     FocalActorContext → ProjectOverlayStore 투영
@@ -220,7 +220,7 @@ def ingest_project_context(
 **규칙**:
 1. **FocalActorContext가 소유**
    - project_context.focal_actor_id가 이미 정의되어 있으면 사용
-   - 없으면 World Engine이 생성 (ACT-{project_context_id})
+   - 없으면 World Engine이 생성 (ACT-{focal_actor_context_id})
 
 2. **RealityGraphStore 확인**
    - focal_actor_id가 RealityGraphStore에 이미 존재하면:
@@ -248,7 +248,7 @@ baseline_state:
 **→ R-Graph State 노드**:
 ```python
 State:
-  state_id: "STATE-{project_context_id}-baseline"
+  state_id: "STATE-{focal_actor_context_id}-baseline"
   target_type: "actor"
   target_id: focal_actor_id
   as_of: "2025-12-01"
@@ -260,7 +260,7 @@ State:
   traits:
     data_source: "project_context"
   lineage:
-    from_project_context_id: project_context_id
+    from_focal_actor_context_id: focal_actor_context_id
 ```
 
 **매핑 테이블**:
@@ -334,7 +334,7 @@ Actor (focal_actor):
 **3. brand_assets → State**:
 ```python
 State:
-  state_id: "STATE-{project_context_id}-brand"
+  state_id: "STATE-{focal_actor_context_id}-brand"
   target_type: "actor"
   target_id: focal_actor_id
   as_of: "2025-12-01"
@@ -346,7 +346,7 @@ State:
 **4. organizational_assets → State**:
 ```python
 State:
-  state_id: "STATE-{project_context_id}-org"
+  state_id: "STATE-{focal_actor_context_id}-org"
   target_type: "actor"
   target_id: focal_actor_id
   properties:
@@ -357,7 +357,7 @@ State:
 **5. data_assets → State**:
 ```python
 State:
-  state_id: "STATE-{project_context_id}-data"
+  state_id: "STATE-{focal_actor_context_id}-data"
   target_type: "actor"
   target_id: focal_actor_id
   properties:
@@ -528,7 +528,7 @@ def extract_subgraph(graph, focal_actor, n_hops=2):
 snapshot(
     domain="...",
     region="...",
-    project_context_id="PRJ-001",
+    focal_actor_context_id="PRJ-001",
     slice_spec={
         "n_hops": 3,  # 기본값 2 대신 3-hop
         "include_competitors": True,
@@ -746,12 +746,12 @@ opportunity_discovery:
    - Context Archetype 결정 시 R-Graph의 Actor/Resource traits 사용
    - Expected Pattern vs Matched Pattern 비교
 
-**project_context_id 지원**:
+**focal_actor_context_id 지원**:
 ```yaml
 # Brownfield 기회 발굴
 opportunity_discovery:
   with:
-    project_context_id: "PRJ-my-company"
+    focal_actor_context_id: "PRJ-my-company"
 ```
 - focal_actor 중심 서브그래프에서 Gap 탐지
 - Execution Fit 계산 시 FocalActorContext 활용
@@ -764,7 +764,7 @@ strategy_design:
   steps:
     - call: world_engine.snapshot
       with:
-        project_context_id: "@input.project_context_id"  # 필수
+        focal_actor_context_id: "@input.focal_actor_context_id"  # 필수
 
     - call: strategy_engine.search_strategies
       with:
@@ -775,11 +775,11 @@ strategy_design:
 **World Engine 역할**:
 - **Brownfield 전용**
 - focal_actor + baseline_state 기반 전략 설계
-- ingest_project_context가 필수
+- ingest_focal_actor_context가 필수
 
 **우선순위 재확인**:
-- strategy_design는 ingest_project_context 없으면 작동 불가
-- → ingest_project_context는 Priority 1
+- strategy_design는 ingest_focal_actor_context 없으면 작동 불가
+- → ingest_focal_actor_context는 Priority 1
 
 ---
 
@@ -789,7 +789,7 @@ strategy_design:
 
 | Priority | 항목 | 이유 |
 |----------|------|------|
-| 1 | ingest_project_context | Brownfield 핵심 |
+| 1 | ingest_focal_actor_context | Brownfield 핵심 |
 | 2 | snapshot 서브그래프 추출 | 성능 최적화 |
 | 3 | ingest_evidence | 동적 확장 |
 | 4 | segment/as_of 필터링 | 시급성 낮음 |
@@ -798,10 +798,10 @@ strategy_design:
 
 | Priority | 항목 | 이유 |
 |----------|------|------|
-| **1** | **ingest_project_context** | **Brownfield 핵심, strategy_design 필수** |
+| **1** | **ingest_focal_actor_context** | **Brownfield 핵심, strategy_design 필수** |
 | **2** | **as_of 필터링** | **canonical_workflows 필수, 시계열 정합성** |
 | **2.5** | **segment 필터링** | **세그먼트별 분석 지원** |
-| **2.5** | **snapshot 서브그래프 추출** | **Brownfield 성능, ingest_project_context와 세트** |
+| **2.5** | **snapshot 서브그래프 추출** | **Brownfield 성능, ingest_focal_actor_context와 세트** |
 | **3** | **ingest_evidence** | **동적 확장, 장기적 필수** |
 
 ### 7.3 재조정 근거
@@ -816,7 +816,7 @@ strategy_design:
 - Brownfield만큼은 아니지만 실용성 높음
 
 **서브그래프 추출 Priority 2 → 2.5**:
-- ingest_project_context와 항상 같이 쓰임
+- ingest_focal_actor_context와 항상 같이 쓰임
 - 우선순위 동일하게 유지
 
 ---
@@ -842,7 +842,7 @@ strategy_design:
    - Actor.kind + segment trait 기반
    - MoneyFlow/Event 연쇄 필터링
 
-4. **ingest_project_context 구현** (2일)
+4. **ingest_focal_actor_context 구현** (2일)
    - focal_actor_id 생성/조회
    - baseline_state → State 매핑
    - assets_profile → traits/State 매핑
@@ -865,7 +865,7 @@ strategy_design:
 **테스트**: 15개
 - as_of 필터링: 3개
 - segment 필터링: 3개
-- ingest_project_context: 4개
+- ingest_focal_actor_context_id: 4개
 - 서브그래프 추출: 3개
 - 통합: 2개
 
@@ -956,9 +956,9 @@ strategy_design:
 
 ### 9.2 cmis.yaml API 일치성
 
-- [x] `snapshot(as_of, scope, project_context_id)` 시그니처
+- [x] `snapshot(as_of, scope, focal_actor_context_id)` 시그니처
 - [x] `ingest_evidence(evidence_ids)` 시그니처
-- [x] `ingest_project_context(project_context_id)` 시그니처
+- [x] `ingest_focal_actor_context(focal_actor_context_id)` 시그니처
 - [x] RealityGraph 노드/엣지 타입
 - [x] canonical_workflows 지원
 
@@ -1019,7 +1019,7 @@ strategy_design:
 **작업**:
 - RealityGraphStore 설계
 - as_of/segment 필터링
-- ingest_project_context
+- ingest_focal_actor_context
 - 서브그래프 추출
 
 **예상 시간**: 1.5주
@@ -1081,6 +1081,3 @@ strategy_design:
 **상태**: 설계 완료 (Enhanced)
 **기반**: WORLD_ENGINE_GAP_ANALYSIS.md + 피드백 반영
 **다음**: Phase A 구현 착수
-
-
-

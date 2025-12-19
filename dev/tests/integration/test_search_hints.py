@@ -221,6 +221,3 @@ class TestFullPageVsSnippet:
 
         # Full page가 같거나 더 많아야 함
         assert num_full >= num_snippet
-
-
-

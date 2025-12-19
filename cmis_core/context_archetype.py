@@ -158,7 +158,7 @@ class ContextArchetypeLibrary:
 
 def determine_context_archetype(
     graph: InMemoryGraph,
-    project_context_id: Optional[str] = None,
+    focal_actor_context_id: Optional[str] = None,
     archetype_library: Optional[ContextArchetypeLibrary] = None
 ) -> Optional[ContextArchetype]:
     """Context Archetype 결정 (3단계)
@@ -170,7 +170,7 @@ def determine_context_archetype(
 
     Args:
         graph: Reality Graph
-        project_context_id: Project Context ID (선택)
+        focal_actor_context_id: FocalActorContext ID (선택)
         archetype_library: Archetype 라이브러리 (None이면 새로 로딩)
 
     Returns:
@@ -180,15 +180,19 @@ def determine_context_archetype(
         archetype_library = ContextArchetypeLibrary()
         archetype_library.load_all()
 
-    # 1차: Project Context 기반 (가장 정확)
-    if project_context_id:
-        # Phase 2: 간단한 로딩 (실제로는 Store에서)
+    # 1차: FocalActorContext 기반 (가장 정확)
+    if focal_actor_context_id:
+        # Phase 2: store-first 로딩
         try:
-            from .types import FocalActorContext
+            from .stores.focal_actor_context_store import FocalActorContextStore
 
-            # TODO: 실제 Project Context Store에서 로딩
-            # 지금은 간단한 예시
-            scope = {"domain_id": "test", "region": "KR"}
+            store = FocalActorContextStore()
+            try:
+                record = store.get_latest(focal_actor_context_id)
+            finally:
+                store.close()
+
+            scope = dict(record.scope) if record is not None else {}
 
             archetype = archetype_library.find_by_criteria(
                 domain=scope.get("domain_id"),
@@ -247,6 +251,3 @@ def determine_context_archetype(
     fallback = archetype_library.get_fallback()
     fallback.confidence = 0.3
     return fallback
-
-
-

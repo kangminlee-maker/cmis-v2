@@ -788,5 +788,3 @@ class LLMQueryGenerator:
 **작성**: 2025-12-10
 **현재**: Level 1/5 (기초)
 **권장**: Phase 1 즉시 착수 (Level 2-3 달성)
-
-

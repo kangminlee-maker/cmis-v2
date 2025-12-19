@@ -54,7 +54,7 @@ class PatternEngineV2:
     def match_patterns(
         self,
         graph: InMemoryGraph,
-        project_context_id: Optional[str] = None
+        focal_actor_context_id: Optional[str] = None,
     ) -> List[PatternMatch]:
         """Pattern 매칭
 
@@ -67,7 +67,7 @@ class PatternEngineV2:
 
         Args:
             graph: Reality Graph (InMemoryGraph)
-            project_context_id: Project Context ID (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
 
         Returns:
             PatternMatch 리스트 (combined_score 기준 정렬)
@@ -85,14 +85,14 @@ class PatternEngineV2:
             return []
 
         # 3. 점수 계산
-        scored_matches = self.scorer.score_all(match_results, project_context_id)
+        scored_matches = self.scorer.score_all(match_results, focal_actor_context_id)
 
         return scored_matches
 
     def discover_gaps(
         self,
         graph: InMemoryGraph,
-        project_context_id: Optional[str] = None,
+        focal_actor_context_id: Optional[str] = None,
         precomputed_matches: Optional[List[PatternMatch]] = None
     ) -> List[GapCandidate]:
         """Gap 탐지
@@ -105,7 +105,7 @@ class PatternEngineV2:
 
         Args:
             graph: Reality Graph
-            project_context_id: Project Context ID (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
             precomputed_matches: 이미 계산된 매칭 결과 (성능 최적화)
 
         Returns:
@@ -113,13 +113,13 @@ class PatternEngineV2:
         """
         # 1. Matched Patterns 확보 (재사용 또는 새로 계산)
         if precomputed_matches is None:
-            precomputed_matches = self.match_patterns(graph, project_context_id)
+            precomputed_matches = self.match_patterns(graph, focal_actor_context_id)
 
         # 2. Gap Discovery
         gaps = self.gap_discoverer.discover_gaps(
             graph,
             precomputed_matches,
-            project_context_id
+            focal_actor_context_id,
         )
 
         return gaps
@@ -142,6 +142,3 @@ class PatternEngineV2:
             PatternSpec 리스트
         """
         return self.library.get_all()
-
-
-

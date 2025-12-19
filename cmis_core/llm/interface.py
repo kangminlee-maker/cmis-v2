@@ -157,5 +157,3 @@ class BaseLLM(ABC):
             "is_available": self.is_available(),
             "is_automated": self.is_automated(),
         }
-
-

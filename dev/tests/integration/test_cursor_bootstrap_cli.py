@@ -40,5 +40,3 @@ def test_cursor_bootstrap_saves_manifest(project_root: Path) -> None:
             data = json.load(f)
         assert data.get("schema_version") == 1
         assert "workflows" in data
-
-

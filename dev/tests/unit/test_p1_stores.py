@@ -1,7 +1,7 @@
 """P1 stores (Phase 1) unit tests.
 
 목표:
-- ProjectContextStore(FocalActorContext) 저장/조회
+- FocalActorContextStore(FocalActorContext) 저장/조회
 - OutcomeStore 저장/조회
 - ArtifactStore 저장/메타 조회
 - context_binding / learning_engine 의 store 우선 로딩 확인
@@ -9,21 +9,22 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from cmis_core.context_binding import resolve_focal_actor_context_binding
 from cmis_core.learning_engine import LearningEngine
-from cmis_core.stores import ArtifactStore, OutcomeStore, ProjectContextStore
+from cmis_core.stores import ArtifactStore, OutcomeStore, FocalActorContextStore
 from cmis_core.types import FocalActorContext, Outcome
 
 
 def test_project_context_store_roundtrip_versions(project_root: Path, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
 
-    store = ProjectContextStore(project_root=project_root)
+    store = FocalActorContextStore(project_root=project_root)
 
     v1 = FocalActorContext(
-        project_context_id="PRJ-test-v1",
+        focal_actor_context_id="PRJ-test-v1",
         version=1,
         previous_version_id=None,
         scope={"domain_id": "Adult_Language_Education_KR"},
@@ -38,13 +39,13 @@ def test_project_context_store_roundtrip_versions(project_root: Path, tmp_path: 
 
     latest = store.get_latest("PRJ-test")
     assert latest is not None
-    assert latest.project_context_id == "PRJ-test-v1"
+    assert latest.focal_actor_context_id == "PRJ-test-v1"
     assert latest.version == 1
 
     v2 = FocalActorContext(
-        project_context_id="PRJ-test-v2",
+        focal_actor_context_id="PRJ-test-v2",
         version=2,
-        previous_version_id=v1.project_context_id,
+        previous_version_id=v1.focal_actor_context_id,
         scope=v1.scope,
         assets_profile=v1.assets_profile,
         baseline_state={"as_of": "2025-12-14"},
@@ -57,12 +58,12 @@ def test_project_context_store_roundtrip_versions(project_root: Path, tmp_path: 
 
     latest2 = store.get_latest("PRJ-test")
     assert latest2 is not None
-    assert latest2.project_context_id == "PRJ-test-v2"
+    assert latest2.focal_actor_context_id == "PRJ-test-v2"
     assert latest2.version == 2
 
     by_v1 = store.get_by_version("PRJ-test", 1)
     assert by_v1 is not None
-    assert by_v1.project_context_id == "PRJ-test-v1"
+    assert by_v1.focal_actor_context_id == "PRJ-test-v1"
 
     assert store.list_versions("PRJ-test") == [1, 2]
 
@@ -78,7 +79,7 @@ def test_outcome_store_roundtrip(project_root: Path, tmp_path: Path, monkeypatch
         outcome_id="OUT-1",
         related_strategy_id=None,
         related_scenario_id=None,
-        project_context_id="PRJ-test",
+        focal_actor_context_id="PRJ-test",
         as_of="2025-12-14",
         metrics={"MET-Revenue": 1234.0},
     )
@@ -101,6 +102,9 @@ def test_artifact_store_put_json_and_meta(project_root: Path, tmp_path: Path, mo
     meta = store.get_meta(aid)
     assert meta is not None
     assert meta["artifact_id"] == aid
+    assert isinstance(meta.get("sha256"), str)
+    assert meta["sha256"] == hashlib.sha256(Path(meta["file_path"]).read_bytes()).hexdigest()
+    assert int(meta.get("size_bytes") or 0) > 0
 
     file_path = Path(meta["file_path"])
     assert file_path.exists()
@@ -109,12 +113,39 @@ def test_artifact_store_put_json_and_meta(project_root: Path, tmp_path: Path, mo
     store.close()
 
 
+def test_artifact_store_put_file_and_dedupe(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+
+    store = ArtifactStore(project_root=project_root)
+
+    src = tmp_path / "sample.bin"
+    content = b"hello\nbinary\n"
+    src.write_bytes(content)
+    expected_sha = hashlib.sha256(content).hexdigest()
+
+    aid1 = store.put_file(src, kind="upload", mime_type="application/octet-stream", dedupe=False)
+    meta1 = store.get_meta(aid1)
+    assert meta1 is not None
+    assert meta1["sha256"] == expected_sha
+    assert int(meta1["size_bytes"]) == len(content)
+    assert meta1["original_filename"] == "sample.bin"
+
+    p1 = Path(meta1["file_path"])
+    assert p1.exists()
+    assert p1.read_bytes() == content
+
+    # best-effort dedupe: same bytes should return same artifact_id when enabled
+    aid2 = store.put_file(src, kind="upload", mime_type="application/octet-stream", dedupe=True)
+    assert aid2 == aid1
+
+    store.close()
+
 def test_context_binding_prefers_store_record(project_root: Path, tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
 
-    store = ProjectContextStore(project_root=project_root)
+    store = FocalActorContextStore(project_root=project_root)
     v1 = FocalActorContext(
-        project_context_id="PRJ-bind-v1",
+        focal_actor_context_id="PRJ-bind-v1",
         version=1,
         scope={},
         assets_profile={},
@@ -136,20 +167,20 @@ def test_learning_engine_loads_from_stores(project_root: Path, tmp_path: Path, m
     monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
 
     outcome_store = OutcomeStore(project_root=project_root)
-    ctx_store = ProjectContextStore(project_root=project_root)
+    ctx_store = FocalActorContextStore(project_root=project_root)
 
     out = Outcome(
         outcome_id="OUT-2",
         related_strategy_id=None,
         related_scenario_id=None,
-        project_context_id="PRJ-learn",
+        focal_actor_context_id="PRJ-learn",
         as_of="2025-12-14",
         metrics={"MET-N_customers": 42},
     )
     outcome_store.save(out)
 
     ctx = FocalActorContext(
-        project_context_id="PRJ-learn-v1",
+        focal_actor_context_id="PRJ-learn-v1",
         version=1,
         scope={},
         assets_profile={},
@@ -164,16 +195,16 @@ def test_learning_engine_loads_from_stores(project_root: Path, tmp_path: Path, m
     engine = LearningEngine(
         project_root=project_root,
         outcome_store=outcome_store,
-        project_context_store=ctx_store,
+        focal_actor_context_store=ctx_store,
     )
 
     loaded_out = engine._load_outcome("OUT-2")
     assert loaded_out is not None
     assert loaded_out.outcome_id == "OUT-2"
 
-    loaded_ctx = engine._load_project_context("PRJ-learn")
+    loaded_ctx = engine._load_focal_actor_context("PRJ-learn")
     assert loaded_ctx is not None
-    assert loaded_ctx.project_context_id == "PRJ-learn-v1"
+    assert loaded_ctx.focal_actor_context_id == "PRJ-learn-v1"
 
     outcome_store.close()
     ctx_store.close()

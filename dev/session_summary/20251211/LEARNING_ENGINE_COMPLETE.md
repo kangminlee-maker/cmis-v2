@@ -236,5 +236,3 @@ Phase 2:  5/5 passed
 **완성도**: 80%
 
 **LearningEngine v1.0 (Phase 1+2) 완성!** 🎉
-
-

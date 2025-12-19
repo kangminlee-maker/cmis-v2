@@ -28,7 +28,6 @@ __all__ = [
     "DARTSource",
     "StubSource",
     "KOSISSource",
-    "MarketResearchSource",
 ]
 
 # GoogleSearchSource는 별도 import 필요 (의존성 때문에)
@@ -228,39 +227,6 @@ try:
     from cmis_core.evidence.kosis_source import KOSISSource as KOSISSource  # type: ignore
 except Exception:
     KOSISSource = _LegacyKOSISSourceStub  # type: ignore
-
-
-# ========================================
-# CommercialSource (스텁, 향후 확장)
-# ========================================
-
-class MarketResearchSource(BaseDataSource):
-    """시장 리서치 Source
-
-    v1: 스텁 구현 (향후 문서 저장소 연동 예정)
-    """
-
-    def __init__(self):
-        super().__init__(
-            source_id="MarketResearch",
-            source_tier=SourceTier.COMMERCIAL,
-            capabilities={
-                "provides": ["market_size_reports", "industry_analysis"],
-                "regions": ["*"],
-                "data_types": ["numeric", "table", "raw_document"]
-            }
-        )
-
-    def fetch(self, request: EvidenceRequest) -> EvidenceRecord:
-        """v1: 스텁 구현
-
-        향후 S3/문서 저장소 연동 예정
-        """
-        raise DataNotFoundError("MarketResearch integration not yet implemented")
-
-    def can_handle(self, request: EvidenceRequest) -> bool:
-        """v1: 모든 region 지원"""
-        return True
 
 
 

@@ -122,5 +122,3 @@ class StrategyLibrary:
             s for s in self.strategies_history
             if s.expected_outcomes.get("roi", 0) >= min_roi
         ]
-
-

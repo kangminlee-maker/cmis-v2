@@ -143,5 +143,3 @@ class TestCLIIntegration:
         assert "report-generate" in result.stdout
         assert "cache-manage" in result.stdout
         assert "config-validate" in result.stdout
-
-

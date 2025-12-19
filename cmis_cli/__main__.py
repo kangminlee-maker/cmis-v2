@@ -25,7 +25,13 @@ from cmis_cli.commands import (
     cmd_batch_analysis,
     cmd_report_generate,
     cmd_cache_manage,
+    cmd_db_manage,
     cmd_config_validate,
+    cmd_context_verify,
+    cmd_brownfield_import,
+    cmd_brownfield_preview,
+    cmd_brownfield_validate,
+    cmd_brownfield_commit,
     cmd_cursor_init,
     cmd_cursor_doctor,
     cmd_cursor_manifest,
@@ -83,7 +89,7 @@ def main():
     sa_parser.add_argument('--region', required=True, help='지역')
     sa_parser.add_argument('--segment', help='세그먼트')
     sa_parser.add_argument('--as-of', dest='as_of', help='기준일')
-    sa_parser.add_argument('--project-context', dest='project_context', help='프로젝트 컨텍스트 ID')
+    sa_parser.add_argument('--focal-actor-context-id', dest='focal_actor_context_id', help='FocalActorContext ID (PRJ-*)')
     sa_parser.add_argument('--role', help='Role (기본: structure_analyst)')
     sa_parser.add_argument('--policy', help='Policy (기본: reporting_strict)')
     sa_parser.add_argument('--output', help='출력 파일')
@@ -97,7 +103,7 @@ def main():
     od_parser.add_argument('--domain', required=True, help='도메인 ID')
     od_parser.add_argument('--region', required=True, help='지역')
     od_parser.add_argument('--segment', help='세그먼트')
-    od_parser.add_argument('--project-context', dest='project_context', help='프로젝트 컨텍스트 ID')
+    od_parser.add_argument('--focal-actor-context-id', dest='focal_actor_context_id', help='FocalActorContext ID (PRJ-*)')
     od_parser.add_argument('--top-n', dest='top_n', type=int, default=5, help='상위 N개 기회')
     od_parser.add_argument('--min-feasibility', dest='min_feasibility',
                            choices=['high', 'medium', 'low'], help='최소 feasibility')
@@ -119,7 +125,7 @@ def main():
     cc_parser.add_argument(
         '--context2',
         required=True,
-        help='Context 2 (예: domain:Adult_Language,region:KR,project_context:PRJ-001)'
+        help='Context 2 (예: domain:Adult_Language,region:KR,focal_actor_context_id:PRJ-001)'
     )
     cc_parser.add_argument('--output', help='출력 파일')
     cc_parser.add_argument('--format', default='table',
@@ -160,6 +166,18 @@ def main():
     cache_parser.add_argument('--stats', action='store_true', help='캐시 통계')
     cache_parser.add_argument('--type', choices=['evidence', 'snapshots', 'results', 'all'],
                              help='캐시 타입')
+
+    # ========== db-manage ==========
+    db_parser = subparsers.add_parser(
+        'db-manage',
+        help='런타임 스토리지(.cmis) 마이그레이션/리셋'
+    )
+    db_parser.add_argument('--project-root', dest='project_root', help='프로젝트 루트 (기본: cwd)')
+    db_parser.add_argument('--migrate', action='store_true', help='project_context_id 등 legacy key 마이그레이션')
+    db_parser.add_argument('--reset', action='store_true', help='.cmis 런타임 스토어 초기화(db/runs/artifacts/value_store/cache 등)')
+    db_parser.add_argument('--no-backup', dest='no_backup', action='store_true', help='reset 시 백업하지 않음 (위험)')
+    db_parser.add_argument('--keep-runs', dest='keep_runs', action='store_true', help='reset 시 .cmis/runs 유지')
+    db_parser.add_argument('--skip-reexport', dest='skip_reexport', action='store_true', help='migrate 후 run export 생략')
 
     # ========== config-validate ==========
     validate_parser = subparsers.add_parser(
@@ -224,7 +242,7 @@ def main():
     cursor_ask_parser.add_argument("--region", required=True, help="지역")
     cursor_ask_parser.add_argument("--segment", help="세그먼트")
     cursor_ask_parser.add_argument("--as-of", dest="as_of", help="기준일(as_of)")
-    cursor_ask_parser.add_argument("--project-context", dest="project_context", help="프로젝트 컨텍스트 ID")
+    cursor_ask_parser.add_argument("--focal-actor-context-id", dest="focal_actor_context_id", help="FocalActorContext ID (PRJ-*)")
     cursor_ask_parser.add_argument("--role", help="Role override")
     cursor_ask_parser.add_argument("--policy", help="Policy override")
     cursor_ask_parser.add_argument(
@@ -249,6 +267,72 @@ def main():
     run_open_parser.add_argument("run_id", help="RUN-... ID")
     run_open_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
 
+    # ========== context ==========
+    context_parser = subparsers.add_parser("context", help="Context helpers (verify, etc)")
+    context_subparsers = context_parser.add_subparsers(dest="context_command")
+
+    context_verify_parser = context_subparsers.add_parser("verify", help="Verify PRJ-...-vN against Brownfield contracts")
+    context_verify_parser.add_argument("focal_actor_context_id", help="FocalActorContext ID (PRJ-...-vN)")
+    context_verify_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
+    # ========== brownfield ==========
+    brownfield_parser = subparsers.add_parser("brownfield", help="Brownfield ingest/curation helpers (MVP)")
+    brownfield_subparsers = brownfield_parser.add_subparsers(dest="brownfield_command")
+
+    bf_import_parser = brownfield_subparsers.add_parser("import", help="Import a local file (CSV/XLSX MVP)")
+    bf_import_parser.add_argument("file", help="입력 파일 경로(.csv/.xlsx)")
+    bf_import_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+    bf_import_parser.add_argument("--mapping-id", dest="mapping_id", help="Mapping ID (MAP-*)")
+    bf_import_parser.add_argument("--mapping-version", dest="mapping_version", type=int, help="Mapping version")
+    bf_import_parser.add_argument("--ingest-policy-digest", dest="ingest_policy_digest", help="Ingest policy digest (optional)")
+    bf_import_parser.add_argument(
+        "--normalization-defaults-digest",
+        dest="normalization_defaults_digest",
+        help="Normalization defaults digest (optional)",
+    )
+    bf_import_parser.add_argument(
+        "--extractor-version",
+        dest="extractor_version",
+        help="Extractor version label (기본: 확장자 기반 자동 선택)",
+    )
+
+    bf_preview_parser = brownfield_subparsers.add_parser("preview", help="Print preview summary for an ImportRun")
+    bf_preview_parser.add_argument("import_run_id", help="ImportRun ID (IMP-...)")
+    bf_preview_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
+    bf_validate_parser = brownfield_subparsers.add_parser(
+        "validate",
+        help="Validate an ImportRun and attach ValidationReport(ART)",
+    )
+    bf_validate_parser.add_argument("import_run_id", help="ImportRun ID (IMP-...)")
+    bf_validate_parser.add_argument(
+        "--policy-mode",
+        dest="policy_mode",
+        default="reporting_strict",
+        choices=["reporting_strict", "decision_balanced", "exploration_friendly"],
+        help="Commit gating policy mode",
+    )
+    bf_validate_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
+    bf_commit_parser = brownfield_subparsers.add_parser(
+        "commit",
+        help="Commit a validated ImportRun (creates CUB + PRJ)",
+    )
+    bf_commit_parser.add_argument("import_run_id", help="ImportRun ID (IMP-...)")
+    bf_commit_parser.add_argument(
+        "--policy-mode",
+        dest="policy_mode",
+        default="reporting_strict",
+        choices=["reporting_strict", "decision_balanced", "exploration_friendly"],
+        help="Commit gating policy mode",
+    )
+    bf_commit_parser.add_argument(
+        "--focal-actor-context-base-id",
+        dest="focal_actor_context_base_id",
+        help="PRJ base id (e.g., PRJ-mycase)",
+    )
+    bf_commit_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
     # Parse
     args = parser.parse_args()
 
@@ -270,6 +354,8 @@ def main():
         cmd_report_generate(args)
     elif args.command == 'cache-manage':
         cmd_cache_manage(args)
+    elif args.command == 'db-manage':
+        cmd_db_manage(args)
     elif args.command == 'config-validate':
         cmd_config_validate(args)
     elif args.command == "eval-run":
@@ -294,6 +380,22 @@ def main():
             cmd_run_open(args)
         else:
             run_group_parser.print_help()
+    elif args.command == "context":
+        if args.context_command == "verify":
+            cmd_context_verify(args)
+        else:
+            context_parser.print_help()
+    elif args.command == "brownfield":
+        if args.brownfield_command == "import":
+            cmd_brownfield_import(args)
+        elif args.brownfield_command == "preview":
+            cmd_brownfield_preview(args)
+        elif args.brownfield_command == "validate":
+            cmd_brownfield_validate(args)
+        elif args.brownfield_command == "commit":
+            cmd_brownfield_commit(args)
+        else:
+            brownfield_parser.print_help()
     else:
         parser.print_help()
 

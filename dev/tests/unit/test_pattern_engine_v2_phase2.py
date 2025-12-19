@@ -116,9 +116,9 @@ class TestExecutionFit:
 
         pattern = library.get("PAT-subscription_model")
 
-        # 강한 Project Context
+        # 강한 FocalActorContext
         project_context = FocalActorContext(
-            project_context_id="PRJ-test-001",
+            focal_actor_context_id="PRJ-test-001",
             scope={"domain_id": "education", "region": "KR"},
             assets_profile={
                 "capability_traits": [
@@ -301,7 +301,7 @@ class TestGapDiscovery:
         assert sorted_gaps[2].expected_level == "rare"
 
     def test_gap_with_feasibility(self):
-        """Gap with Feasibility (Project Context)"""
+        """Gap with Feasibility (FocalActorContext)"""
         engine = PatternEngineV2()
         graph = InMemoryGraph()
 
@@ -314,15 +314,15 @@ class TestGapDiscovery:
 
         matches = engine.match_patterns(graph)
 
-        # Project Context 있으면 feasibility 평가
+        # FocalActorContext 있으면 feasibility 평가
         gaps = engine.discover_gaps(
             graph,
-            project_context_id="PRJ-test-001",
+            focal_actor_context_id="PRJ-test-001",
             precomputed_matches=matches
         )
 
         # Feasibility가 계산되어야 함
-        # (지금은 기본 Project Context라 "unknown" 가능)
+        # (지금은 기본 FocalActorContext라 "unknown" 가능)
         for gap in gaps:
             assert gap.feasibility in ["high", "medium", "low", "unknown"]
 
@@ -342,10 +342,10 @@ class TestPatternEngineV2Phase2:
             {"traits": {"revenue_model": "subscription", "payment_recurs": True}}
         )
 
-        # Project Context 포함 매칭
+        # FocalActorContext 포함 매칭
         matches = engine.match_patterns(
             graph,
-            project_context_id="PRJ-test-brownfield"
+            focal_actor_context_id="PRJ-test-brownfield",
         )
 
         if len(matches) > 0:
@@ -432,11 +432,11 @@ class TestPatternEngineV2Phase2:
             {"traits": {"revenue_model": "subscription", "payment_recurs": True}}
         )
 
-        # Brownfield: Project Context 있음
-        matches = engine.match_patterns(graph, project_context_id="PRJ-test-001")
+        # Brownfield: FocalActorContext 있음
+        matches = engine.match_patterns(graph, focal_actor_context_id="PRJ-test-001")
         gaps = engine.discover_gaps(
             graph,
-            project_context_id="PRJ-test-001",
+            focal_actor_context_id="PRJ-test-001",
             precomputed_matches=matches
         )
 
@@ -447,18 +447,18 @@ class TestPatternEngineV2Phase2:
                 assert match.combined_score <= match.structure_fit_score
 
         # Gap도 feasibility 평가됨
-        # (기본 Project Context라 값은 다양할 수 있음)
+        # (기본 FocalActorContext라 값은 다양할 수 있음)
 
         print(f"Brownfield: {len(matches)} matches, {len(gaps)} gaps")
 
 
 class TestFocalActorContext:
-    """Project Context 관련 테스트"""
+    """FocalActorContext 관련 테스트"""
 
-    def test_project_context_creation(self):
-        """Project Context 생성"""
+    def test_focal_actor_context_creation(self):
+        """FocalActorContext 생성"""
         pc = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={"domain_id": "education", "region": "KR"},
             assets_profile={
                 "capability_traits": [
@@ -470,12 +470,12 @@ class TestFocalActorContext:
             }
         )
 
-        assert pc.project_context_id == "PRJ-test"
+        assert pc.focal_actor_context_id == "PRJ-test"
         assert pc.scope["region"] == "KR"
         assert len(pc.assets_profile["capability_traits"]) == 1
 
-    def test_project_context_in_scoring(self):
-        """Project Context가 Scoring에 영향"""
+    def test_focal_actor_context_in_scoring(self):
+        """FocalActorContext가 Scoring에 영향"""
         library = PatternLibrary()
         library.load_all()
 
@@ -483,7 +483,7 @@ class TestFocalActorContext:
 
         # 약한 Context
         weak_context = FocalActorContext(
-            project_context_id="PRJ-weak",
+            focal_actor_context_id="PRJ-weak",
             scope={},
             assets_profile={
                 "capability_traits": [],
@@ -493,7 +493,7 @@ class TestFocalActorContext:
 
         # 강한 Context
         strong_context = FocalActorContext(
-            project_context_id="PRJ-strong",
+            focal_actor_context_id="PRJ-strong",
             scope={},
             assets_profile={
                 "capability_traits": [
@@ -589,15 +589,15 @@ class TestIntegrationPhase2:
             {"traits": {"revenue_model": "subscription", "payment_recurs": True}}
         )
 
-        project_context_id = "PRJ-test-brownfield"
+        focal_actor_context_id = "PRJ-test-brownfield"
 
-        # Step 1: match_patterns (with Project Context)
-        matches = engine.match_patterns(graph, project_context_id)
+        # Step 1: match_patterns (with FocalActorContext)
+        matches = engine.match_patterns(graph, focal_actor_context_id)
 
-        # Step 2: discover_gaps (with Project Context)
+        # Step 2: discover_gaps (with FocalActorContext)
         gaps = engine.discover_gaps(
             graph,
-            project_context_id,
+            focal_actor_context_id,
             precomputed_matches=matches
         )
 
@@ -607,7 +607,7 @@ class TestIntegrationPhase2:
                 assert 0.0 <= match.execution_fit_score <= 1.0
 
         # Gap도 feasibility 평가됨
-        # (실제 평가는 Project Context에 따라 다름)
+        # (실제 평가는 FocalActorContext에 따라 다름)
 
         print(f"Brownfield pipeline: {len(matches)} matches, {len(gaps)} gaps")
 

@@ -52,7 +52,7 @@ class StrategyEvaluator:
     def calculate_execution_fit(
         self,
         strategy: Strategy,
-        project_context: FocalActorContext
+        focal_actor_context: FocalActorContext,
     ) -> float:
         """Strategy Execution Fit 계산
 
@@ -60,7 +60,7 @@ class StrategyEvaluator:
 
         Args:
             strategy: Strategy
-            project_context: FocalActorContext
+            focal_actor_context: FocalActorContext
 
         Returns:
             Execution Fit (0.0 ~ 1.0)
@@ -68,7 +68,7 @@ class StrategyEvaluator:
         if not strategy.pattern_composition:
             return 0.0
 
-        binding = FocalActorContextBinding.from_record(project_context)
+        binding = FocalActorContextBinding.from_record(focal_actor_context)
         pattern_fits = []
 
         for pattern_id in strategy.pattern_composition:
@@ -172,7 +172,7 @@ class StrategyEvaluator:
     def assess_risks(
         self,
         strategy: Strategy,
-        project_context: Optional[FocalActorContext],
+        focal_actor_context: Optional[FocalActorContext],
         matched_patterns: List[PatternMatch]
     ) -> List[Dict[str, Any]]:
         """Risk 평가
@@ -185,7 +185,7 @@ class StrategyEvaluator:
 
         Args:
             strategy: Strategy
-            project_context: FocalActorContext (선택)
+            focal_actor_context: FocalActorContext (선택)
             matched_patterns: 이미 매칭된 Pattern
 
         Returns:
@@ -210,9 +210,9 @@ class StrategyEvaluator:
                 })
 
         # 2. Resource Risk (Brownfield만)
-        if project_context:
+        if focal_actor_context:
             required = strategy.expected_outcomes.get("required_investment", 0)
-            available = project_context.assets_profile.get("budget", float('inf'))
+            available = focal_actor_context.assets_profile.get("budget", float('inf'))
 
             if required > available:
                 risks.append({
@@ -331,5 +331,3 @@ class StrategyEvaluator:
         base_team += len(strategy.pattern_composition) * 5
 
         return min(base_team, 50)  # 최대 50
-
-

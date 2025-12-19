@@ -7,7 +7,7 @@ canonical_workflows:
     role_id: "structure_analyst"
     description: "시장 구조/규모/경쟁 분석"
     default_policy: "reporting_strict"
-    
+
     steps:
       - step_id: "snapshot"
         call: "world_engine.snapshot"
@@ -16,45 +16,48 @@ canonical_workflows:
           region: "@input.region"
           segment: "@input.segment"
           as_of: "latest"
-          project_context_id: "@input.project_context_id"
-      
+          focal_actor_context_id: "@input.focal_actor_context_id"
+          segment: "@input.segment"
+          as_of: "latest"
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
       - step_id: "match_patterns"
         call: "pattern_engine.match_patterns"
         with:
           reality_snapshot_ref: "@prev.reality_snapshot_ref"
-          project_context_id: "@input.project_context_id"
-      
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
       - step_id: "evaluate_metrics"
         call: "value_engine.evaluate_metrics"
         with:
           metric_requests: "@metric_sets.structure_core_economics"
           policy_ref: "reporting_strict"
-          project_context_id: "@input.project_context_id"
-    
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
     outputs:
       - "reality_snapshot"
       - "pattern_matches"
       - "value_records"
-  
+
   opportunity_discovery:
     id: "opportunity_discovery"
     role_id: "opportunity_designer"
     description: "패턴 기반 기회 발굴"
     default_policy: "exploration_friendly"
-    
+
     steps:
       - step_id: "snapshot"
         call: "world_engine.snapshot"
         with:
           domain_id: "@input.domain_id"
           region: "@input.region"
-      
+
       - step_id: "discover_gaps"
         call: "pattern_engine.discover_gaps"
         with:
           reality_snapshot_ref: "@prev.reality_snapshot_ref"
-          project_context_id: "@input.project_context_id"
-      
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
       - step_id: "evaluate_metrics"
         call: "value_engine.evaluate_metrics"
         with:
@@ -62,54 +65,55 @@ canonical_workflows:
             - "@metric_sets.structure_core_economics"
             - "@metric_sets.opportunity_additional"
           policy_ref: "exploration_friendly"
-    
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
     outputs:
       - "gap_candidates"
       - "opportunity_sizing"
-  
+
   strategy_design:
     id: "strategy_design"
     role_id: "strategy_architect"
     description: "전략 후보 탐색 및 평가"
     default_policy: "decision_balanced"
-    
+
     steps:
       - step_id: "search_strategies"
         call: "strategy_engine.search_strategies"
         with:
           goal_id: "@input.goal_id"
           constraints: "@input.constraints"
-          project_context_id: "@input.project_context_id"
-      
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
       - step_id: "evaluate_portfolio"
         call: "strategy_engine.evaluate_portfolio"
         with:
           strategy_ids: "@prev.strategy_ids"
           policy_ref: "decision_balanced"
-          project_context_id: "@input.project_context_id"
-    
+          focal_actor_context_id: "@input.focal_actor_context_id"
+
     outputs:
       - "strategy_candidates"
       - "portfolio_evaluation"
-  
+
   reality_monitoring:
     id: "reality_monitoring"
     role_id: "reality_monitor"
     description: "실적 모니터링 및 학습"
     default_policy: "reporting_strict"
-    
+
     steps:
       - step_id: "update_from_outcomes"
         call: "learning_engine.update_from_outcomes"
         with:
           outcome_ids: "@input.outcome_ids"
-      
+
       - step_id: "evaluate_current_metrics"
         call: "value_engine.evaluate_metrics"
         with:
           metric_requests: "@metric_sets.monitoring_core"
           policy_ref: "reporting_strict"
-    
+
     outputs:
       - "learning_results"
       - "updated_metrics"

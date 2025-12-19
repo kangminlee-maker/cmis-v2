@@ -268,6 +268,3 @@ class ActorResolver:
             counter += 1
 
         return actor_id
-
-
-

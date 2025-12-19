@@ -148,5 +148,3 @@ class AsyncFetcher:
             return record
         except Exception:
             return None
-
-

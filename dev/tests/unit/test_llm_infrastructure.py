@@ -308,5 +308,3 @@ def test_llm_service_trace():
     assert trace.task_type == "evidence_account_matching"
     assert trace.provider_id == "mock"
     assert "trace test" in trace.prompt_preview
-
-

@@ -168,13 +168,13 @@ config/
 ```python
 matches = pattern_engine.match_patterns(
     graph,
-    project_context_id=None  # Greenfield
+    focal_actor_context_id=None  # Greenfield
 )
 
 # Brownfield
 matches = pattern_engine.match_patterns(
     graph,
-    project_context_id="PRJ-001"
+    focal_actor_context_id="PRJ-001"
 )
 ```
 
@@ -183,7 +183,7 @@ matches = pattern_engine.match_patterns(
 ```python
 gaps = pattern_engine.discover_gaps(
     graph,
-    project_context_id="PRJ-001",
+    focal_actor_context_id="PRJ-001",
     precomputed_matches=matches
 )
 ```
@@ -202,5 +202,3 @@ gaps = pattern_engine.discover_gaps(
 **작성**: 2025-12-11
 **상태**: v2.0 완성
 **기반**: Phase 1/2/3 통합
-
-

@@ -172,5 +172,3 @@ class TestIntegrationPhase3:
         # Belief/Quality 업데이트 확인
         assert "updated_entities" in result
         assert result["learning_quality"]["total_outcomes"] == 1
-
-

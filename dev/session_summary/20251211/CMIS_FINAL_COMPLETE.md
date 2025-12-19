@@ -223,5 +223,3 @@ cmis batch-analysis \
 **완성도**: 89%
 
 **CMIS v3.3 완성!** 🎉🚀✨🏆
-
-

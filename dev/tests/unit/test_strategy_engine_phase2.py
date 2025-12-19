@@ -138,7 +138,7 @@ class TestEvaluatePortfolio:
 
         portfolio_eval = engine.evaluate_portfolio_core(
             strategies,
-            project_context=None,
+            focal_actor_context=None,
             policy_params=policy_params
         )
 
@@ -243,5 +243,3 @@ class TestIntegrationPhase2:
                 )
 
                 assert portfolio_ref.startswith("PORTFOLIO-") or portfolio_ref == "PEVAL-empty"
-
-

@@ -652,5 +652,3 @@ def _build_capability_mapping(self):
 **작성**: 2025-12-10
 **발견**: 8개 하드코딩
 **추천**: capability_to_metric 즉시 개선
-
-

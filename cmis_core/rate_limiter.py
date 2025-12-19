@@ -199,5 +199,3 @@ class RateLimiter:
             "can_call": current_tokens >= 1.0,
             "wait_time": self.wait_time(source_id)
         }
-
-

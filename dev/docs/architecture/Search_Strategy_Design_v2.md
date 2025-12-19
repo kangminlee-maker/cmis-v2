@@ -690,5 +690,3 @@ EvidenceEngine
 **작성**: 2025-12-10
 **결론**: SearchPlanner 중심 재설계 완료
 **다음**: Phase 1 구현 착수?
-
-

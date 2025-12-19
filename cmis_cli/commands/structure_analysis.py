@@ -54,7 +54,7 @@ def cmd_structure_analysis(args):
         region=args.region,
         segment=args.segment,
         as_of=args.as_of,
-        project_context_id=args.project_context
+        focal_actor_context_id=args.focal_actor_context_id,
     )
 
     print()

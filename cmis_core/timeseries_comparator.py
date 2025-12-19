@@ -175,6 +175,3 @@ def compare_timeseries(
 
     comparator = TimeseriesComparator()
     return comparator.compare_snapshots(snapshots, metric_key)
-
-
-

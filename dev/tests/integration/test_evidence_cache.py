@@ -235,6 +235,3 @@ def test_sqlite_backend_persistence(config, tmp_path):
     # 값 동일 (첫 번째 engine의 값)
     bundle = result2.get_bundle("MET-Revenue")
     assert bundle.records[0].source_id == "Stub1"  # 첫 번째 source
-
-
-

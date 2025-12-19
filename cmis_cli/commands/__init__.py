@@ -25,6 +25,14 @@ from .run import (
     cmd_run_open,
 )
 from .eval_run import cmd_eval_run
+from .db_manage import cmd_db_manage
+from .context import cmd_context_verify
+from .brownfield import (
+    cmd_brownfield_import,
+    cmd_brownfield_preview,
+    cmd_brownfield_validate,
+    cmd_brownfield_commit,
+)
 
 __all__ = [
     "cmd_structure_analysis",
@@ -43,6 +51,12 @@ __all__ = [
     "cmd_run_explain",
     "cmd_run_open",
     "cmd_eval_run",
+    "cmd_db_manage",
+    "cmd_context_verify",
+    "cmd_brownfield_import",
+    "cmd_brownfield_preview",
+    "cmd_brownfield_validate",
+    "cmd_brownfield_commit",
 ]
 
 

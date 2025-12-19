@@ -151,6 +151,3 @@ def estimate_metric_from_pattern(
     """
     provider = PatternBenchmarkProvider(pattern_library)
     return provider.get_prior_from_patterns(metric_id, matched_patterns)
-
-
-

@@ -140,7 +140,7 @@ class UMISConfig:
         self.index_metrics()
         self.index_patterns()
         self.index_data_sources()
-    
+
     def get_metric_spec(self, metric_id: str) -> MetricSpec
     def get_pattern_spec(self, pattern_id: str) -> PatternSpec
     def get_data_source(self, source_id: str) -> DataSourceSpec
@@ -178,7 +178,7 @@ assert config.get_metric_spec("MET-SAM").resolution_protocol is not None
 # umis_v9_core/evidence/dart_connector.py (신규)
 class DARTConnector:
     """DART 전자공시 API 연동"""
-    
+
     def fetch_financial_statement(
         self,
         company_name: str,
@@ -186,10 +186,10 @@ class DARTConnector:
     ) -> Evidence:
         # 1. 회사 코드 검색
         corp_code = self._search_company(company_name)
-        
+
         # 2. 재무제표 조회
         fs_data = self._fetch_fs(corp_code, year)
-        
+
         # 3. Evidence 정규화
         return Evidence(
             evidence_id=f"EVD-DART-{corp_code}-{year}",
@@ -228,7 +228,7 @@ assert evidence.reliability >= 90
 # umis_v9_core/evidence/web_search_connector.py (신규)
 class WebSearchConnector:
     """Tavily/Perplexity API 기반 웹 검색"""
-    
+
     def search_company_revenue(
         self,
         company_name: str,
@@ -237,13 +237,13 @@ class WebSearchConnector:
     ) -> List[Evidence]:
         # 1. 검색 쿼리 구성
         query = f"{company_name} 매출 {year}"
-        
+
         # 2. Tavily API 호출
         results = self.tavily_client.search(query)
-        
+
         # 3. LLM으로 결과 파싱
         parsed = self._parse_with_llm(results, company_name, year)
-        
+
         # 4. Evidence 생성
         return [
             Evidence(
@@ -280,7 +280,7 @@ assert any(e.metadata.get("revenue") for e in evidences)
 # umis_v9_core/evidence/kosis_connector.py (신규)
 class KOSISConnector:
     """통계청 KOSIS API 연동"""
-    
+
     def fetch_population_stats(
         self,
         year: int,
@@ -304,25 +304,25 @@ class KOSISConnector:
 # umis_v9_core/evidence_engine.py (신규)
 class EvidenceEngine:
     """Evidence 수집 총괄 엔진"""
-    
+
     def __init__(self, config: UMISConfig):
         self.dart = DARTConnector()
         self.web_search = WebSearchConnector()
         self.kosis = KOSISConnector()
         self.config = config
-    
+
     def fetch_for_metrics(
         self,
         metric_requests: List[MetricRequest],
         policy_ref: str
     ) -> EvidenceBundle:
         """Metric 계산에 필요한 Evidence 수집"""
-        
+
         bundle = EvidenceBundle()
-        
+
         for req in metric_requests:
             metric_spec = self.config.get_metric_spec(req.metric_id)
-            
+
             # Direct Evidence 소스 탐색
             for source_id in metric_spec.direct_evidence_sources:
                 if source_id == "KR_DART_filings":
@@ -331,7 +331,7 @@ class EvidenceEngine:
                     evidences = self._fetch_from_web(req)
                 # ...
                 bundle.add_evidences(evidences)
-        
+
         return bundle
 ```
 
@@ -362,21 +362,21 @@ assert bundle.evidences[0].source_tier in ["official", "commercial", "other"]
 # umis_v9_core/world_engine.py (확장)
 class WorldEngine:
     """Evidence → R-Graph 변환 엔진"""
-    
+
     def ingest_evidence(
         self,
         evidence_ids: List[str]
     ) -> List[str]:
         """Evidence를 R-Graph에 반영"""
-        
+
         updated_nodes = []
-        
+
         for eid in evidence_ids:
             evidence = self.evidence_store.get(eid)
-            
+
             # LLM으로 구조 추출
             extracted = self._extract_structure(evidence)
-            
+
             # Actor 생성/업데이트
             for actor_data in extracted.actors:
                 actor_id = self.graph.upsert_node(
@@ -385,26 +385,26 @@ class WorldEngine:
                     data=actor_data
                 )
                 updated_nodes.append(actor_id)
-            
+
             # MoneyFlow 생성
             for mf_data in extracted.money_flows:
                 # ...
-        
+
         return updated_nodes
-    
+
     def _extract_structure(self, evidence: Evidence) -> ExtractedStructure:
         """LLM으로 Evidence에서 Actor/MoneyFlow 추출"""
         prompt = f"""
         다음 Evidence에서 시장 구조를 추출하세요:
-        
+
         {evidence.content_ref}
         {evidence.metadata}
-        
+
         추출할 것:
         - Actor (회사/고객 세그먼트)
         - MoneyFlow (누가 누구에게 얼마를)
         - State (시장 집중도/경쟁 강도 등)
-        
+
         YAML 형식으로 반환:
         actors:
           - actor_id: ACT-...
@@ -437,36 +437,36 @@ assert actor.data["metadata"]["revenue"] == 817억원
 **작업 내용**:
 ```python
 class WorldEngine:
-    
+
     def snapshot(
         self,
         domain_id: str,
         region: str,
         segment: str = None,
         as_of: str = None,
-        project_context_id: str = None
+        focal_actor_context_id: str = None
     ) -> RealityGraphSnapshot:
         """동적 R-Graph 스냅샷 생성"""
-        
+
         # 1. 기존 R-Graph 확인
         existing = self._check_existing_graph(domain_id, region, as_of)
-        
+
         if existing and self._is_fresh(existing, max_age_days=7):
             # 기존 그래프 재사용
             return existing
-        
+
         # 2. Evidence 수집 필요
         scope = {"domain_id": domain_id, "region": region}
         evidence_bundle = self.evidence_engine.fetch_for_reality_slice(scope)
-        
+
         # 3. R-Graph 구축
         node_ids = self.ingest_evidence(evidence_bundle.evidence_ids)
-        
+
         # 4. Project Context 있으면 focal_actor 추가
-        if project_context_id:
-            project_ctx = self.project_context_store.get(project_context_id)
+        if focal_actor_context_id:
+            project_ctx = self.focal_actor_context_store.get(focal_actor_context_id)
             self._add_focal_actor(project_ctx)
-        
+
         # 5. Snapshot 반환
         return RealityGraphSnapshot(
             graph=self.graph.subgraph(node_ids),
@@ -503,7 +503,7 @@ assert len(snapshot.graph.edges) >= 5   # 최소 MoneyFlow 수
 # umis_v9_core/value_engine.py (확장)
 class MetricResolver:
     """Metric 해결 4-Stage 파이프라인"""
-    
+
     def resolve(
         self,
         metric_id: str,
@@ -511,40 +511,40 @@ class MetricResolver:
         policy_ref: str
     ) -> ValueRecord:
         """4-Stage로 Metric 해결"""
-        
+
         # Stage 1: Direct Evidence
         direct_result = self._stage_1_direct(metric_id, context)
         if self._meets_quality(direct_result, policy_ref):
             return direct_result
-        
+
         # Stage 2: Derived
         derived_result = self._stage_2_derived(metric_id, context)
         if self._meets_quality(derived_result, policy_ref):
             return derived_result
-        
+
         # Stage 3: Prior (필요 시)
         # Stage 4: Fusion
         # ...
-    
+
     def _stage_1_direct(self, metric_id, context) -> ValueRecord:
         """Direct Evidence에서 직접 값 추출"""
         spec = self.config.get_metric_spec(metric_id)
-        
+
         # Evidence Engine 호출
         bundle = self.evidence_engine.fetch_for_metrics([
             MetricRequest(metric_id, context)
         ])
-        
+
         # Evidence에서 값 추출 (LLM)
         values = self._extract_values_from_evidence(bundle, metric_id)
-        
+
         if values:
             return self._build_value_record(
                 metric_id, context, values,
                 method="direct_evidence",
                 lineage={"from_evidence_ids": bundle.evidence_ids}
             )
-        
+
         return None  # Direct 실패
 ```
 
@@ -570,18 +570,18 @@ assert value.quality["method"] == "direct_evidence"
 ```python
 def _method_topdown(self, metric_id, context) -> ValueRecord:
     """상위 시장에서 비율로 축소"""
-    
+
     # MET-SAM 예시
     # 1. 상위 시장 규모 찾기
     parent_market = self._find_parent_market(context)
     parent_tam = resolver.resolve(f"MET-TAM_{parent_market}", context)
-    
+
     # 2. 세그먼트 비율 추정
     segment_share = self._estimate_segment_share(context)
-    
+
     # 3. 계산
     sam = parent_tam.point_estimate * segment_share
-    
+
     return ValueRecord(
         metric_id="MET-SAM",
         point_estimate=sam,
@@ -593,24 +593,24 @@ def _method_topdown(self, metric_id, context) -> ValueRecord:
 ```python
 def _method_bottomup(self, metric_id, context) -> ValueRecord:
     """R-Graph Actor 집계"""
-    
+
     # 1. R-Graph에서 해당 도메인 Actor 조회
     actors = self.graph.query_nodes({
         "type": "actor",
         "kind": "company",
         "traits.domain_id": context["domain_id"]
     })
-    
+
     # 2. Actor 매출 합산
     total_revenue = sum(
         actor.metadata.get("revenue", 0)
         for actor in actors
     )
-    
+
     # 3. 점유율 역산
     top_n_share = context.get("top_n_share", 0.35)  # 가정
     market_size = total_revenue / top_n_share
-    
+
     return ValueRecord(
         metric_id="MET-SAM",
         point_estimate=market_size,
@@ -623,24 +623,24 @@ def _method_bottomup(self, metric_id, context) -> ValueRecord:
 ```python
 def _method_fermi(self, metric_id, context) -> ValueRecord:
     """Fermi 분해 추정"""
-    
+
     spec = self.config.get_metric_spec(metric_id)
     fermi_hint = spec.resolution_protocol.get("fermi_decomposition")
-    
+
     # LLM으로 Fermi 분해
     prompt = f"""
     {metric_id}를 Fermi 분해로 추정하세요.
-    
+
     힌트: {fermi_hint}
     컨텍스트: {context}
-    
+
     단계별 계산:
     1. 모집단 추정
     2. 참여율 추정
     3. 단가 추정
     4. 최종 계산
     """
-    
+
     # Claude API 호출 + 계산
 ```
 
@@ -648,16 +648,16 @@ def _method_fermi(self, metric_id, context) -> ValueRecord:
 ```python
 def _method_proxy(self, metric_id, context) -> ValueRecord:
     """유사 시장 비교"""
-    
+
     # 1. 유사 시장 찾기 (일본, 미국 등)
     analog_market = self._find_analog_market(context)
-    
+
     # 2. 조정 계수 계산
     adjustment = self._calculate_adjustment_factor(
         context["region"],
         analog_market["region"]
     )
-    
+
     # 3. 추정
     analog_value = resolver.resolve(metric_id, analog_market)
     estimated = analog_value.point_estimate * adjustment
@@ -681,32 +681,32 @@ assert 8000억 <= value.point_estimate <= 12000억  # v7.x 범위
 **작업 내용**:
 ```python
 class MetricResolver:
-    
+
     def _stage_4_fusion(
         self,
         candidates: List[ValueRecord],
         policy_ref: str
     ) -> ValueRecord:
         """4-Method 가중 평균 및 수렴 검증"""
-        
+
         # 1. 가중 평균
         weights = self.config.get_method_weights(metric_id)
         weighted_avg = sum(
             c.point_estimate * weights[c.method]
             for c in candidates
         )
-        
+
         # 2. 수렴 검증 (±30%)
         convergence_check = self._check_convergence(
             candidates,
             threshold=0.30
         )
-        
+
         if not convergence_check.passed:
             # Outlier 제거
             candidates = self._remove_outliers(candidates)
             weighted_avg = self._recalculate(candidates)
-        
+
         # 3. 최종 ValueRecord 생성
         return ValueRecord(
             metric_id=metric_id,
@@ -789,18 +789,18 @@ assert len(value.lineage["from_evidence_ids"]) >= 3
 # umis_v9_core/pattern_engine.py (신규)
 class PatternEngine:
     """패턴 인식 및 갭 탐지 엔진"""
-    
+
     def __init__(self, config: UMISConfig):
         self.config = config
         self.patterns = self._load_patterns()
-    
+
     def _load_patterns(self) -> Dict[str, PatternSpec]:
         """23개 BM Pattern 로드"""
         patterns = {}
-        
+
         # umis_v9_strategic_frameworks.yaml 등에서 로드
         # 또는 코드로 직접 정의
-        
+
         patterns["PAT-subscription_model"] = PatternSpec(
             pattern_id="PAT-subscription_model",
             constraints={
@@ -810,9 +810,9 @@ class PatternEngine:
                 }
             }
         )
-        
+
         # 23개 패턴 정의...
-        
+
         return patterns
 ```
 
@@ -827,57 +827,57 @@ class PatternEngine:
 **작업 내용**:
 ```python
 class PatternEngine:
-    
+
     def match_patterns(
         self,
         graph: InMemoryGraph,
-        project_context_id: str = None
+        focal_actor_context_id: str = None
     ) -> List[PatternMatch]:
         """R-Graph에서 패턴 매칭"""
-        
+
         matches = []
-        
+
         for pattern_id, pattern_spec in self.patterns.items():
             # Structure Fit Score 계산
             structure_fit = self._calculate_structure_fit(
                 graph,
                 pattern_spec
             )
-            
+
             # Execution Fit Score (project_context 있을 때만)
             execution_fit = None
-            if project_context_id:
-                project_ctx = self.project_context_store.get(project_context_id)
+            if focal_actor_context_id:
+                project_ctx = self.focal_actor_context_store.get(focal_actor_context_id)
                 execution_fit = self._calculate_execution_fit(
                     pattern_spec,
                     project_ctx
                 )
-            
+
             matches.append(PatternMatch(
                 pattern_id=pattern_id,
                 structure_fit_score=structure_fit,
                 execution_fit_score=execution_fit,
                 combined_score=structure_fit * (execution_fit or 1.0)
             ))
-        
+
         return sorted(matches, key=lambda m: m.combined_score, reverse=True)
-    
+
     def _calculate_structure_fit(
         self,
         graph: InMemoryGraph,
         pattern: PatternSpec
     ) -> float:
         """R-Graph Trait와 Pattern 제약 비교"""
-        
+
         required = pattern.constraints["required_traits"]
         score = 0.0
-        
+
         # MoneyFlow에서 revenue_model 확인
         for mf in graph.nodes_by_type("money_flow"):
             traits = mf.data.get("traits", {})
             if traits.get("revenue_model") in required.get("revenue_model", []):
                 score += 1.0
-        
+
         # 정규화
         return min(score / len(required), 1.0)
 ```
@@ -904,12 +904,12 @@ assert subscription_match.structure_fit_score >= 0.7
 # umis_v9_core/policy_engine.py (신규)
 class PolicyEngine:
     """검증 게이트 실행 엔진"""
-    
+
     def validate_mece(self, classification: dict) -> ValidationResult:
         """MECE 검증"""
         # Mutually Exclusive
         # Collectively Exhaustive (합계 100%)
-    
+
     def validate_4method_convergence(
         self,
         methods: List[ValueRecord]
@@ -917,7 +917,7 @@ class PolicyEngine:
         """4-Method ±30% 수렴 검증"""
         avg = statistics.mean(m.point_estimate for m in methods)
         deviations = [abs(m.point_estimate - avg) / avg for m in methods]
-        
+
         return ValidationResult(
             passed=all(d <= 0.30 for d in deviations),
             details={"deviations": deviations}
@@ -937,7 +937,7 @@ class PolicyEngine:
 # umis_v9_core/report_generator.py (신규)
 class ReportGenerator:
     """Markdown 리포트 생성"""
-    
+
     def generate_market_reality_report(
         self,
         domain_id: str,
@@ -946,11 +946,11 @@ class ReportGenerator:
         evidences: List[Evidence]
     ) -> str:
         """v7.x 포맷 리포트 생성"""
-        
+
         template = self.jinja_env.get_template(
             "market_reality_report.md.j2"
         )
-        
+
         return template.render(
             domain_id=domain_id,
             executive_summary=self._build_executive_summary(...),
@@ -1012,7 +1012,7 @@ class ReportGenerator:
 # umis_v9_core/workflow_executor.py (신규)
 class WorkflowExecutor:
     """Phase 1-14 오케스트레이션"""
-    
+
     def execute_structure_analysis(
         self,
         domain_id: str,
@@ -1020,26 +1020,26 @@ class WorkflowExecutor:
         output_path: str
     ) -> WorkflowResult:
         """structure_analysis 전체 실행"""
-        
+
         print("Phase 1: 시장 정의...")
         ph01_output = self._execute_phase_01(domain_id, region)
-        
+
         print("Phase 2: 도메인 분류...")
         ph02_output = self._execute_phase_02(ph01_output)
-        
+
         # ...
-        
+
         print("Phase 7: 시장규모 추정...")
         ph07_output = self._execute_phase_07(snapshot, metric_requests)
-        
+
         # ...
-        
+
         print("Phase 14: 리포트 생성...")
         report = self.report_generator.generate_market_reality_report(...)
-        
+
         with open(output_path, "w") as f:
             f.write(report)
-        
+
         return WorkflowResult(
             success=True,
             output_path=output_path,
@@ -1114,13 +1114,13 @@ Phase 14: 리포트 생성... ✓
 def test_market_size_accuracy():
     v7_sam = 10000억
     v9_sam = run_structure_analysis("Adult_Language_KR").get_metric("MET-SAM")
-    
+
     deviation = abs(v9_sam - v7_sam) / v7_sam
     assert deviation <= 0.25  # ±25%
 
 def test_traceability():
     report = run_structure_analysis("Adult_Language_KR")
-    
+
     for value_record in report.value_records:
         assert len(value_record.lineage["from_evidence_ids"]) >= 1
         # 모든 숫자에 근거 존재

@@ -634,6 +634,3 @@ Phase C: ⏳ 예정 (성능 최적화)
 **다음**: Phase B (ingest_evidence) 또는 StrategyEngine
 
 **World Engine v2.0 Phase A 완성!**
-
-
-

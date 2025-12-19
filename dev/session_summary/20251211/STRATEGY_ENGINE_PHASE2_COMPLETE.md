@@ -310,5 +310,3 @@ Phase 3: ⏳ 선택 (고급 기능)
 **다음**: Phase 3 (선택) 또는 다음 엔진
 
 **StrategyEngine v1.0 (Phase 1+2) 완성!** 🎉🚀
-
-

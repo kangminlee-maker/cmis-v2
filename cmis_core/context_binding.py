@@ -10,7 +10,7 @@
 Phase 1:
 - Store 미구현 상태에서도 테스트/런타임을 위해 최소 binding 생성(스텁) 지원
 Phase 2+:
-- project_context_store(또는 focal_actor_context_store)에서 로딩
+- focal_actor_context_store에서 로딩
 - 권한/버전/lineage 정책 강화
 """
 
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from cmis_core.stores.project_context_store import ProjectContextStore
+from cmis_core.stores.focal_actor_context_store import FocalActorContextStore
 from cmis_core.types import FocalActorContext
 
 
@@ -55,7 +55,7 @@ class FocalActorContextBinding:
                 version = 1
 
         return cls(
-            context_id=record.project_context_id,
+            context_id=record.focal_actor_context_id,
             focal_actor_id=record.focal_actor_id,
             version=version,
             scope=dict(record.scope or {}),
@@ -83,18 +83,18 @@ class FocalActorContextBinding:
 
 
 def resolve_focal_actor_context_binding(
-    project_context_id: str,
+    focal_actor_context_id: str,
     *,
     project_root: Optional[Path] = None,
 ) -> FocalActorContextBinding:
     """FocalActorContextBinding 로딩.
 
     Phase 1:
-    - store가 있으면 우선 로딩 (ProjectContextStore)
+    - store가 있으면 우선 로딩 (FocalActorContextStore)
     - 없으면 최소 레코드 생성(스텁)으로 fallback
 
     Args:
-        project_context_id: PRJ-* (또는 PRJ-*-vN)
+        focal_actor_context_id: PRJ-* (또는 PRJ-*-vN)
         project_root: 프로젝트 루트(선택). 미지정 시 CWD를 기준으로 `.cmis`를 사용합니다.
 
     Returns:
@@ -102,10 +102,10 @@ def resolve_focal_actor_context_binding(
     """
 
     record: Optional[FocalActorContext] = None
-    store: Optional[ProjectContextStore] = None
+    store: Optional[FocalActorContextStore] = None
     try:
-        store = ProjectContextStore(project_root=project_root)
-        record = store.get_latest(project_context_id)
+        store = FocalActorContextStore(project_root=project_root)
+        record = store.get_latest(focal_actor_context_id)
     except Exception:
         record = None
     finally:
@@ -114,7 +114,7 @@ def resolve_focal_actor_context_binding(
 
     if record is None:
         record = FocalActorContext(
-            project_context_id=project_context_id,
+            focal_actor_context_id=focal_actor_context_id,
             scope={},
             assets_profile={
                 "capability_traits": [],

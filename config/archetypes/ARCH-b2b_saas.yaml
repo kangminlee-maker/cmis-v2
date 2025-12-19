@@ -51,6 +51,3 @@ archetype:
       - pattern_id: "PAT-platform_business_model"
         weight: 0.20
         rationale: "App Store/Marketplace 형태"
-
-
-

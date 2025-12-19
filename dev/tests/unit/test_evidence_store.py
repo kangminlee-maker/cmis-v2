@@ -322,6 +322,3 @@ def test_evidence_store_serialization(sample_bundle):
     assert deserialized.request.metric_id == "MET-Revenue"
     assert len(deserialized.records) == 1
     assert deserialized.records[0].value == 1000000000
-
-
-

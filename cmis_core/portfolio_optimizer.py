@@ -218,5 +218,3 @@ class PortfolioOptimizer:
                 families.add(pattern.family)
 
         return families
-
-

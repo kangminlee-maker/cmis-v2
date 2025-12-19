@@ -206,6 +206,3 @@ def test_cache_with_real_api(full_evidence_engine):
     # 두 번째는 캐시 hit
     assert summary2["cache_hits"] == 1
     assert summary2["cache_misses"] == 0
-
-
-

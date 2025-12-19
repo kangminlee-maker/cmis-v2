@@ -6,9 +6,9 @@
 
 # UMIS v9 – `structure_analysis` 프로덕션 v1 작업리스트 (Vertical Slice)
 
-> 목표:  
-> 한 도메인(예: `Adult_Language_Education_KR`)에 대해  
-> `structure_analysis` 워크플로를 **작은 vertical slice**로 프로덕션 수준까지 구현한다.  
+> 목표:
+> 한 도메인(예: `Adult_Language_Education_KR`)에 대해
+> `structure_analysis` 워크플로를 **작은 vertical slice**로 프로덕션 수준까지 구현한다.
 > (의존성 최소, 클린 코드, 오버엔지니어링 회피)
 
 ---
@@ -240,7 +240,7 @@ v1 범위
 구현 대상 Metric (예시)
 
 1. `MET-N_customers`
-   - 손쉬운 근사: R-Graph `actor` 중 `kind == "customer_segment"`인 노드들의  
+   - 손쉬운 근사: R-Graph `actor` 중 `kind == "customer_segment"`인 노드들의
      `data["metadata"]["approx_population"]` 합산
 2. `MET-Revenue`
    - `money_flow` 노드의 `quantity.amount` 합산
@@ -433,7 +433,7 @@ v1이 안정화되면 다음 Vertical Slice로 확장:
 - 구조 분석 보고서 자동 생성 고도화
   - 14 Phase 중 일부를 직접 자동화
   - MemoryStore/ArtifactStore와 연결
-- Project Context 통합 (`project_context_store`)
+- Project Context 통합 (`focal_actor_context_store`)
   - Brownfield/Greenfield 차이를 반영하는 `structure_analysis_for_project` 확장
 
 ---

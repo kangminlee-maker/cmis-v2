@@ -44,6 +44,7 @@ class RunExporter:
     ) -> Path:
         run_dir = self.paths.runs_dir / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
+        self._cleanup_legacy_files(run_dir)
 
         run = run_store.get_run(run_id) or {}
         snapshot = ledger_store.get_latest_snapshot(run_id) or {}
@@ -89,6 +90,23 @@ class RunExporter:
         (run_dir / "results.md").write_text(results_md, encoding="utf-8")
 
         return run_dir
+
+    @staticmethod
+    def _cleanup_legacy_files(run_dir: Path) -> None:
+        """Remove known legacy filenames to avoid confusing consumers."""
+
+        legacy_names = (
+            # legacy naming (Magnetic-One style)
+            "task_ledger.yaml",
+            # legacy aggregate naming
+            "ledgers.yaml",
+        )
+        for name in legacy_names:
+            p = run_dir / name
+            try:
+                p.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     @staticmethod
     def _write_yaml(path: Path, data: Dict[str, Any]) -> None:

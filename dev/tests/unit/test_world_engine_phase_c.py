@@ -154,7 +154,7 @@ class TestSliceSpec:
 
         # FocalActorContext 설정
         project_context = FocalActorContext(
-            project_context_id="PRJ-hops",
+            focal_actor_context_id="PRJ-hops",
             scope={},
             assets_profile={}
         )
@@ -165,7 +165,7 @@ class TestSliceSpec:
         snapshot = engine.snapshot(
             domain_id="Adult_Language_Education_KR",
             region="KR",
-            project_context_id="PRJ-hops",
+            focal_actor_context_id="PRJ-hops",
             slice_spec={"n_hops": 3}
         )
 
@@ -177,7 +177,7 @@ class TestSliceSpec:
         engine = WorldEngine(project_root)
 
         project_context = FocalActorContext(
-            project_context_id="PRJ-no-comp",
+            focal_actor_context_id="PRJ-no-comp",
             scope={},
             assets_profile={}
         )
@@ -188,7 +188,7 @@ class TestSliceSpec:
         snapshot = engine.snapshot(
             domain_id="Adult_Language_Education_KR",
             region="KR",
-            project_context_id="PRJ-no-comp",
+            focal_actor_context_id="PRJ-no-comp",
             slice_spec={"include_competitors": False}
         )
 
@@ -344,6 +344,3 @@ class TestIntegrationPhaseC:
             )
 
             assert snapshot.graph is not None
-
-
-

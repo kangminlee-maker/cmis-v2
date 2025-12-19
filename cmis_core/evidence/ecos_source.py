@@ -354,5 +354,3 @@ class ECOSSource(BaseDataSource):
                     return stat_type
 
         return None
-
-

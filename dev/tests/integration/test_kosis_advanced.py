@@ -389,6 +389,3 @@ class TestKOSISEdgeCases:
 
         assert record.value > 45_000_000
         print(f"2010년 인구: {record.value:,.0f}명")
-
-
-

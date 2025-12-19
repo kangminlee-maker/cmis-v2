@@ -325,5 +325,3 @@ class WorldBankSource(BaseDataSource):
         }
 
         return mapping.get(region, region)
-
-

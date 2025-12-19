@@ -42,16 +42,16 @@ class DARTClient:
         # ✅ 정확한 이름 매칭 우선
         # ✅ 부분 매칭 시 상장사 우선 (stock_code 기준)
         # ✅ "하이브" 검색 시 29개 중 자동 선별
-    
+
     def get_financials(corp_code, year, fs_div='OFS') -> Dict
         # ✅ 개별재무제표 (OFS) 우선
         # ✅ fs_div 불일치 시 명시적 에러
         # ✅ strict 모드 지원
-    
+
     def get_report_list(corp_code, year, max_retries=3) -> List
         # ✅ 900 오류 재시도 (3회, 2초 대기)
         # ✅ [기재정정] > 원본 > [첨부정정] 우선순위
-    
+
     def download_document(rcept_no) -> str
         # ✅ ZIP 압축 자동 해제
         # ✅ XML 원문 파싱
@@ -74,39 +74,39 @@ from v7_reference_code.umis_rag.utils.dart_api import DARTClient  # 임시
 
 class DARTConnector:
     """v9 Evidence Engine용 DART 연동"""
-    
+
     def __init__(self, api_key: str = None):
         self.client = DARTClient(api_key)  # v7 코드 재사용
         self.evidence_store = get_evidence_store()
-    
+
     def fetch_company_revenue(
         self,
         company_name: str,
         year: int
     ) -> Evidence:
         """v7 로직 + v9 Evidence 스키마로 변환"""
-        
+
         # 1. v7 DARTClient 호출
         corp_code = self.client.get_corp_code(company_name)
         if not corp_code:
             return None
-        
+
         financials = self.client.get_financials(corp_code, year, fs_div='OFS')
         if not financials:
             return None
-        
+
         # 2. 매출액 항목 찾기
         revenue_items = [
             item for item in financials
             if '매출액' in item.get('account_nm', '')
             and item.get('sj_div') == '재무상태표'  # 손익계산서 확인
         ]
-        
+
         if not revenue_items:
             return None
-        
+
         revenue = float(revenue_items[0]['thstrm_amount'])  # 당기금액
-        
+
         # 3. v9 Evidence 스키마로 변환
         evidence = Evidence(
             evidence_id=f"EVD-DART-{corp_code}-{year}",
@@ -123,10 +123,10 @@ class DARTConnector:
             retrieved_at=datetime.now().isoformat(),
             source_id="KR_DART_filings"  # v9 data_sources 참조
         )
-        
+
         # 4. Evidence Store 저장
         self.evidence_store.save(evidence)
-        
+
         return evidence
 ```
 
@@ -153,15 +153,15 @@ class FusionLayer:
         fermi_result: Optional[EstimationResult]
     ) -> EstimationResult:
         """여러 추정 결과 융합"""
-        
+
         # Case 1: 확정 값이 있으면 100% 사용
         if evidence.definite_value is not None:
             return create_definite_result(evidence.definite_value)
-        
+
         # Case 2: Prior만 있음
         if prior_result and not fermi_result:
             return clip_to_hard_bounds(prior_result)
-        
+
         # Case 3: Prior + Fermi 융합
         if prior_result and fermi_result:
             # 가중 평균 (certainty 기반)
@@ -170,13 +170,13 @@ class FusionLayer:
                 prior_result.value * weights['prior'] +
                 fermi_result.value * weights['fermi']
             )
-            
+
             # 범위 교집합
             final_range = self._intersect_ranges(
                 prior_result.range,
                 fermi_result.range
             )
-            
+
             return EstimationResult(
                 value=fused_value,
                 range=final_range,
@@ -197,31 +197,31 @@ class FusionLayer:
 # v9: umis_v9_core/value_engine.py
 
 class MetricResolver:
-    
+
     def _stage_4_fusion(
         self,
         candidates: List[ValueRecord]  # v9 용어
     ) -> ValueRecord:
         """v7 FusionLayer 로직 재사용"""
-        
+
         # v7 코드를 v9 스키마로 변환만 하면 됨
-        
+
         # 1. Certainty → quality.literal_ratio 매핑
         weights = {
             c.method: self._certainty_to_weight(c.quality.get("certainty", "medium"))
             for c in candidates
         }
-        
+
         # 2. 가중 평균 (v7과 동일)
         weighted_avg = sum(
             c.point_estimate * weights[c.method]
             for c in candidates
         ) / sum(weights.values())
-        
+
         # 3. 범위 교집합 (v7과 동일)
         ranges = [c.distribution for c in candidates if c.distribution]
         intersected_range = self._intersect_ranges(ranges)  # v7 로직 복사
-        
+
         # 4. v9 ValueRecord 생성
         return ValueRecord(
             metric_id=candidates[0].metric_id,
@@ -237,7 +237,7 @@ class MetricResolver:
                 "methods_used": [c.method for c in candidates]
             }
         )
-    
+
     @staticmethod
     def _certainty_to_weight(certainty: str) -> float:
         """v7 Certainty를 가중치로 변환"""
@@ -262,39 +262,39 @@ class MetricResolver:
 ```python
 class EvidenceCollector:
     """4가지 소스에서 증거 수집"""
-    
+
     def collect(question, context) -> (EstimationResult, Evidence):
         """
         Stage 1: Evidence Collection
-        
+
         Sources:
         1. Literal Source (프로젝트 데이터)
         2. RAG Source (학습된 규칙)
         3. Validator Source (외부 확정 데이터)
         4. Guardrail Analyzer (논리적 제약)
-        
+
         Early Return:
         - 확정 값 발견 시 즉시 반환 (85% 케이스)
         """
-        
+
         # Phase 0: Literal
         definite_value = self.literal_source.search(question)
         if definite_value:
             return create_definite_result(definite_value), evidence
-        
+
         # Phase 1: Direct RAG
         rag_rules = self.rag_source.search(question, k=5)
         evidence.rag_rules = rag_rules
-        
+
         # Phase 2: Validator Search (85% 성공!)
         validator_data = self.validator_source.search(question, context)
         if validator_data and validator_data.certainty == 'high':
             return create_definite_result(validator_data.value), evidence
-        
+
         # Guardrail
         guardrails = self.guardrail_analyzer.analyze(question)
         evidence.hard_bounds = guardrails.hard_bounds
-        
+
         return None, evidence  # 추정 필요
 ```
 
@@ -311,45 +311,45 @@ class EvidenceCollector:
 # v9: umis_v9_core/evidence_engine.py
 
 class EvidenceEngine:
-    
+
     def fetch_for_metrics(
         self,
         metric_requests: List[MetricRequest],
         policy_ref: str
     ) -> EvidenceBundle:
         """v7 EvidenceCollector 로직 재사용"""
-        
+
         bundle = EvidenceBundle()
-        
+
         for req in metric_requests:
             # v7의 4가지 소스 활용
-            
+
             # 1. Literal Source (프로젝트 데이터)
             # → v9에서는 Project Context baseline_state로 대체
-            if req.project_context_id:
-                project_ctx = self.project_context_store.get(req.project_context_id)
+            if req.focal_actor_context_id:
+                project_ctx = self.focal_actor_context_store.get(req.focal_actor_context_id)
                 baseline_value = project_ctx.baseline_state.get(req.metric_id)
                 if baseline_value:
                     bundle.add_definite(baseline_value)
                     continue  # Early Return
-            
+
             # 2. Validator Source (외부 확정 데이터)
             # → v7 validator_source.py 로직 재사용
             validator_result = self.validator_source.search(req)
             if validator_result and validator_result.certainty == 'high':
                 bundle.add_evidence(validator_result)
                 continue  # Early Return
-            
+
             # 3. Direct Evidence (DART/웹 검색)
             # → v7 dart_api.py 활용
             dart_evidence = self.dart_connector.fetch(req)
             if dart_evidence:
                 bundle.add_evidence(dart_evidence)
-            
+
             # 4. RAG Source (패턴/사례)
             # → v9에서는 Pattern Graph로 대체
             # (v7 RAG → v9 Pattern Benchmarks 매핑)
-        
+
         return bundle
 ```
 
@@ -367,31 +367,31 @@ class EvidenceEngine:
 ```python
 class FermiEstimator:
     """Fermi 분해 추정 (재귀 없음, max_depth=2)"""
-    
+
     def estimate(question, context, budget) -> EstimationResult:
         """
         Stage 3: Fermi Decomposition
-        
+
         특징:
         - 재귀 없음 (v7.11.0)
         - max_depth=2 고정
         - Budget 기반 (max_llm_calls)
         """
-        
+
         # Step 1: 변수 식별 (LLM)
         variables = self._identify_variables(question)
         # 예: "SAM = N_customers × ARPU"
         #     variables = ["N_customers", "ARPU"]
-        
+
         # Step 2: 각 변수를 Prior로 추정 (재귀 ❌, Stage 2 호출)
         var_values = {}
         for var in variables:
             # PriorEstimator 호출 (Stage 2)
             var_values[var] = self.prior_estimator.estimate(var, context)
-        
+
         # Step 3: 공식 계산
         result_value = self._calculate_formula(variables, var_values)
-        
+
         return EstimationResult(
             value=result_value,
             source="fermi",
@@ -412,31 +412,31 @@ class FermiEstimator:
 # v9: umis_v9_core/value_engine.py
 
 class MetricResolver:
-    
+
     def _method_fermi(
         self,
         metric_id: str,
         context: dict
     ) -> ValueRecord:
         """v7 Fermi 로직 재사용"""
-        
+
         # v7 FermiEstimator와 거의 동일
         spec = self.config.get_metric_spec(metric_id)
         fermi_hint = spec.resolution_protocol.get("fermi_decomposition")
-        
+
         # 1. 변수 식별 (v7 프롬프트 재사용)
         variables = self._identify_variables_llm(metric_id, fermi_hint)
-        
+
         # 2. 각 변수 추정 (재귀 ❌, Stage 2 Prior 호출)
         var_values = {}
         for var_id in variables:
             # v9 Metric Resolver를 Stage 2 (Prior)로 호출
             var_value = self._stage_3_prior(var_id, context)
             var_values[var_id] = var_value
-        
+
         # 3. 공식 계산 (v7과 동일)
         result = self._calculate_formula(variables, var_values, fermi_hint)
-        
+
         return ValueRecord(
             metric_id=metric_id,
             point_estimate=result,
@@ -466,20 +466,20 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Environment 기반 설정"""
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8"
     )
-    
+
     # API Keys
     openai_api_key: str
     dart_api_key: str
-    
+
     # Paths
     project_root: Path = Field(default_factory=lambda: Path(__file__).parent.parent)
     data_dir: Path = Field(default_factory=lambda: project_root / "data")
-    
+
     # Phase별 모델 설정
     llm_model_phase0_2: str = Field(default="gpt-4.1-nano")
     llm_model_phase3: str = Field(default="gpt-4o-mini")
@@ -497,34 +497,34 @@ import yaml
 
 class UMISConfig(BaseSettings):
     """v7 패턴 + v9 YAML 로딩"""
-    
+
     # .env 기반 설정 (v7과 동일)
     dart_api_key: str
     tavily_api_key: str
-    
+
     # v9 추가: YAML 로딩
     yaml_config: dict = None
-    
+
     def __init__(self, yaml_path: str = "umis_v9.yaml"):
         super().__init__()
-        
+
         # v9 YAML 로드
         with open(yaml_path) as f:
             self.yaml_config = yaml.safe_load(f)
-        
+
         # Metric 스펙 인덱싱 (v7과 유사)
         self.metrics = self._index_metrics()
         self.patterns = self._index_patterns()
         self.data_sources = self._index_data_sources()
-    
+
     def _index_metrics(self) -> Dict[str, MetricSpec]:
         """umis_v9.yaml에서 Metric 스펙 인덱싱"""
         metrics = {}
-        
+
         for m in self.yaml_config["umis_v9"]["planes"]["cognition_plane"]["engines"]["value_engine"]["metrics_spec"]["metrics"]:
             metric_id = m["metric_id"]
             metrics[metric_id] = MetricSpec(**m)
-        
+
         return metrics
 ```
 
@@ -645,11 +645,11 @@ cp v7_reference_code/umis_rag/agents/estimator/fusion_layer.py \
 class DARTConnector:
     # v7 DARTClient 로직 그대로
     # + v9 Evidence 스키마로 변환만 추가
-    
+
     def fetch_company_revenue(...) -> Evidence:  # v9 타입
         # v7 로직 호출
         financials = self.dart_client.get_financials(...)
-        
+
         # v9 Evidence 변환
         return Evidence(
             evidence_id=f"EVD-DART-{corp_code}-{year}",
@@ -665,7 +665,7 @@ class DARTConnector:
 def test_dart_ybm():
     connector = DARTConnector()
     evidence = connector.fetch_company_revenue("YBM넷", 2023)
-    
+
     assert evidence.evidence_id.startswith("EVD-DART-")
     assert evidence.metadata["revenue"] == 817억원 (±5%)
     assert evidence.source_tier == "official"

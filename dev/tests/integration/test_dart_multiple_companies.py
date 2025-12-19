@@ -160,5 +160,3 @@ def test_dart_financials_multiple_metrics():
 
     # 영업이익
     assert financials.get("영업이익") is not None
-
-

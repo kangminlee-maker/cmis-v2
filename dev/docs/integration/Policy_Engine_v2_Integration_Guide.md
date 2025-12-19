@@ -113,28 +113,28 @@ def evaluate_metrics(self, metric_requests, policy_ref, ...):
     value_policy = self.policy_engine.get_value_policy(policy_ref)
     prior_policy = self.policy_engine.get_prior_policy(policy_ref)
     convergence_policy = self.policy_engine.get_convergence_policy(policy_ref)
-    
+
     results = []
-    
+
     for metric_req in metric_requests:
         # Stage 1: Evidence
         evidence_value, literal_ratio = self._stage_evidence(metric_req)
-        
+
         # Stage 2: Derived
         derived_value = self._stage_derived(metric_req)
-        
+
         # Stage 3: Prior (Policy 확인)
         prior_value = None
         if prior_policy.allow_prior:
             prior_value = self._stage_prior(metric_req)
-        
+
         # Stage 4: Fusion
         final_value, metrics = self._stage_fusion(
-            evidence_value, 
-            derived_value, 
+            evidence_value,
+            derived_value,
             prior_value
         )
-        
+
         # MetricEval 생성
         metric_eval = MetricEval(
             metric_id=metric_req.metric_id,
@@ -146,9 +146,9 @@ def evaluate_metrics(self, metric_requests, policy_ref, ...):
             prior_types_used=metrics["prior_types_used"],
             convergence_ratio=metrics.get("convergence_ratio")
         )
-        
+
         results.append(metric_eval)
-    
+
     return results
 ```
 
@@ -198,29 +198,29 @@ for metric_id, check_result in batch_result.by_metric.items():
 class Verifier:
     def __init__(self, policy_engine: PolicyEngine):
         self.policy_engine = policy_engine
-    
+
     def verify_goal(self, goal, ledgers):
         # Goal의 target_metrics 검증
         policy_id = ledgers.progress_ledger.policy_ref
         evidence_summary = self._extract_evidence_summary(ledgers)
-        
+
         violations_by_metric = {}
-        
+
         for metric_id in goal.target_metrics:
             metric_eval = self._extract_metric_eval(ledgers, metric_id)
-            
+
             result = self.policy_engine.evaluate_metric(
                 policy_id=policy_id,
                 evidence=evidence_summary,
                 metric=metric_eval
             )
-            
+
             if not result.passed:
                 violations_by_metric[metric_id] = result.violations
-        
+
         # Diff Report 생성
         return self._generate_diff_report(violations_by_metric)
-    
+
     def _generate_diff_report(self, violations_by_metric):
         """PolicyCheckResult → Diff Report 변환"""
         diff_report = {
@@ -228,18 +228,18 @@ class Verifier:
             "low_quality_metrics": [],
             "suggested_actions": []
         }
-        
+
         for metric_id, violations in violations_by_metric.items():
             for violation in violations:
                 # Gate별 처리
                 if violation.gate_id == "value_literal_ratio":
                     diff_report["low_quality_metrics"].append(metric_id)
-                
+
                 # suggested_actions 수집
                 diff_report["suggested_actions"].extend(
                     violation.suggested_actions
                 )
-        
+
         return diff_report
 ```
 
@@ -249,10 +249,10 @@ class Verifier:
 class Replanner:
     def generate_tasks_from_diff(self, diff_report, goal, ledgers):
         tasks = []
-        
+
         for action in diff_report.get("suggested_actions", []):
             action_type = action.get("type")
-            
+
             if action_type == "fetch_more_evidence":
                 tasks.append(Task(
                     task_id=f"TASK-fetch-evidence-{uuid4().hex[:8]}",
@@ -261,7 +261,7 @@ class Replanner:
                         "min_sources": action.get("min_sources", 2)
                     }
                 ))
-            
+
             elif action_type == "run_additional_method":
                 tasks.append(Task(
                     task_id=f"TASK-compute-{uuid4().hex[:8]}",
@@ -270,9 +270,9 @@ class Replanner:
                         "methods_required": action.get("required", 2)
                     }
                 ))
-            
+
             # ... 기타 action types
-        
+
         return tasks
 ```
 
@@ -360,7 +360,7 @@ if not check_result.passed:
 # policy_engine.py에 추가
 
 def extract_all_suggested_actions(
-    self, 
+    self,
     check_result: PolicyCheckResult
 ) -> List[Dict[str, Any]]:
     """모든 suggested_actions 추출"""
@@ -370,7 +370,7 @@ def extract_all_suggested_actions(
     return actions
 
 def summarize_violations(
-    self, 
+    self,
     check_result: PolicyCheckResult
 ) -> Dict[str, int]:
     """위반 gate별 개수 집계"""
@@ -386,4 +386,3 @@ def summarize_violations(
 **작성**: 2025-12-13
 **버전**: v2.0
 **상태**: 통합 가이드
-

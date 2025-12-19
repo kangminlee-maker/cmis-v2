@@ -367,6 +367,3 @@ hints = evidence_store.query_hints(
 
 **작성**: 2025-12-10
 **결론**: Priority 1 즉시 구현 권장
-
-
-

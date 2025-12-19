@@ -518,6 +518,3 @@ Evidence → ingest_evidence → R-Graph → Analysis
 **다음**: StrategyEngine 설계 및 구현
 
 **역대급 생산적인 하루였습니다!** 🎉🚀✨
-
-
-

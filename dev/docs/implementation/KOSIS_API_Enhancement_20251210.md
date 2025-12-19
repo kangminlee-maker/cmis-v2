@@ -433,6 +433,3 @@ print(f"가구 수: {record.value:,.0f}")
 **작업자**: CMIS Development Team
 **검증**: 22/23 테스트 통과 (95.7%)
 **상태**: Production Ready
-
-
-

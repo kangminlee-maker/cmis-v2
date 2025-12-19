@@ -28,20 +28,20 @@ class ContextLearner:
 
     def update_baseline_state(
         self,
-        project_context: FocalActorContext,
+        focal_actor_context: FocalActorContext,
         outcome: Outcome
     ) -> FocalActorContext:
         """baseline_state 업데이트 (버전 관리)
 
         Args:
-            project_context: 기존 FocalActorContext
+            focal_actor_context: 기존 FocalActorContext
             outcome: 실제 Outcome
 
         Returns:
             새 버전 FocalActorContext
         """
         # 새 baseline_state
-        updated_baseline = dict(project_context.baseline_state)
+        updated_baseline = dict(focal_actor_context.baseline_state)
 
         # Outcome.metrics → baseline_state 매핑
         for metric_id, value in outcome.metrics.items():
@@ -66,15 +66,15 @@ class ContextLearner:
         updated_baseline["as_of"] = outcome.as_of
 
         # 새 버전 ID
-        new_version = project_context.version + 1
-        new_version_id = f"{project_context.project_context_id.split('-v')[0]}-v{new_version}"
+        new_version = focal_actor_context.version + 1
+        new_version_id = f"{focal_actor_context.focal_actor_context_id.split('-v')[0]}-v{new_version}"
 
         # Lineage 업데이트
-        from_outcome_ids = project_context.lineage.get("from_outcome_ids", [])
+        from_outcome_ids = focal_actor_context.lineage.get("from_outcome_ids", [])
         from_outcome_ids.append(outcome.outcome_id)
 
         updated_lineage = {
-            **project_context.lineage,
+            **focal_actor_context.lineage,
             "from_outcome_ids": from_outcome_ids,
             "updated_at": datetime.now().isoformat(),
             "updated_by": "learning_engine"
@@ -82,18 +82,16 @@ class ContextLearner:
 
         # 새 FocalActorContext
         updated_context = FocalActorContext(
-            project_context_id=new_version_id,
+            focal_actor_context_id=new_version_id,
             version=new_version,
-            previous_version_id=project_context.project_context_id,
-            scope=project_context.scope,
-            assets_profile=project_context.assets_profile,
+            previous_version_id=focal_actor_context.focal_actor_context_id,
+            scope=focal_actor_context.scope,
+            assets_profile=focal_actor_context.assets_profile,
             baseline_state=updated_baseline,
-            constraints_profile=project_context.constraints_profile,
-            preference_profile=project_context.preference_profile,
-            focal_actor_id=project_context.focal_actor_id,
+            constraints_profile=focal_actor_context.constraints_profile,
+            preference_profile=focal_actor_context.preference_profile,
+            focal_actor_id=focal_actor_context.focal_actor_id,
             lineage=updated_lineage
         )
 
         return updated_context
-
-

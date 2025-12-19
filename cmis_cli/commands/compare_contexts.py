@@ -36,8 +36,8 @@ def parse_context_string(context_str: str) -> dict:
             # domain → domain_id 변환
             if key == "domain":
                 context["domain_id"] = value
-            elif key == "project_context":
-                context["project_context_id"] = value
+            elif key == "focal_actor_context_id":
+                context["focal_actor_context_id"] = value
             else:
                 context[key] = value
 

@@ -210,7 +210,7 @@ class TestProjectOverlay:
 
         overlay = store.create_overlay("PRJ-001", "ACT-my-company")
 
-        assert overlay.project_context_id == "PRJ-001"
+        assert overlay.focal_actor_context_id == "PRJ-001"
         assert overlay.focal_actor_id == "ACT-my-company"
         assert len(overlay.nodes) == 0
 
@@ -238,7 +238,7 @@ class TestIngestFocalActorContext:
     def test_ingest_basic(self):
         """기본 FocalActorContext → Overlay"""
         project_context = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={"domain_id": "test", "region": "KR"},
             assets_profile={
                 "capability_traits": [
@@ -263,7 +263,7 @@ class TestIngestFocalActorContext:
     def test_ingest_with_baseline_state(self):
         """baseline_state 포함"""
         project_context = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={},
             assets_profile={},
             baseline_state={
@@ -446,7 +446,7 @@ class TestWorldEnginePhaseA:
             region="KR"
         )
 
-        assert snapshot.meta["project_context_id"] is None
+        assert snapshot.meta["focal_actor_context_id"] is None
         assert len(snapshot.graph.nodes) > 0
 
     def test_snapshot_brownfield(self, project_root):
@@ -455,7 +455,7 @@ class TestWorldEnginePhaseA:
 
         # 1. ingest_focal_actor_context
         project_context = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={"domain_id": "Adult_Language_Education_KR", "region": "KR"},
             assets_profile={
                 "capability_traits": [
@@ -478,10 +478,10 @@ class TestWorldEnginePhaseA:
         snapshot = engine.snapshot(
             domain_id="Adult_Language_Education_KR",
             region="KR",
-            project_context_id="PRJ-test"
+            focal_actor_context_id="PRJ-test",
         )
 
-        assert snapshot.meta["project_context_id"] == "PRJ-test"
+        assert snapshot.meta["focal_actor_context_id"] == "PRJ-test"
 
         # focal_actor 포함 확인
         actors = list(snapshot.graph.nodes_by_type("actor"))
@@ -525,7 +525,7 @@ class TestIntegrationPhaseA:
 
         # 2. FocalActorContext 추가
         project_context = FocalActorContext(
-            project_context_id="PRJ-transition",
+            focal_actor_context_id="PRJ-transition",
             scope={},
             assets_profile={},
             baseline_state={
@@ -539,7 +539,7 @@ class TestIntegrationPhaseA:
         brownfield_snapshot = engine.snapshot(
             domain_id="Adult_Language_Education_KR",
             region="KR",
-            project_context_id="PRJ-transition"
+            focal_actor_context_id="PRJ-transition",
         )
 
         brownfield_actor_count = len(list(brownfield_snapshot.graph.nodes_by_type("actor")))
@@ -567,6 +567,3 @@ class TestIntegrationPhaseA:
 
         # 동일한 RealityGraphStore 사용 (재로딩 안 함)
         assert engine.reality_store.has_domain("Adult_Language_Education_KR")
-
-
-

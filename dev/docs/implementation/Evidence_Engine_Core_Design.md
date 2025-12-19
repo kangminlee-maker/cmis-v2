@@ -69,7 +69,7 @@
 │  Tier 관리:                                                   │
 │  - Tier 1: official (DART, KOSIS, Gov Stats)                 │
 │  - Tier 2: curated_internal (내부 검증 DB)                    │
-│  - Tier 3: commercial (Market Research, Consulting)          │
+│  - Tier 3: commercial (web_search: 공개 리포트/문서/기사)      │
 │  - Tier 4: structured_estimation (Pattern/공식 기반)          │
 │  - Tier 5: llm_baseline (웹검색 + LLM)                        │
 └───────────────────────────────────────────────────────────────┘
@@ -888,6 +888,3 @@ def _evaluate_sufficiency(bundle, policy):
 
 **변경 이력**:
 - 2025-12-09: 초안 작성 (Evidence Engine 핵심 설계)
-
-
-

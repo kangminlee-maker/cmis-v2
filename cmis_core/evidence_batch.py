@@ -138,5 +138,3 @@ class BatchFetcher:
             "savings": without_batch - with_batch,
             "savings_percent": ((without_batch - with_batch) / without_batch * 100) if without_batch > 0 else 0
         }
-
-

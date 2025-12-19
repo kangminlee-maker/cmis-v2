@@ -212,7 +212,7 @@ cmis opportunity-discovery \
 cmis structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
-  --project-context PRJ-my-company
+  --focal-actor-context-id PRJ-my-company
 ```
 
 **출력**:
@@ -227,7 +227,7 @@ cmis structure-analysis \
 # Greenfield vs Brownfield 비교
 cmis compare-contexts \
   --context1 "domain:Adult_Language_KR,region:KR" \
-  --context2 "domain:Adult_Language_KR,region:KR,project_context:PRJ-001"
+  --context2 "domain:Adult_Language_KR,region:KR,focal_actor_context_id:PRJ-001"
 ```
 
 **출력**:
@@ -471,8 +471,8 @@ learning_engine.update_from_outcomes_api(['OUT-001'])
 from cmis_core.types import FocalActorContext
 
 # 우리 회사 정의
-project_context = FocalActorContext(
-    project_context_id="PRJ-my-company",
+focal_actor_context = FocalActorContext(
+    focal_actor_context_id="PRJ-my-company",
     baseline_state={
         "current_revenue": 5000000000,
         "current_customers": 50000
@@ -490,17 +490,17 @@ project_context = FocalActorContext(
 )
 
 # focal_actor 생성
-world_engine.ingest_project_context(project_context)
+world_engine.ingest_focal_actor_context(focal_actor_context)
 
 # 우리 회사 관점 분석
 snapshot = world_engine.snapshot(
     'Domain', 'KR',
-    project_context_id='PRJ-my-company'
+    focal_actor_context_id='PRJ-my-company'
 )
 
 patterns = pattern_engine.match_patterns(
     snapshot.graph,
-    project_context_id='PRJ-my-company'
+    focal_actor_context_id='PRJ-my-company'
 )
 ```
 
@@ -520,7 +520,7 @@ cmis opportunity-discovery --domain <DOMAIN> --region <REGION> --top-n 5
 # 컨텍스트 비교
 cmis compare-contexts \
   --context1 "domain:X,region:KR" \
-  --context2 "domain:X,region:KR,project_context:PRJ-001"
+  --context2 "domain:X,region:KR,focal_actor_context_id:PRJ-001"
 
 # Generic workflow
 cmis workflow run <workflow_id> \
@@ -586,7 +586,7 @@ cmis opportunity-discovery \
 cmis structure-analysis \
   --domain Adult_Language_Education_KR \
   --region KR \
-  --project-context PRJ-my-company
+  --focal-actor-context-id PRJ-my-company
 ```
 
 **결과**:

@@ -180,5 +180,3 @@ def detect_conflicts(
             })
 
     return conflicts
-
-

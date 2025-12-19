@@ -280,12 +280,12 @@ class GraphCache:
         region: str,
         segment: Optional[str],
         as_of: Optional[str],
-        project_context_id: Optional[str]
+        focal_actor_context_id: Optional[str],
     ) -> str:
         """캐시 키 생성
 
         Args:
-            domain_id, region, segment, as_of, project_context_id
+            domain_id, region, segment, as_of, focal_actor_context_id
 
         Returns:
             캐시 키
@@ -295,7 +295,7 @@ class GraphCache:
             region,
             segment or "none",
             as_of or "none",
-            project_context_id or "none"
+            focal_actor_context_id or "none",
         ]
         return "|".join(parts)
 
@@ -373,6 +373,3 @@ class GraphCache:
             "expired_items": expired,
             "ttl_seconds": self.ttl_seconds
         }
-
-
-

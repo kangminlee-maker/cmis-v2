@@ -333,6 +333,3 @@ class KOSISSource(BaseDataSource):
 
 **작성**: 2025-12-09
 **권장**: JSON (v1/v2), SDMX (v3+)
-
-
-

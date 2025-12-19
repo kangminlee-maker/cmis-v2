@@ -400,6 +400,3 @@ class KOSISSource(BaseDataSource):
 
 **변경 이력**:
 - 2025-12-09: 초안 작성 (v7 코드 분석 기반)
-
-
-

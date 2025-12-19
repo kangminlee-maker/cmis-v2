@@ -5,23 +5,11 @@
 strategies:
   MET-TAM:
     per_source:
-      Commercial_Market_Research:
-        template: "{domain} {region} total addressable market {year}"
-        use_llm: false
-        num_queries: 1
-        languages: [en]
-
       GenericWebSearch:
         template: "{domain} {region} market size {year}"
         use_llm: true
         num_queries: 5
         languages: [ko, en]
-
-      Academic_Papers:
-        template: "{domain} market analysis {year}"
-        use_llm: true
-        num_queries: 3
-        languages: [en]
 
   MET-SAM:
     per_source:
@@ -95,5 +83,3 @@ language_strategy:
   CN:
     default_languages: [zh, en]
     primary: zh
-
-

@@ -21,7 +21,7 @@ from .metric_learner import MetricLearner
 from .learning_policy import LearningPolicy
 from .config import CMISConfig
 from .stores.outcome_store import OutcomeStore
-from .stores.project_context_store import ProjectContextStore
+from .stores.focal_actor_context_store import FocalActorContextStore
 
 
 class LearningEngine:
@@ -43,7 +43,7 @@ class LearningEngine:
         project_root: Optional[Path] = None,
         *,
         outcome_store: Optional[OutcomeStore] = None,
-        project_context_store: Optional[ProjectContextStore] = None,
+        focal_actor_context_store: Optional[FocalActorContextStore] = None,
     ):
         """
         Args:
@@ -69,12 +69,12 @@ class LearningEngine:
         # Stores (인메모리)
         self.outcomes: Dict[str, Outcome] = {}
         self.strategies: Dict[str, Strategy] = {}
-        self.project_contexts: Dict[str, FocalActorContext] = {}
+        self.focal_actor_contexts: Dict[str, FocalActorContext] = {}
         self.learning_history: List[LearningResult] = []
 
         # Authoritative stores (Phase 1: optional wiring)
         self.outcome_store = outcome_store
-        self.project_context_store = project_context_store
+        self.focal_actor_context_store = focal_actor_context_store
 
         # memory_store (Phase 3: 간단한 버전)
         self.memory_store: List[Dict[str, Any]] = []
@@ -144,7 +144,7 @@ class LearningEngine:
             "updated_entities": {
                 "pattern_ids": list(updated_pattern_ids),
                 "metric_ids": list(updated_metric_ids),
-                "project_context_ids": list(updated_context_ids),
+                "focal_actor_context_ids": list(updated_context_ids),
                 "belief_updates": sum(
                     len(r.updates.get("confidence_adjustments", []))
                     for r in learning_results
@@ -432,16 +432,16 @@ class LearningEngine:
         """Strategy 등록 (테스트용)"""
         self.strategies[strategy.strategy_id] = strategy
 
-    def register_project_context(self, project_context: FocalActorContext) -> None:
+    def register_focal_actor_context(self, focal_actor_context: FocalActorContext) -> None:
         """FocalActorContext 등록 (테스트용)"""
-        self.project_contexts[project_context.project_context_id] = project_context
-        if self.project_context_store is not None:
-            self.project_context_store.save(project_context)
+        self.focal_actor_contexts[focal_actor_context.focal_actor_context_id] = focal_actor_context
+        if self.focal_actor_context_store is not None:
+            self.focal_actor_context_store.save(focal_actor_context)
 
-    def update_project_context_from_outcome_api(
+    def update_focal_actor_context_from_outcome_api(
         self,
         outcome_id: str,
-        project_context_id: str
+        focal_actor_context_id: str,
     ) -> str:
         """Public API: FocalActorContext 업데이트 (cmis.yaml 대응)
 
@@ -455,7 +455,7 @@ class LearningEngine:
 
         Args:
             outcome_id: Outcome ID
-            project_context_id: FocalActorContext ID
+            focal_actor_context_id: FocalActorContext ID
 
         Returns:
             updated_context_ref: "PRJ-xxx-vN"
@@ -464,34 +464,34 @@ class LearningEngine:
         outcome = self._load_outcome(outcome_id)
 
         if not outcome:
-            return f"{project_context_id}-unchanged"
+            return f"{focal_actor_context_id}-unchanged"
 
         # 2. FocalActorContext 로딩
-        project_context = self._load_project_context(project_context_id)
+        focal_actor_context = self._load_focal_actor_context(focal_actor_context_id)
 
-        if not project_context:
-            return f"{project_context_id}-notfound"
+        if not focal_actor_context:
+            return f"{focal_actor_context_id}-notfound"
 
         # 3. 업데이트
         updated_context = self.context_learner.update_baseline_state(
-            project_context,
+            focal_actor_context,
             outcome
         )
 
         # 4. 저장 (Phase 2: 캐시)
-        self.project_contexts[updated_context.project_context_id] = updated_context
-        if self.project_context_store is not None:
-            self.project_context_store.save(updated_context)
+        self.focal_actor_contexts[updated_context.focal_actor_context_id] = updated_context
+        if self.focal_actor_context_store is not None:
+            self.focal_actor_context_store.save(updated_context)
 
-        return updated_context.project_context_id
+        return updated_context.focal_actor_context_id
 
-    def _load_project_context(
+    def _load_focal_actor_context(
         self,
-        project_context_id: str
+        focal_actor_context_id: str,
     ) -> Optional[FocalActorContext]:
         """FocalActorContext 로딩"""
-        if project_context_id in self.project_contexts:
-            return self.project_contexts.get(project_context_id)
-        if self.project_context_store is not None:
-            return self.project_context_store.get_latest(project_context_id)
+        if focal_actor_context_id in self.focal_actor_contexts:
+            return self.focal_actor_contexts.get(focal_actor_context_id)
+        if self.focal_actor_context_store is not None:
+            return self.focal_actor_context_store.get_latest(focal_actor_context_id)
         return None

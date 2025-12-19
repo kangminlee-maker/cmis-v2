@@ -1407,22 +1407,22 @@ focal_actor_input:
     revenue: "연 800억"
     customers: 45000
     channels: "오프라인 120개 지점, 온라인 미미"
-  
+
   capabilities:
     - "전국 지점 네트워크 120개"
     - "강사 800명"
     - "브랜드 Top 3"
     - "디지털 인프라 약함"
-  
+
   constraints:
     - "디지털 투자 연 30억 이내"
     - "오프라인 매출 90% 이상 유지"
     - "3년 내 손익 방어"
-  
+
   preferences:
     - "현금흐름 안정 우선"
     - "점진적 전환"
-  
+
   goal:
     - "디지털 확장하며 기존 사업 방어"
 ```
@@ -1516,9 +1516,9 @@ trait_set:
 
 #### 0.5 Substrate Plane: Project Context 객체 생성
 
-**project_context_store에 저장**:
+**focal_actor_context_store에 저장**:
 ```yaml
-project_context_id: "PRJ-20251205-OfflineAcademy-Chain-001"
+focal_actor_context_id: "PRJ-20251205-OfflineAcademy-Chain-001"
 version: 1
 focal_actor_id: "ACT-CLIENT-OfflineAcademy-Chain-001"
 mode: "brownfield"
@@ -1554,11 +1554,11 @@ lineage:
 
 ---
 
-## Phase 1-14: 기존 Phase 재사용 (project_context_id 전달)
+## Phase 1-14: 기존 Phase 재사용 (focal_actor_context_id 전달)
 
 **Brownfield 모드 (structure_analysis_for_project)**:
 - PH01-PH14는 기존과 동일
-- **차이점**: 모든 Engine 호출 시 `project_context_id` 전달
+- **차이점**: 모든 Engine 호출 시 `focal_actor_context_id` 전달
 
 **예시 - Phase 7 시장규모 추정**:
 
@@ -1580,7 +1580,7 @@ value_engine.evaluate_metrics(
         MetricRequest("MET-SOM_for_project", ...)  # 이 조직 관점
     ],
     policy_ref="decision_balanced",
-    project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"  # 추가
+    focal_actor_context_id="PRJ-20251205-OfflineAcademy-Chain-001"  # 추가
 )
 ```
 
@@ -1588,7 +1588,7 @@ value_engine.evaluate_metrics(
 ```python
 pattern_matches = pattern_engine.match_patterns(
     graph_slice_ref=snapshot.graph,
-    project_context_id="PRJ-20251205-OfflineAcademy-Chain-001"
+    focal_actor_context_id="PRJ-20251205-OfflineAcademy-Chain-001"
 )
 
 # 결과:

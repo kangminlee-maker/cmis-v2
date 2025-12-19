@@ -45,7 +45,7 @@ def cmd_opportunity_discovery(args):
         domain_id=args.domain,
         region=args.region,
         segment=args.segment,
-        project_context_id=args.project_context,
+        focal_actor_context_id=args.focal_actor_context_id,
         top_n=args.top_n,
         min_feasibility=args.min_feasibility
     )

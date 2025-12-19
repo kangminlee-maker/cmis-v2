@@ -21,4 +21,3 @@ regression_suite:
       context:
         domain_id: "Adult_Language_Education_KR"
         region: "KR"
-

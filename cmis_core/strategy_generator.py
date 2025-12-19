@@ -339,5 +339,3 @@ class StrategyGenerator:
         # Phase 1: 간단한 필터
         # 모든 전략 통과 (Evaluator에서 평가)
         return strategies
-
-

@@ -50,21 +50,21 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
     - `@metric_sets.<set_name>`: `CMISConfig.get_metric_set(set_name)`로 확장
   - **call → 실행/출력 키(표준)**
     - `world_engine.snapshot`
-      - 입력: `domain_id`, `region`, `segment?`, `as_of?`, `project_context_id?`
+      - 입력: `domain_id`, `region`, `segment?`, `as_of?`, `focal_actor_context_id?`
       - raw output: `reality_snapshot_ref`
       - json output: `reality_snapshot.meta`
     - `pattern_engine.match_patterns`
-      - 입력: `reality_snapshot_ref`, `project_context_id?`
+      - 입력: `reality_snapshot_ref`, `focal_actor_context_id?`
       - 구현: `PatternEngineV2.match_patterns(snapshot.graph, ...)`
       - raw output: `pattern_match_set_ref`, `pattern_matches`
       - json output: `pattern_matches[]`
     - `pattern_engine.discover_gaps`
-      - 입력: `reality_snapshot_ref`, `project_context_id?`, `precomputed_matches?`
+      - 입력: `reality_snapshot_ref`, `focal_actor_context_id?`, `precomputed_matches?`
       - 구현: `PatternEngineV2.discover_gaps(snapshot.graph, ...)`
       - raw output: `gap_set_ref`, `gap_candidates`
       - json output: `gap_candidates[]`
     - `value_engine.evaluate_metrics`
-      - 입력: `metric_requests`, `policy_ref?`, `project_context_id?`, `reality_snapshot_ref?`
+      - 입력: `metric_requests`, `policy_ref?`, `focal_actor_context_id?`, `reality_snapshot_ref?`
       - graph 확보 규칙:
         - `reality_snapshot_ref`가 없으면 **이전 snapshot(prev)** 사용
         - 그래도 없으면 `inputs.domain_id + inputs.region`이 있을 때 **auto snapshot** 생성
@@ -144,15 +144,15 @@ pytest -q dev/tests/unit/test_cursor_agent_interface_v2.py dev/tests/unit/test_s
 - **I**
   - store들이 `CMIS_STORAGE_ROOT`를 따르도록 통일
 
-### P1-2. ProjectContextStore (FocalActorContext PRJ-*)
+### P1-2. FocalActorContextStore (FocalActorContext PRJ-*)
 
 - **D**
   - DB: `.cmis/db/contexts.db`
-  - 스키마(최소): `project_context_id`, `version`, `created_at`, `previous_version_id`, `record_json`
+  - 스키마(최소): `focal_actor_context_id`, `version`, `created_at`, `previous_version_id`, `record_json`
   - API: save/get_latest/get_by_version
 
 - **I**
-  - `cmis_core/stores/project_context_store.py` 구현 + 테스트
+  - `cmis_core/stores/focal_actor_context_store.py` 구현 + 테스트
   - `cmis_core/context_binding.py`가 store 우선 로딩하도록 연결
 
 ### P1-3. OutcomeStore + LearningEngine 연동

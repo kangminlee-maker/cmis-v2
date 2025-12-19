@@ -68,7 +68,7 @@ class ValueEngine:
         graph: InMemoryGraph,
         metric_requests: List[MetricRequest],
         policy_ref: str = "reporting_strict",
-        project_context_id: Optional[str] = None,
+        focal_actor_context_id: Optional[str] = None,
         use_evidence_engine: bool = True
     ) -> Tuple[List[ValueRecord], Dict[str, Any], List[MetricEval]]:
         """Metric 평가 (v3: PolicyEngine 통합)
@@ -77,7 +77,7 @@ class ValueEngine:
             graph: R-Graph
             metric_requests: Metric 요청 목록
             policy_ref: 품질 정책
-            project_context_id: 프로젝트 컨텍스트 (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
             use_evidence_engine: EvidenceEngine 사용 여부 (기본 True)
 
         Returns:
@@ -194,7 +194,7 @@ class ValueEngine:
         value_program = {
             "engine": "ValueEngine_v3",
             "policy_ref": policy_ref,
-            "project_context_id": project_context_id,
+            "focal_actor_context_id": focal_actor_context_id,
             "use_evidence_engine": use_evidence_engine,
             "evidence_metrics": list(evidence_bundles.keys()),
             "created_at": datetime.now(timezone.utc).isoformat(),

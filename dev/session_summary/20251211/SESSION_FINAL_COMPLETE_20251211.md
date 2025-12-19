@@ -69,5 +69,3 @@ LearningEngine:   600 라인
 **다음**: LearningEngine Phase 2
 
 **역대급!** 🎉🚀✨🏆
-
-

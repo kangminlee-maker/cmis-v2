@@ -269,5 +269,3 @@ class TestECOSIntegration:
                 print(f"{stat_type}: {record.value:,.2f} {record.metadata.get('unit', '')}")
             except DataNotFoundError:
                 print(f"{stat_type}: 데이터 없음")
-
-

@@ -67,6 +67,3 @@ def format_json(
         return json.dumps(output, ensure_ascii=False, indent=2, default=str)
     else:
         return json.dumps(output, ensure_ascii=False, default=str)
-
-
-

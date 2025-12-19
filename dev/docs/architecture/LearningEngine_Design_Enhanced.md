@@ -80,7 +80,7 @@ def update_from_outcomes_api(
             "updated_entities": {
                 "pattern_ids": ["PAT-subscription_model"],
                 "metric_ids": ["MET-Revenue", "MET-Churn_rate"],
-                "project_context_ids": ["PRJ-001"],
+                "focal_actor_context_ids": ["PRJ-001"],
                 "belief_updates": 5
             },
             "learning_quality": {
@@ -128,7 +128,7 @@ def update_from_outcomes_api(
         "updated_entities": {
             "pattern_ids": list(updated_pattern_ids),
             "metric_ids": list(updated_metric_ids),
-            "project_context_ids": list(updated_context_ids),
+            "focal_actor_context_ids": list(updated_context_ids),
             "belief_updates": sum(
                 len(r.updates.get("confidence_adjustments", []))
                 for r in learning_results
@@ -386,9 +386,9 @@ class PatternLearner:
 
 ### 6.1 FocalActorContext 버전 업데이트
 
-**project_context_store 스키마**:
+**focal_actor_context_store 스키마**:
 ```yaml
-project_context_store:
+focal_actor_context_store:
   version: int
   previous_version_id: Optional[str]
   lineage: Dict
@@ -401,7 +401,7 @@ class ContextLearner:
 
     def update_baseline_state(
         self,
-        project_context: FocalActorContext,
+        focal_actor_context_id: FocalActorContext,
         outcome: Outcome
     ) -> FocalActorContext:
         """
@@ -427,12 +427,12 @@ class ContextLearner:
         updated_baseline["as_of"] = outcome.as_of
 
         # 새 버전 생성
-        new_version_id = f"{project_context.project_context_id}-v{self._next_version()}"
+        new_version_id = f"{project_context.focal_actor_context_id}-v{self._next_version()}"
 
         updated_context = FocalActorContext(
-            project_context_id=new_version_id,
+            focal_actor_context_id=new_version_id,
             version=project_context.version + 1,  # 버전 증가
-            previous_version_id=project_context.project_context_id,
+            previous_version_id=project_context.focal_actor_context_id,
             scope=project_context.scope,
             assets_profile=project_context.assets_profile,
             baseline_state=updated_baseline,
@@ -786,7 +786,7 @@ def detect_outlier(
 
 **Day 5-6**: Public API
 - update_from_outcomes_api() (updated_entities)
-- update_project_context_from_outcome_api() (버전)
+- update_focal_actor_context_from_outcome_api() (버전)
 
 **Day 7**: 테스트
 - 10개 테스트
@@ -813,9 +813,9 @@ def detect_outlier(
 ### cmis.yaml 정합성
 
 - [x] update_from_outcomes → updated_entities dict
-- [x] update_project_context_from_outcome → version 관리
+- [x] update_focal_actor_context_from_outcome → version 관리
 - [x] outcome_store 스키마 완전 사용
-- [x] project_context_store 버전/lineage
+- [x] focal_actor_context_store 버전/lineage
 
 ### 엔진 연계
 
@@ -837,5 +837,3 @@ def detect_outlier(
 **상태**: 설계 완료 (Enhanced) ✅
 **기반**: 피드백 10개 완전 반영
 **다음**: Phase 1 구현
-
-

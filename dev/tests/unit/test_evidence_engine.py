@@ -351,6 +351,3 @@ def test_stub_source_can_handle():
     )
 
     assert stub.can_handle(request) == True
-
-
-

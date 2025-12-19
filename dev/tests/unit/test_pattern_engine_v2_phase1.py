@@ -550,6 +550,3 @@ class TestIntegration:
         print(f"Matched {len(matches)} patterns")
         for match in matches:
             print(f"  {match.pattern_id}: {match.combined_score:.2f}")
-
-
-

@@ -56,7 +56,7 @@ class GapDiscoverer:
         self,
         graph: InMemoryGraph,
         matched_patterns: List[PatternMatch],
-        project_context_id: Optional[str] = None
+        focal_actor_context_id: Optional[str] = None,
     ) -> List[GapCandidate]:
         """Gap 탐지
 
@@ -69,7 +69,7 @@ class GapDiscoverer:
         Args:
             graph: Reality Graph
             matched_patterns: 이미 매칭된 Pattern 리스트
-            project_context_id: Project Context ID (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
 
         Returns:
             GapCandidate 리스트 (정렬: expected_level → feasibility)
@@ -77,7 +77,7 @@ class GapDiscoverer:
         # 1. Context Archetype 결정
         archetype = determine_context_archetype(
             graph,
-            project_context_id,
+            focal_actor_context_id,
             self.archetype_library
         )
 
@@ -108,7 +108,7 @@ class GapDiscoverer:
                     feasibility, execution_fit = self._evaluate_feasibility(
                         pattern,
                         matched_patterns,
-                        project_context_id
+                        focal_actor_context_id,
                     )
 
                     gap = GapCandidate(
@@ -138,21 +138,21 @@ class GapDiscoverer:
         self,
         pattern: Any,
         matched_patterns: List[PatternMatch],
-        project_context_id: Optional[str]
+        focal_actor_context_id: Optional[str],
     ) -> tuple[str, Optional[float]]:
         """Feasibility 평가
 
         Args:
             pattern: Gap Pattern
             matched_patterns: 이미 매칭된 Pattern 리스트
-            project_context_id: Project Context ID
+            focal_actor_context_id: FocalActorContext ID
 
         Returns:
             (feasibility, execution_fit_score)
             - feasibility: "high" | "medium" | "low" | "unknown"
             - execution_fit_score: 0.0 ~ 1.0 or None
         """
-        if not project_context_id:
+        if not focal_actor_context_id:
             return ("unknown", None)
 
         # Execution Fit 계산 (PatternScorer 재사용)
@@ -161,7 +161,7 @@ class GapDiscoverer:
 
         scorer = PatternScorer()
 
-        focal_context_binding = resolve_focal_actor_context_binding(project_context_id)
+        focal_context_binding = resolve_focal_actor_context_binding(focal_actor_context_id)
         execution_fit = scorer.calculate_execution_fit(pattern, focal_context_binding)
 
         # Feasibility 레벨 결정
@@ -201,6 +201,3 @@ class GapDiscoverer:
         )
 
         return gaps
-
-
-

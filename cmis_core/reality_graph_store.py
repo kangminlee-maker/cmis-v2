@@ -463,6 +463,3 @@ def apply_segment_filter(
     ]
 
     return InMemoryGraph(nodes=filtered_nodes, edges=filtered_edges)
-
-
-

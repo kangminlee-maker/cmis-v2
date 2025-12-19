@@ -576,5 +576,3 @@ def _find_revenue_account(financials):
 **작성**: 2025-12-09
 **상태**: 설계 수정 완료
 **다음**: 즉시 구현
-
-

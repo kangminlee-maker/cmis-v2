@@ -196,7 +196,7 @@ class WorldEngine:
         region: str,
         segment: Optional[str] = None,
         as_of: Optional[str] = None,
-        project_context_id: Optional[str] = None,
+        focal_actor_context_id: Optional[str] = None,
         slice_spec: Optional[Dict[str, Any]] = None
     ) -> RealityGraphSnapshot:
         """R-Graph snapshot 생성 (v2: 필터링 + Brownfield + 캐싱)
@@ -215,7 +215,7 @@ class WorldEngine:
             region: 지역 (예: "KR")
             segment: 세그먼트 (선택)
             as_of: 기준일 (선택, "latest" 가능)
-            project_context_id: 프로젝트 컨텍스트 ID (선택, Brownfield)
+            focal_actor_context_id: FocalActorContext ID (선택, Brownfield)
             slice_spec: 서브그래프 커스터마이즈 (Phase C)
                        {"n_hops": 3, "include_competitors": True}
 
@@ -228,7 +228,7 @@ class WorldEngine:
         # 0. 캐시 확인 (Phase C)
         if self.use_cache and self.cache:
             cache_key = self.cache.get_cache_key(
-                domain_id, region, segment, as_of, project_context_id
+                domain_id, region, segment, as_of, focal_actor_context_id
             )
             cached = self.cache.get(cache_key)
             if cached:
@@ -256,8 +256,8 @@ class WorldEngine:
         filtered_graph = apply_segment_filter(filtered_graph, segment)
 
         # 4. ProjectOverlay 적용 (Brownfield)
-        if project_context_id:
-            overlay = self.overlay_store.get_overlay(project_context_id)
+        if focal_actor_context_id:
+            overlay = self.overlay_store.get_overlay(focal_actor_context_id)
 
             if overlay:
                 # Overlay 결합
@@ -303,7 +303,7 @@ class WorldEngine:
             "region": region,
             "segment": segment,
             "as_of": as_of,
-            "project_context_id": project_context_id,
+            "focal_actor_context_id": focal_actor_context_id,
             "num_actors": len(list(final_graph.nodes_by_type("actor"))),
             "num_money_flows": len(list(final_graph.nodes_by_type("money_flow"))),
             "num_states": len(list(final_graph.nodes_by_type("state"))),

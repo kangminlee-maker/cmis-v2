@@ -313,5 +313,3 @@ JSON만 출력:
                         continue
 
         return items if items else None
-
-

@@ -581,6 +581,3 @@ class TestIntegrationPhaseB:
 
         assert snapshot.graph is not None
         assert len(list(snapshot.graph.nodes_by_type("state"))) >= 3
-
-
-

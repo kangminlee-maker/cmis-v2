@@ -276,5 +276,3 @@ def cmd_config_validate(args):
         print()
 
     print("Overall: PASS" if overall_ok else "Overall: FAIL")
-
-

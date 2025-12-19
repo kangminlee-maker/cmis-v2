@@ -905,7 +905,7 @@ class OrchestrationKernel:
 
         Args:
             query: 사용자 질문
-            context: project_context_id 등
+            context: focal_actor_context_id 등
 
         Returns:
             {
@@ -1161,7 +1161,7 @@ orchestration_kernel:
       - "Prior 사용 시 명시적 DecisionLog + 경고"
 
   greenfield_brownfield:
-    integration: "project_context_id 기반 자동 판단"
+    integration: "focal_actor_context_id 기반 자동 판단"
     greenfield:
       predicate_mode: "greenfield_constraints만 반영"
     brownfield:

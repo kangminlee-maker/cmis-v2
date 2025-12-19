@@ -25,15 +25,15 @@ class ProjectOverlay:
 
     def __init__(
         self,
-        project_context_id: str,
+        focal_actor_context_id: str,
         focal_actor_id: str
     ):
         """
         Args:
-            project_context_id: 프로젝트 컨텍스트 ID
+            focal_actor_context_id: FocalActorContext ID
             focal_actor_id: Focal Actor ID
         """
-        self.project_context_id = project_context_id
+        self.focal_actor_context_id = focal_actor_context_id
         self.focal_actor_id = focal_actor_id
 
         # Overlay 노드/엣지
@@ -61,48 +61,48 @@ class ProjectOverlayStore:
 
     def __init__(self):
         """초기화"""
-        # project_context_id → ProjectOverlay
+        # focal_actor_context_id → ProjectOverlay
         self.overlays: Dict[str, ProjectOverlay] = {}
 
     def create_overlay(
         self,
-        project_context_id: str,
+        focal_actor_context_id: str,
         focal_actor_id: str
     ) -> ProjectOverlay:
         """새로운 Overlay 생성
 
         Args:
-            project_context_id: 프로젝트 컨텍스트 ID
+            focal_actor_context_id: FocalActorContext ID
             focal_actor_id: Focal Actor ID
 
         Returns:
             ProjectOverlay
         """
-        overlay = ProjectOverlay(project_context_id, focal_actor_id)
-        self.overlays[project_context_id] = overlay
+        overlay = ProjectOverlay(focal_actor_context_id, focal_actor_id)
+        self.overlays[focal_actor_context_id] = overlay
         return overlay
 
-    def get_overlay(self, project_context_id: str) -> Optional[ProjectOverlay]:
+    def get_overlay(self, focal_actor_context_id: str) -> Optional[ProjectOverlay]:
         """Overlay 조회
 
         Args:
-            project_context_id: 프로젝트 컨텍스트 ID
+            focal_actor_context_id: FocalActorContext ID
 
         Returns:
             ProjectOverlay 또는 None
         """
-        return self.overlays.get(project_context_id)
+        return self.overlays.get(focal_actor_context_id)
 
-    def has_overlay(self, project_context_id: str) -> bool:
+    def has_overlay(self, focal_actor_context_id: str) -> bool:
         """Overlay 존재 여부
 
         Args:
-            project_context_id: 프로젝트 컨텍스트 ID
+            focal_actor_context_id: FocalActorContext ID
 
         Returns:
             존재 여부
         """
-        return project_context_id in self.overlays
+        return focal_actor_context_id in self.overlays
 
 
 def ingest_focal_actor_context(
@@ -139,7 +139,7 @@ def ingest_focal_actor_context(
             "traits": {},
             "created_at": datetime.now().isoformat(),
             "lineage": {
-                "from_project_context_id": context_id,
+                "from_focal_actor_context_id": context_id,
                 "created_at": datetime.now().isoformat()
             }
         }
@@ -211,7 +211,7 @@ def ingest_focal_actor_context(
                 "as_of": as_of_date,
                 "properties": properties,
                 "lineage": {
-                    "from_project_context_id": context_id,
+                    "from_focal_actor_context_id": context_id,
                     "created_at": datetime.now().isoformat()
                 }
             }
@@ -232,7 +232,7 @@ def ingest_focal_actor_context(
                 "as_of": datetime.now().date().isoformat(),
                 "properties": brand_assets,
                 "lineage": {
-                    "from_project_context_id": context_id
+                    "from_focal_actor_context_id": context_id
                 }
             }
         )
@@ -252,7 +252,7 @@ def ingest_focal_actor_context(
                 "as_of": datetime.now().date().isoformat(),
                 "properties": org_assets,
                 "lineage": {
-                    "from_project_context_id": context_id
+                    "from_focal_actor_context_id": context_id
                 }
             }
         )
@@ -262,7 +262,7 @@ def ingest_focal_actor_context(
     # 6. data_assets → State
     data_assets = assets_profile.get("data_assets", {})
     if data_assets:
-        data_state_id = f"STATE-{project_context_id}-data"
+        data_state_id = f"STATE-{context_id}-data"
         data_state = Node(
             id=data_state_id,
             type="state",
@@ -272,7 +272,7 @@ def ingest_focal_actor_context(
                 "as_of": datetime.now().date().isoformat(),
                 "properties": data_assets,
                 "lineage": {
-                    "from_project_context_id": project_context_id
+                    "from_focal_actor_context_id": context_id
                 }
             }
         )
@@ -415,6 +415,3 @@ def extract_subgraph(
     ]
 
     return InMemoryGraph(nodes=subgraph_nodes, edges=subgraph_edges)
-
-
-

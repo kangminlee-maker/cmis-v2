@@ -197,6 +197,3 @@ def format_markdown(
     lines.append(f"**완성도**: {result.get('completeness', 'unknown')}")
 
     return "\n".join(lines)
-
-
-

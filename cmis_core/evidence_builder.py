@@ -175,5 +175,3 @@ class EvidenceBuilder:
             })
 
         return hints
-
-

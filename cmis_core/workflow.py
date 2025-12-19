@@ -283,7 +283,7 @@ class WorkflowOrchestrator:
                         region=resolved_params.get("region"),
                         segment=resolved_params.get("segment"),
                         as_of=resolved_params.get("as_of"),
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                     )
                     outputs_raw = {"reality_snapshot_ref": snapshot}
                     outputs_json = {
@@ -297,7 +297,7 @@ class WorkflowOrchestrator:
                     graph = getattr(snapshot, "graph", None)
                     matches = self.pattern_engine_v2.match_patterns(
                         graph,
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                     )
                     outputs_raw = {"pattern_match_set_ref": matches, "pattern_matches": matches}
                     outputs_json = {"pattern_matches": self._to_jsonable_dataclass_list(matches)}
@@ -308,7 +308,7 @@ class WorkflowOrchestrator:
                     precomputed = resolved_params.get("precomputed_matches")
                     gaps = self.pattern_engine_v2.discover_gaps(
                         graph,
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                         precomputed_matches=precomputed,
                     )
                     outputs_raw = {"gap_set_ref": gaps, "gap_candidates": gaps}
@@ -326,14 +326,14 @@ class WorkflowOrchestrator:
                         domain_id = coerced_inputs.get("domain_id")
                         region = coerced_inputs.get("region")
                         segment = coerced_inputs.get("segment")
-                        project_context_id = resolved_params.get("project_context_id") or coerced_inputs.get("project_context_id")
+                        focal_actor_context_id = resolved_params.get("focal_actor_context_id") or coerced_inputs.get("focal_actor_context_id")
                         if domain_id and region:
                             auto_snapshot = self.world_engine.snapshot(
                                 domain_id=domain_id,
                                 region=region,
                                 segment=segment,
                                 as_of="latest",
-                                project_context_id=project_context_id,
+                                focal_actor_context_id=focal_actor_context_id,
                             )
                             graph = getattr(auto_snapshot, "graph", None)
                             auto_snapshot_json = {"meta": dict(getattr(auto_snapshot, "meta", {}) or {})}
@@ -352,7 +352,7 @@ class WorkflowOrchestrator:
                         graph,
                         mreqs,
                         policy_ref=policy_ref,
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                     )
                     outputs_raw = {
                         "value_bundle_ref": value_records,
@@ -377,7 +377,7 @@ class WorkflowOrchestrator:
                     strategy_set_ref = se.search_strategies_api(
                         goal_id=str(resolved_params.get("goal_id") or ""),
                         constraints=constraints,
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                     )
                     node = se.d_graph.get_node(strategy_set_ref)
                     strategy_ids = []
@@ -406,7 +406,7 @@ class WorkflowOrchestrator:
                     portfolio_eval_ref = se.evaluate_portfolio_api(
                         strategy_ids=[str(x) for x in ids],
                         policy_ref=str(resolved_params.get("policy_ref") or policy_mode),
-                        project_context_id=resolved_params.get("project_context_id"),
+                        focal_actor_context_id=resolved_params.get("focal_actor_context_id"),
                     )
                     outputs_raw = {"portfolio_eval_ref": portfolio_eval_ref}
                     outputs_json = {"portfolio_eval_ref": portfolio_eval_ref}
@@ -506,7 +506,7 @@ class WorkflowOrchestrator:
             region=input_data.region,
             segment=input_data.segment,
             as_of=input_data.as_of,
-            project_context_id=input_data.project_context_id
+            focal_actor_context_id=input_data.focal_actor_context_id,
         )
 
         # Graph overview 생성
@@ -524,7 +524,7 @@ class WorkflowOrchestrator:
         print(f"[2/3] Matching patterns...")
         pattern_matches = self.pattern_engine.match_patterns(
             snapshot.graph,
-            project_context_id=input_data.project_context_id
+            focal_actor_context_id=input_data.focal_actor_context_id,
         )
 
         print(f"   ✓ {len(pattern_matches)} patterns matched")
@@ -543,7 +543,7 @@ class WorkflowOrchestrator:
             snapshot.graph,
             metric_requests,
             policy_ref="reporting_strict",
-            project_context_id=input_data.project_context_id
+            focal_actor_context_id=input_data.focal_actor_context_id,
         )
 
         print(f"   ✓ {len(value_records)} metrics calculated")
@@ -557,7 +557,7 @@ class WorkflowOrchestrator:
                 "region": input_data.region,
                 "segment": input_data.segment,
                 "as_of": input_data.as_of or snapshot.meta.get("as_of"),
-                "project_context_id": input_data.project_context_id,
+                "focal_actor_context_id": input_data.focal_actor_context_id,
             },
             graph_overview=graph_overview,
             pattern_matches=pattern_matches,
@@ -574,7 +574,7 @@ class WorkflowOrchestrator:
         domain_id: str,
         region: str,
         segment: Optional[str] = None,
-        project_context_id: Optional[str] = None,
+        focal_actor_context_id: Optional[str] = None,
         top_n: int = 5,
         min_feasibility: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -591,7 +591,7 @@ class WorkflowOrchestrator:
             domain_id: 도메인 ID
             region: 지역
             segment: 세그먼트 (선택)
-            project_context_id: 프로젝트 컨텍스트 (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
             top_n: 상위 N개 기회
             min_feasibility: 최소 feasibility (high|medium|low)
 
@@ -607,7 +607,7 @@ class WorkflowOrchestrator:
             region=region,
             segment=segment,
             as_of="latest",
-            project_context_id=project_context_id
+            focal_actor_context_id=focal_actor_context_id,
         )
 
         print(f"   ✓ {snapshot.meta['num_actors']} actors loaded")
@@ -616,7 +616,7 @@ class WorkflowOrchestrator:
         print(f"[2/4] Matching patterns...")
         pattern_matches = self.pattern_engine_v2.match_patterns(
             snapshot.graph,
-            project_context_id=project_context_id
+            focal_actor_context_id=focal_actor_context_id,
         )
 
         print(f"   ✓ {len(pattern_matches)} patterns matched")
@@ -625,7 +625,7 @@ class WorkflowOrchestrator:
         print(f"[3/4] Discovering gaps...")
         gaps = self.pattern_engine_v2.discover_gaps(
             snapshot.graph,
-            project_context_id=project_context_id,
+            focal_actor_context_id=focal_actor_context_id,
             precomputed_matches=pattern_matches
         )
 
@@ -682,7 +682,7 @@ class WorkflowOrchestrator:
                 "domain_id": domain_id,
                 "region": region,
                 "segment": segment,
-                "project_context_id": project_context_id,
+                "focal_actor_context_id": focal_actor_context_id,
                 "execution_time": execution_time
             },
             "matched_patterns": pattern_matches,
@@ -777,7 +777,7 @@ class WorkflowOrchestrator:
             region=inputs.get("region"),
             segment=inputs.get("segment"),
             as_of=inputs.get("as_of"),
-            project_context_id=inputs.get("project_context_id")
+            focal_actor_context_id=inputs.get("focal_actor_context_id"),
         )
 
         result = self.run_structure_analysis(input_data)
@@ -801,7 +801,7 @@ class WorkflowOrchestrator:
             domain_id=inputs.get("domain_id"),
             region=inputs.get("region"),
             segment=inputs.get("segment"),
-            project_context_id=inputs.get("project_context_id"),
+            focal_actor_context_id=inputs.get("focal_actor_context_id"),
             top_n=inputs.get("top_n", 5),
             min_feasibility=inputs.get("min_feasibility")
         )
@@ -843,7 +843,7 @@ def run_structure_analysis(
     region: str,
     segment: Optional[str] = None,
     as_of: Optional[str] = None,
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None,
 ) -> StructureAnalysisResult:
     """structure_analysis 실행 편의 함수
 
@@ -852,7 +852,7 @@ def run_structure_analysis(
         region: 지역
         segment: 세그먼트 (선택)
         as_of: 기준일 (선택)
-        project_context_id: 프로젝트 컨텍스트 (선택)
+        focal_actor_context_id: FocalActorContext ID (선택)
 
     Returns:
         StructureAnalysisResult
@@ -862,7 +862,7 @@ def run_structure_analysis(
         region=region,
         segment=segment,
         as_of=as_of,
-        project_context_id=project_context_id
+        focal_actor_context_id=focal_actor_context_id,
     )
 
     orchestrator = WorkflowOrchestrator()

@@ -516,5 +516,3 @@ print(f"GDP: {record.value:,.1f} {record.metadata['unit']}")
 **작성**: 2025-12-10
 **검증**: GDP, CPI, 금리 (14개 테스트 통과)
 **형식**: JSON (권장)
-
-

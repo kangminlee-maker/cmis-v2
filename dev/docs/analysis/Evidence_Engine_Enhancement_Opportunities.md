@@ -669,5 +669,3 @@ def fetch_incremental(
 **작성**: 2025-12-10
 **결론**: 즉시 보강 가능한 4가지 영역 확인
 **다음**: fetch_for_reality_slice 구현 권장
-
-

@@ -461,5 +461,3 @@ gdf = gpd.read_file("regions.geojson")
 
 **작성**: 2025-12-10
 **결론**: REST + JSON이 최적, CSV/XLSX가 차선책
-
-

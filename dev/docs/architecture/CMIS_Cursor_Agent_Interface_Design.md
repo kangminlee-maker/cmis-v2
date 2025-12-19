@@ -221,7 +221,7 @@ class CursorAgentInterface:
 
         Args:
             query: 사용자 질문
-            context: 컨텍스트 (project_context_id 등)
+            context: 컨텍스트 (focal_actor_context_id 등)
             role_id: Role 오버라이드
             policy_mode: Policy 오버라이드
 
@@ -688,7 +688,7 @@ interface = CursorAgentInterface()
 # Query 실행
 result = interface.execute(
     query="한국 어학 시장 TAM/SAM 파악",
-    context={"project_context_id": "PRJ-001"}
+    context={"focal_actor_context_id": "PRJ-001"}
 )
 
 # 결과 출력
@@ -704,7 +704,7 @@ print(f"Next Steps: {result['next_steps']}")
 ```python
 result = interface.execute(
     query="한국 어학 시장에서 기회 발굴",
-    context={"project_context_id": "PRJ-001"},
+    context={"focal_actor_context_id": "PRJ-001"},
     role_id="opportunity_designer",
     policy_mode="exploration_friendly"
 )

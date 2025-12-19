@@ -164,5 +164,3 @@ def is_evidence_fresh(
 
     except Exception:
         return True  # 파싱 실패 시 허용
-
-

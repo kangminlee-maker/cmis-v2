@@ -126,7 +126,7 @@ class TaskExecutor:
             wf_id = str(task.inputs.get("workflow_id"))
             inputs = dict(task.inputs.get("inputs") or {})
             # run_context 기본값을 inputs에 보강 (explicit input 우선)
-            for k in ["domain_id", "region", "segment", "as_of", "project_context_id", "goal_id", "constraints"]:
+            for k in ["domain_id", "region", "segment", "as_of", "focal_actor_context_id", "goal_id", "constraints"]:
                 if k not in inputs and k in run_context:
                     inputs[k] = run_context[k]
 
@@ -193,7 +193,7 @@ class TaskExecutor:
                 snapshot.graph,
                 [metric_req],
                 policy_ref=policy_id,
-                project_context_id=run_context.get("project_context_id"),
+                focal_actor_context_id=run_context.get("focal_actor_context_id"),
                 use_evidence_engine=True,
             )
 
@@ -238,14 +238,14 @@ class TaskExecutor:
 
         segment = run_context.get("segment")
         as_of = run_context.get("as_of") or "latest"
-        project_context_id = run_context.get("project_context_id")
+        focal_actor_context_id = run_context.get("focal_actor_context_id")
 
         return self.world_engine.snapshot(
             domain_id=str(domain_id),
             region=str(region),
             segment=(None if segment is None else str(segment)),
             as_of=str(as_of),
-            project_context_id=(None if project_context_id is None else str(project_context_id)),
+            focal_actor_context_id=(None if focal_actor_context_id is None else str(focal_actor_context_id)),
         )
 
     def _tool_safety(self, tool_id: str) -> Optional[str]:

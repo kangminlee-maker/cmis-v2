@@ -272,6 +272,3 @@ def test_can_handle_reality_slice():
     )
 
     assert source.can_handle(request) == False
-
-
-

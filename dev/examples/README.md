@@ -82,5 +82,3 @@ patterns = pattern_engine.match_patterns(snapshot.graph)
 
 **작성**: 2025-12-11
 **용도**: 테스트, 데모, 예시
-
-

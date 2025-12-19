@@ -118,7 +118,7 @@ cmis:
       strategy: "STR-"
       scenario: "SCN-"
       action: "ACTN-"
-      project_context: "PRJ-"
+      focal_actor_context: "PRJ-"
       outcome: "OUT-"
       ledger: "LDG-"
       run: "RUN-"
@@ -258,7 +258,7 @@ cmis:
         value_store:
           purpose: "ValueRecord(VAL-*) 영속화"
           backend: "sqlite"
-        project_context_store:
+        focal_actor_context_store:
           purpose: "FocalActorContext(PRJ-*) 버전 관리"
           backend: "sqlite"
         outcome_store:
@@ -350,9 +350,9 @@ cmis:
         world_engine:
           description: "Evidence → Reality Graph 정규화 및 스냅샷/오버레이 제공"
           api:
-            - name: "ingest_project_context"
+            - name: "ingest_focal_actor_context"
               input:
-                project_context_id: "project_context_id"
+                focal_actor_context_id: "focal_actor_context_id"
               output:
                 focal_actor_id: "actor_id"
             - name: "ingest_evidence"
@@ -367,7 +367,7 @@ cmis:
                 region: "region"
                 segment: "segment (optional)"
                 as_of: "date_or_latest"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
                 policy_ref: "policy_ref"
               output:
                 reality_snapshot_ref: "reality_snapshot_ref"
@@ -378,13 +378,13 @@ cmis:
             - name: "match_patterns"
               input:
                 reality_snapshot_ref: "reality_snapshot_ref"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
               output:
                 pattern_match_set_ref: "pattern_match_set_ref"
             - name: "discover_gaps"
               input:
                 reality_snapshot_ref: "reality_snapshot_ref"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
               output:
                 gap_set_ref: "gap_set_ref"
 
@@ -412,14 +412,14 @@ cmis:
               input:
                 metric_requests_ref: "metric_request_set_ref"
                 policy_ref: "policy_ref"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
               output:
                 value_bundle_ref: "value_bundle_ref"
             - name: "simulate_scenario"
               input:
                 scenario_id: "scenario_id"
                 policy_ref: "policy_ref"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
               output:
                 value_bundle_ref: "value_bundle_ref"
 
@@ -429,7 +429,7 @@ cmis:
             - name: "search_strategies"
               input:
                 goal_id: "goal_id"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
                 greenfield_constraints_ref: "greenfield_constraints_ref (optional)"
                 policy_ref: "policy_ref"
               output:
@@ -439,7 +439,7 @@ cmis:
                 strategy_ids: "list[strategy_id]"
                 goal_id: "goal_id"
                 policy_ref: "policy_ref"
-                project_context_id: "project_context_id (optional)"
+                focal_actor_context_id: "focal_actor_context_id (optional)"
               output:
                 portfolio_eval_ref: "portfolio_eval_ref"
 
@@ -451,12 +451,12 @@ cmis:
                 outcome_ids: "list[outcome_id]"
               output:
                 updated_entities_ref: "updated_entities_ref"
-            - name: "update_project_context_from_outcome"
+            - name: "update_focal_actor_context_from_outcome"
               input:
                 outcome_id: "outcome_id"
-                project_context_id: "project_context_id"
+                focal_actor_context_id: "focal_actor_context_id"
               output:
-                new_project_context_id: "project_context_id"
+                new_focal_actor_context_id: "focal_actor_context_id"
 
         belief_engine:
           description: "Prior/신념(분포) 관리(증거 약할 때 보조 신호)"

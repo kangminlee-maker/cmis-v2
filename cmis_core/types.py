@@ -162,9 +162,10 @@ class FocalActorContext:
       자산/제약/선호/기준상태를 포함하는 '컨텍스트 레코드(PRJ-*)'입니다.
 
     NOTE:
-    - 실제 구현은 cmis.yaml의 project_context_store(추후 focal_actor_context_store로 개명 가능) 스키마를 참조합니다.
+    - cmis.yaml의 store key는 `focal_actor_context_store`이며,
+      구현체는 `FocalActorContextStore`(cmis_core/stores/focal_actor_context_store.py)입니다.
     """
-    project_context_id: str
+    focal_actor_context_id: str
 
     # Version (Learning Phase 2)
     version: int = 1
@@ -314,7 +315,7 @@ class StructureAnalysisInput:
     region: str
     segment: Optional[str] = None
     as_of: Optional[str] = None
-    project_context_id: Optional[str] = None  # Brownfield 모드 시
+    focal_actor_context_id: Optional[str] = None  # Brownfield 모드 시
 
 
 @dataclass
@@ -387,7 +388,7 @@ class SourceTier(Enum):
     Tier 우선순위 (상위 tier일수록 신뢰도 높음):
     1. official: 공식 통계/공시 (DART, KOSIS, Gov Stats)
     2. curated_internal: 내부 검증 데이터
-    3. commercial: 상용 리서치 (Market Research, Consulting, Brokerage)
+    3. commercial: web_search 기반 공개 자료 (컨설팅/증권사 리포트 등 포함 가능)
 
     주의: structured_estimation, llm_baseline은 ValueEngine.prior_estimation에서 처리
     """
@@ -790,7 +791,7 @@ class Goal:
     # [{"metric_id": "MET-Revenue", "operator": ">", "value": 10000000000, "horizon": "3y"}]
 
     target_horizon: str = "3y"
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None
     scope: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -829,7 +830,7 @@ class PortfolioEvaluation:
     resource_requirements: Dict[str, Any] = field(default_factory=dict)
 
     policy_ref: str = "decision_balanced"
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None
     lineage: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -848,7 +849,7 @@ class Outcome:
     # 연결
     related_strategy_id: Optional[str] = None
     related_scenario_id: Optional[str] = None
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None
 
     # 실제 측정 시점
     as_of: str = ""

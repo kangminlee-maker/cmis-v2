@@ -108,7 +108,7 @@ class TestWorkflowOrchestrator:
                     "scope": {"domain_id": "Adult_Language_Education_KR", "region": "KR"},
                     "horizon": "3y",
                 },
-                "project_context_id": None,
+                "focal_actor_context_id": None,
             },
         )
 
@@ -275,6 +275,3 @@ class TestIntegrationCLI:
         # 성공 확인
         assert result.returncode == 0
         assert "opportunity_discovery 완료" in result.stdout or "Opportunity Discovery" in result.stdout
-
-
-

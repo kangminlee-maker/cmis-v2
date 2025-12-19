@@ -624,6 +624,3 @@ snapshot = world_engine.snapshot("My_Market", "KR", project_context_id="PRJ-001"
 **다음**: Phase C 또는 StrategyEngine
 
 **World Engine v2.0 (Phase A+B) 완성!**
-
-
-

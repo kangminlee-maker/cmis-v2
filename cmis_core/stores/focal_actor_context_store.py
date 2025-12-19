@@ -1,6 +1,6 @@
-"""ProjectContextStore (SQLite).
+"""FocalActorContextStore (SQLite).
 
-cmis.yaml의 store 명칭은 `project_context_store`이지만, 실제 레코드는
+cmis.yaml의 store key는 `focal_actor_context_store`이며,
 `FocalActorContext`(PRJ-*)를 저장합니다.
 
 Phase 1 목표:
@@ -26,15 +26,15 @@ from cmis_core.stores.sqlite_base import StoragePaths, connect_sqlite
 from cmis_core.types import FocalActorContext
 
 
-def _split_context_id(project_context_id: str) -> Tuple[str, Optional[int]]:
-    """project_context_id에서 base id와 버전을 추출합니다.
+def _split_context_id(focal_actor_context_id: str) -> Tuple[str, Optional[int]]:
+    """focal_actor_context_id에서 base id와 버전을 추출합니다.
 
     예:
     - "PRJ-abc" → ("PRJ-abc", None)
     - "PRJ-abc-v2" → ("PRJ-abc", 2)
     """
 
-    pid = str(project_context_id or "").strip()
+    pid = str(focal_actor_context_id or "").strip()
     if not pid:
         return "", None
 
@@ -53,7 +53,7 @@ def _split_context_id(project_context_id: str) -> Tuple[str, Optional[int]]:
     return base, ver
 
 
-class ProjectContextStore:
+class FocalActorContextStore:
     """FocalActorContext(PRJ-*) 버전 관리 스토어."""
 
     def __init__(self, *, project_root: Optional[Path] = None, db_path: Optional[Path] = None) -> None:
@@ -83,8 +83,8 @@ class ProjectContextStore:
     def save(self, record: FocalActorContext) -> None:
         """컨텍스트 레코드를 저장(UPSERT)합니다."""
 
-        base_id, parsed_version = _split_context_id(record.project_context_id)
-        context_id = base_id or record.project_context_id
+        base_id, parsed_version = _split_context_id(record.focal_actor_context_id)
+        context_id = base_id or record.focal_actor_context_id
         version = int(getattr(record, "version", 1) or 1)
         if parsed_version is not None:
             version = int(parsed_version)
@@ -101,7 +101,7 @@ class ProjectContextStore:
             (
                 context_id,
                 version,
-                str(record.project_context_id),
+                            str(record.focal_actor_context_id),
                 created_at,
                 record.previous_version_id,
                 record.focal_actor_id,
@@ -110,11 +110,11 @@ class ProjectContextStore:
         )
         self.conn.commit()
 
-    def get_latest(self, project_context_id: str) -> Optional[FocalActorContext]:
+    def get_latest(self, focal_actor_context_id: str) -> Optional[FocalActorContext]:
         """base id 기준 최신 버전을 조회합니다."""
 
-        base_id, _ = _split_context_id(project_context_id)
-        context_id = base_id or str(project_context_id)
+        base_id, _ = _split_context_id(focal_actor_context_id)
+        context_id = base_id or str(focal_actor_context_id)
 
         cur = self.conn.execute(
             """
@@ -132,11 +132,11 @@ class ProjectContextStore:
 
         return self._parse_record_json(row[0])
 
-    def get_by_version(self, project_context_id: str, version: int) -> Optional[FocalActorContext]:
+    def get_by_version(self, focal_actor_context_id: str, version: int) -> Optional[FocalActorContext]:
         """base id + version으로 특정 버전을 조회합니다."""
 
-        base_id, _ = _split_context_id(project_context_id)
-        context_id = base_id or str(project_context_id)
+        base_id, _ = _split_context_id(focal_actor_context_id)
+        context_id = base_id or str(focal_actor_context_id)
 
         cur = self.conn.execute(
             """
@@ -152,11 +152,11 @@ class ProjectContextStore:
 
         return self._parse_record_json(row[0])
 
-    def list_versions(self, project_context_id: str) -> List[int]:
+    def list_versions(self, focal_actor_context_id: str) -> List[int]:
         """base id의 저장된 버전 목록을 반환합니다."""
 
-        base_id, _ = _split_context_id(project_context_id)
-        context_id = base_id or str(project_context_id)
+        base_id, _ = _split_context_id(focal_actor_context_id)
+        context_id = base_id or str(focal_actor_context_id)
 
         cur = self.conn.execute(
             """
@@ -174,6 +174,11 @@ class ProjectContextStore:
         data: Dict[str, Any] = json.loads(record_json or "{}")
         if not isinstance(data, dict):
             data = {}
+        # legacy key migration (best-effort): project_context_id -> focal_actor_context_id
+        if "project_context_id" in data:
+            if "focal_actor_context_id" not in data:
+                data["focal_actor_context_id"] = data.get("project_context_id")
+            data.pop("project_context_id", None)
         return FocalActorContext(**data)
 
     def close(self) -> None:

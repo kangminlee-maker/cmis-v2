@@ -319,15 +319,15 @@ class TestE2EBrownfield:
             {"traits": {"revenue_model": "subscription", "payment_recurs": True}}
         )
 
-        project_context_id = "PRJ-brownfield-test"
+        focal_actor_context_id = "PRJ-brownfield-test"
 
         # Pattern Matching (Brownfield: with Project Context)
-        matches = engine.match_patterns(graph, project_context_id)
+        matches = engine.match_patterns(graph, focal_actor_context_id)
 
         # Gap Discovery
         gaps = engine.discover_gaps(
             graph,
-            project_context_id,
+            focal_actor_context_id,
             precomputed_matches=matches
         )
 
@@ -342,6 +342,3 @@ class TestE2EBrownfield:
         print(f"Brownfield Analysis:")
         print(f"  Patterns: {len(matches)}")
         print(f"  Gaps: {len(gaps)}")
-
-
-

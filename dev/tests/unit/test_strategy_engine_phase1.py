@@ -122,7 +122,7 @@ class TestStrategyEvaluator:
         )
 
         project_context = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={},
             assets_profile={
                 "capability_traits": [
@@ -222,7 +222,7 @@ class TestStrategyEngine:
             reality_snapshot=snapshot,
             pattern_matches=matches,
             gaps=gaps,
-            project_context=None,
+            focal_actor_context=None,
             greenfield_constraints=constraints
         )
 
@@ -241,7 +241,7 @@ class TestStrategyEngine:
 
         # FocalActorContext
         project_context = FocalActorContext(
-            project_context_id="PRJ-test",
+            focal_actor_context_id="PRJ-test",
             scope={"domain_id": "Adult_Language_Education_KR", "region": "KR"},
             assets_profile={
                 "capability_traits": [{"technology_domain": "platform_tech"}]
@@ -262,14 +262,14 @@ class TestStrategyEngine:
             goal_id="GOAL-brownfield",
             name="Brownfield 테스트",
             scope={"domain_id": "Adult_Language_Education_KR", "region": "KR"},
-            project_context_id="PRJ-test"
+            focal_actor_context_id="PRJ-test",
         )
 
         # Snapshot (Brownfield)
         engine.world_engine.ingest_focal_actor_context(project_context)
         snapshot = engine.world_engine.snapshot(
             "Adult_Language_Education_KR", "KR",
-            project_context_id="PRJ-test"
+            focal_actor_context_id="PRJ-test",
         )
 
         matches = engine.pattern_engine.match_patterns(snapshot.graph, "PRJ-test")
@@ -281,7 +281,7 @@ class TestStrategyEngine:
             reality_snapshot=snapshot,
             pattern_matches=matches,
             gaps=gaps,
-            project_context=project_context
+            focal_actor_context=project_context
         )
 
         assert len(strategies) > 0
@@ -304,5 +304,3 @@ class TestStrategyEngine:
         )
 
         assert strategy_set_ref.startswith("STSET-")
-
-

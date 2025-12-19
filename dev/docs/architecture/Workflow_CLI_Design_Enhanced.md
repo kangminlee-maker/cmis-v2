@@ -235,7 +235,7 @@ cmis structure-analysis \
   --region KR \
   [--segment office_worker] \
   [--as-of 2025-12-05] \
-  [--project-context PRJ-001] \
+  [--focal-actor-context-id PRJ-001] \
   [--role structure_analyst] \
   [--policy reporting_strict] \
   [--output report.json] \
@@ -257,7 +257,7 @@ def cmd_structure_analysis(args):
             "region": args.region,
             "segment": args.segment,
             "as_of": args.as_of,
-            "project_context_id": args.project_context
+            "focal_actor_context_id": args.project_context
         },
         role_id=args.role or "structure_analyst",
         policy_mode=args.policy or "reporting_strict"
@@ -273,7 +273,7 @@ def cmd_structure_analysis(args):
 cmis opportunity-discovery \
   --domain Adult_Language_Education_KR \
   --region KR \
-  [--project-context PRJ-001] \
+  [--focal-actor-context-id PRJ-001] \
   [--role opportunity_designer] \
   [--policy exploration_friendly] \
   [--top-n 5] \
@@ -306,7 +306,7 @@ opportunity_discovery:
 ```bash
 cmis compare-contexts \
   --context1 "domain:Adult_Language_Education_KR,region:KR" \
-  --context2 "domain:Adult_Language_Education_KR,region:KR,project_context:PRJ-001" \
+  --context2 "domain:Adult_Language_Education_KR,region:KR,focal_actor_context_id:PRJ-001" \
   [--output comparison.json] \
   [--format table|json|markdown]
 ```
@@ -1228,6 +1228,3 @@ cmis workflow run education_kr.custom_analysis --input ...
 **다음**: Phase 1 구현 착수
 
 **Workflow CLI v1.1 설계 완성!**
-
-
-

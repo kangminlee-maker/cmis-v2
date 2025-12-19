@@ -123,5 +123,3 @@ class PatternLearner:
         current_benchmark["last_updated"] = datetime.now().isoformat()
 
         return current_benchmark
-
-

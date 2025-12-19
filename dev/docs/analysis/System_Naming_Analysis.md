@@ -295,6 +295,3 @@ UMIS v9 - Contextual Market Intelligence
 - 안정성 중시: **UMIS** (현재 유지)
 
 **작성일**: 2025-12-05
-
-
-

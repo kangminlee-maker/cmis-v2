@@ -17,7 +17,7 @@
 1. **API 레벨 분리** - 공식 API vs 내부 Core 함수
 2. **D-Graph 중심 설계** - decision_graph가 진실의 원천
 3. **ValueEngine ROI 연동** - ValueEngine이 ROI 계산 담당
-4. **Constraints 스키마 정렬** - project_context_store 일치
+4. **Constraints 스키마 정렬** - focal_actor_context_store 일치
 5. **PolicyEngine 통합** - policy_ref 인자 및 모드 반영
 6. **Preference Profile 정렬** - cmis.yaml 스키마 사용
 
@@ -71,7 +71,7 @@ strategy_engine:
       input:
         goal_id: "goal_id"
         constraints: "dict"
-        project_context_id: "project_context_id (optional)"
+        focal_actor_context_id: "focal_actor_context_id (optional)"
       output:
         strategy_set_ref: "strategy_set"
 ```
@@ -101,7 +101,7 @@ class StrategyEngine:
         self,
         goal_id: str,
         constraints: Dict[str, Any],
-        project_context_id: Optional[str] = None
+        focal_actor_context_id: Optional[str] = None
     ) -> str:
         """
         Public API (cmis.yaml 대응)
@@ -117,7 +117,7 @@ class StrategyEngine:
         Args:
             goal_id: Goal ID (D-Graph에서 조회)
             constraints: 추가 제약 (Greenfield에서 사용)
-            project_context_id: FocalActorContext ID (Brownfield)
+            focal_actor_context_id: FocalActorContext ID (Brownfield)
 
         Returns:
             strategy_set_ref: "STSET-{timestamp}"
@@ -127,8 +127,8 @@ class StrategyEngine:
 
         # 2. FocalActorContext 로딩 (있으면)
         project_context = None
-        if project_context_id:
-            project_context = self._load_project_context(project_context_id)
+        if focal_actor_context_id:
+            project_context = self._load_project_context(focal_actor_context_id)
 
         # 3. World/Pattern Engine 호출
         # Goal의 scope에서 domain_id, region 추출
@@ -137,17 +137,17 @@ class StrategyEngine:
         snapshot = self.world_engine.snapshot(
             domain_id=scope["domain_id"],
             region=scope["region"],
-            project_context_id=project_context_id
+            focal_actor_context_id=focal_actor_context_id
         )
 
         matches = self.pattern_engine_v2.match_patterns(
             snapshot.graph,
-            project_context_id=project_context_id
+            focal_actor_context_id=focal_actor_context_id
         )
 
         gaps = self.pattern_engine_v2.discover_gaps(
             snapshot.graph,
-            project_context_id=project_context_id,
+            focal_actor_context_id=focal_actor_context_id,
             precomputed_matches=matches
         )
 
@@ -167,7 +167,7 @@ class StrategyEngine:
         strategy_set_ref = self._save_strategies_to_d_graph(
             strategies,
             goal_id,
-            project_context_id
+            focal_actor_context_id
         )
 
         return strategy_set_ref
@@ -185,7 +185,7 @@ strategy_engine:
       input:
         strategy_ids: "list[strategy_id]"
         policy_ref: "policy_ref"
-        project_context_id: "project_context_id (optional)"
+        focal_actor_context_id: "focal_actor_context_id (optional)"
       output:
         portfolio_eval_ref: "portfolio_evaluation"
 ```
@@ -196,7 +196,7 @@ def evaluate_portfolio_api(
     self,
     strategy_ids: List[str],
     policy_ref: str = "decision_balanced",
-    project_context_id: Optional[str] = None
+    focal_actor_context_id: Optional[str] = None
 ) -> str:
     """
     Public API (cmis.yaml 대응)
@@ -212,7 +212,7 @@ def evaluate_portfolio_api(
     Args:
         strategy_ids: Strategy ID 리스트
         policy_ref: Policy mode
-        project_context_id: FocalActorContext ID
+        focal_actor_context_id: FocalActorContext ID
 
     Returns:
         portfolio_eval_ref: "PEVAL-{timestamp}"
@@ -225,8 +225,8 @@ def evaluate_portfolio_api(
 
     # 2. FocalActorContext 로딩
     project_context = None
-    if project_context_id:
-        project_context = self._load_project_context(project_context_id)
+    if focal_actor_context_id:
+        project_context = self._load_project_context(focal_actor_context_id)
 
     # 3. Policy 해석
     policy_params = self._resolve_policy(policy_ref)
@@ -242,7 +242,7 @@ def evaluate_portfolio_api(
     portfolio_eval_ref = self._save_portfolio_eval_to_d_graph(
         portfolio_eval,
         strategy_ids,
-        project_context_id
+        focal_actor_context_id
     )
 
     return portfolio_eval_ref
@@ -261,7 +261,7 @@ def search_strategies_core(
     reality_snapshot: RealityGraphSnapshot,
     pattern_matches: List[PatternMatch],
     gaps: List[GapCandidate],
-    project_context: Optional[FocalActorContext] = None,
+    focal_actor_context_id: Optional[FocalActorContext] = None,
     greenfield_constraints: Optional[Dict[str, Any]] = None
 ) -> List[Strategy]:
     """
@@ -278,7 +278,7 @@ def search_strategies_core(
     )
 
     # 2. Constraint 필터링
-    if project_context:
+    if focal_actor_context_id:
         # Brownfield
         strategies = self._filter_by_brownfield_constraints(
             strategies,
@@ -294,7 +294,7 @@ def search_strategies_core(
     # 3. StrategyEvaluator로 평가
     for strategy in strategies:
         # Execution Fit
-        if project_context:
+        if focal_actor_context_id:
             strategy.execution_fit_score = self.evaluator.calculate_execution_fit(
                 strategy,
                 project_context
@@ -325,7 +325,7 @@ def search_strategies_core(
             )
 
     # 5. 정렬
-    if project_context:
+    if focal_actor_context_id:
         # Brownfield: Execution Fit × adjusted_score
         strategies.sort(
             key=lambda s: (s.execution_fit_score or 0) * (s.adjusted_score or s.execution_fit_score or 0),
@@ -515,11 +515,11 @@ class StrategyEvaluator:
 
 ## 6. Constraints 스키마 정렬
 
-### 6.1 project_context_store 기준
+### 6.1 focal_actor_context_store 기준
 
 **cmis.yaml 스키마**:
 ```yaml
-project_context_store:
+focal_actor_context_store:
   constraints_profile:
     hard_constraints:
       - type: "financial|temporal|regulatory|organizational|technical"
@@ -540,7 +540,7 @@ def _filter_by_brownfield_constraints(
     constraints_profile: Dict
 ) -> List[Strategy]:
     """
-    project_context_store 스키마 기준 필터링
+    focal_actor_context_store 스키마 기준 필터링
     """
     filtered = []
     hard_constraints = constraints_profile.get("hard_constraints", [])
@@ -593,7 +593,7 @@ greenfield_constraints = {
 }
 ```
 
-**project_context_store 형식으로 변환** (내부):
+**focal_actor_context_store 형식으로 변환** (내부):
 ```python
 def _normalize_greenfield_constraints(constraints: Dict) -> Dict:
     """
@@ -678,7 +678,7 @@ def _resolve_policy(self, policy_ref: str) -> Dict[str, Any]:
 def evaluate_portfolio_core(
     self,
     strategies: List[Strategy],
-    project_context: Optional[FocalActorContext],
+    focal_actor_context_id: Optional[FocalActorContext],
     policy_params: Dict[str, Any]
 ) -> PortfolioEvaluation:
     """
@@ -704,7 +704,7 @@ def evaluate_portfolio_core(
 
 ## 8. Preference Profile 정렬
 
-### 8.1 project_context_store 스키마 사용
+### 8.1 focal_actor_context_store 스키마 사용
 
 **cmis.yaml**:
 ```yaml
@@ -727,7 +727,7 @@ def _adjust_by_preferences(
     preference_profile: Dict
 ) -> float:
     """
-    project_context_store 스키마 기준
+    focal_actor_context_store 스키마 기준
     """
     score = strategy.execution_fit_score or 0.5
 
@@ -784,7 +784,7 @@ def search_strategies_api(
     self,
     goal_id: str,
     constraints: Dict,
-    project_context_id: Optional[str] = None,
+    focal_actor_context_id: Optional[str] = None,
     mode: str = "decide"  # "explore" | "decide"
 ) -> str:
     """
@@ -811,7 +811,7 @@ def search_strategies_api(
 - [x] search_strategies API 시그니처 일치
 - [x] evaluate_portfolio API 시그니처 일치
 - [x] D-Graph 스키마 사용
-- [x] project_context_store 스키마 사용
+- [x] focal_actor_context_store 스키마 사용
 - [x] canonical_workflows 호환
 
 ### 10.2 엔진 연계
@@ -851,7 +851,7 @@ def search_strategies_api(
    - ValueRecord 형식 사용
 
 4. **Constraints 스키마 정렬**
-   - project_context_store 스키마 기준
+   - focal_actor_context_store 스키마 기준
    - type/dimension/threshold 구조
    - Greenfield → constraints_profile 변환
 
@@ -948,7 +948,7 @@ def search_strategies_api(
 
 ---
 
-### ADR-4: project_context_store 스키마 준수
+### ADR-4: focal_actor_context_store 스키마 준수
 
 **결정**: constraints_profile 형식 사용
 

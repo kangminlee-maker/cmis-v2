@@ -21,7 +21,7 @@ class TestContextLearner:
 
         # 기존 Context
         project_context = FocalActorContext(
-            project_context_id="PRJ-test-v1",
+            focal_actor_context_id="PRJ-test-v1",
             version=1,
             baseline_state={
                 "current_revenue": 1000000000,
@@ -62,7 +62,7 @@ class TestContextLearner:
 
         # v1
         context_v1 = FocalActorContext(
-            project_context_id="PRJ-company",
+            focal_actor_context_id="PRJ-company",
             version=1
         )
 
@@ -76,7 +76,7 @@ class TestContextLearner:
         context_v2 = learner.update_baseline_state(context_v1, outcome1)
 
         assert context_v2.version == 2
-        assert context_v2.project_context_id == "PRJ-company-v2"
+        assert context_v2.focal_actor_context_id == "PRJ-company-v2"
         assert context_v2.previous_version_id == "PRJ-company"
 
         # v3
@@ -89,12 +89,12 @@ class TestContextLearner:
         context_v3 = learner.update_baseline_state(context_v2, outcome2)
 
         assert context_v3.version == 3
-        assert context_v3.project_context_id == "PRJ-company-v3"
+        assert context_v3.focal_actor_context_id == "PRJ-company-v3"
         assert context_v3.previous_version_id == "PRJ-company-v2"
 
 
 class TestUpdateFocalActorContextAPI:
-    """update_project_context_from_outcome_api 테스트"""
+    """update_focal_actor_context_from_outcome_api 테스트"""
 
     def test_update_project_context_api(self):
         """Public API"""
@@ -102,7 +102,7 @@ class TestUpdateFocalActorContextAPI:
 
         # FocalActorContext 등록
         context = FocalActorContext(
-            project_context_id="PRJ-api-test",
+            focal_actor_context_id="PRJ-api-test",
             version=1,
             baseline_state={
                 "current_revenue": 1000000000,
@@ -110,12 +110,12 @@ class TestUpdateFocalActorContextAPI:
             }
         )
 
-        engine.register_project_context(context)
+        engine.register_focal_actor_context(context)
 
         # Outcome 등록
         outcome = Outcome(
             outcome_id="OUT-api",
-            project_context_id="PRJ-api-test",
+            focal_actor_context_id="PRJ-api-test",
             metrics={"MET-Revenue": 1500000000},
             as_of="2025-12-31"
         )
@@ -123,9 +123,9 @@ class TestUpdateFocalActorContextAPI:
         engine.register_outcome(outcome)
 
         # 업데이트
-        updated_ref = engine.update_project_context_from_outcome_api(
+        updated_ref = engine.update_focal_actor_context_from_outcome_api(
             outcome_id="OUT-api",
-            project_context_id="PRJ-api-test"
+            focal_actor_context_id="PRJ-api-test",
         )
 
         # 새 버전 ID
@@ -137,7 +137,7 @@ class TestUpdateFocalActorContextAPI:
         learner = ContextLearner()
 
         context = FocalActorContext(
-            project_context_id="PRJ-mapping",
+            focal_actor_context_id="PRJ-mapping",
             baseline_state={}
         )
 
@@ -172,7 +172,7 @@ class TestIntegrationPhase2:
 
         # 1. 초기 Context
         context = FocalActorContext(
-            project_context_id="PRJ-loop",
+            focal_actor_context_id="PRJ-loop",
             version=1,
             baseline_state={
                 "current_revenue": 1000000000,
@@ -192,12 +192,12 @@ class TestIntegrationPhase2:
         outcome = Outcome(
             outcome_id="OUT-loop",
             related_strategy_id="STR-loop",
-            project_context_id="PRJ-loop",
+            focal_actor_context_id="PRJ-loop",
             metrics={"MET-Revenue": 1200000000},  # 실제 1년 후
             as_of="2025-12-31"
         )
 
-        engine.register_project_context(context)
+        engine.register_focal_actor_context(context)
         engine.register_strategy(strategy)
         engine.register_outcome(outcome)
 
@@ -205,7 +205,7 @@ class TestIntegrationPhase2:
         learning_result = engine.update_from_outcomes_api(["OUT-loop"])
 
         # 5. Context 업데이트
-        updated_context_ref = engine.update_project_context_from_outcome_api(
+        updated_context_ref = engine.update_focal_actor_context_from_outcome_api(
             "OUT-loop",
             "PRJ-loop"
         )
@@ -215,9 +215,7 @@ class TestIntegrationPhase2:
         assert updated_context_ref.startswith("PRJ-loop")
 
         # 새 버전 확인
-        updated_context = engine.project_contexts.get(updated_context_ref)
+        updated_context = engine.focal_actor_contexts.get(updated_context_ref)
         if updated_context:
             assert updated_context.version == 2
             assert updated_context.baseline_state["current_revenue"] == 1200000000
-
-

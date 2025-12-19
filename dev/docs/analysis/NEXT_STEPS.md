@@ -106,7 +106,7 @@
 
 **참고**:
 - `cmis_project_context_layer_design.md`
-- cmis.yaml project_context_store
+- cmis.yaml focal_actor_context_store
 
 ---
 

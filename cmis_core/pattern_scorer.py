@@ -23,7 +23,7 @@ class PatternScorer:
     3. Combined Score 계산
 
     Phase 1: Structure Fit
-    Phase 2: Execution Fit (Project Context 연동)
+    Phase 2: Execution Fit (FocalActorContext 연동)
     """
 
     def __init__(self):
@@ -33,23 +33,23 @@ class PatternScorer:
     def score_all(
         self,
         match_results: List[Dict],
-        project_context_id: Optional[str] = None
+        focal_actor_context_id: Optional[str] = None,
     ) -> List[PatternMatch]:
         """매칭 결과에 점수 부여
 
         Args:
             match_results: PatternMatcher.match() 결과
-            project_context_id: Project Context ID (선택)
+            focal_actor_context_id: FocalActorContext ID (선택)
 
         Returns:
             PatternMatch 리스트 (점수 포함)
         """
         scored_matches = []
 
-        # Project Context 로딩 (있다면)
+        # FocalActorContext 로딩 (있다면)
         focal_context_binding: Optional[FocalActorContextBinding] = None
-        if project_context_id:
-            focal_context_binding = self._resolve_focal_actor_context_binding(project_context_id)
+        if focal_actor_context_id:
+            focal_context_binding = self._resolve_focal_actor_context_binding(focal_actor_context_id)
 
         for result in match_results:
             pattern = result["pattern"]
@@ -63,7 +63,7 @@ class PatternScorer:
                 structure_result
             )
 
-            # Execution Fit (Project Context 있을 때만)
+            # Execution Fit (FocalActorContext 있을 때만)
             execution_fit = None
             if focal_context_binding:
                 execution_fit = self.calculate_execution_fit(
@@ -146,7 +146,7 @@ class PatternScorer:
 
         Args:
             pattern: PatternSpec
-            project_context: Project Context
+            focal_context: FocalActorContextBinding
 
         Returns:
             Execution Fit 점수 (0.0 ~ 1.0)
@@ -187,7 +187,7 @@ class PatternScorer:
 
         Args:
             required_capabilities: Pattern이 요구하는 capability
-            available_capabilities: Project Context의 capability
+            available_capabilities: FocalActorContext의 capability_traits
 
         Returns:
             매칭 점수 (0.0 ~ 1.0)
@@ -247,7 +247,7 @@ class PatternScorer:
 
         Args:
             constraint_checks: Pattern이 체크하는 제약 조건 ID
-            hard_constraints: Project Context의 hard constraints
+            hard_constraints: FocalActorContext의 hard_constraints
 
         Returns:
             만족도 (0.0 ~ 1.0)
@@ -270,7 +270,7 @@ class PatternScorer:
 
         Args:
             required_assets: Pattern이 요구하는 자산
-            assets_profile: Project Context의 자산
+            assets_profile: FocalActorContext의 assets_profile
 
         Returns:
             충족도 (0.0 ~ 1.0)
@@ -384,9 +384,9 @@ class PatternScorer:
 
         return True
 
-    def _resolve_focal_actor_context_binding(self, project_context_id: str) -> FocalActorContextBinding:
+    def _resolve_focal_actor_context_binding(self, focal_actor_context_id: str) -> FocalActorContextBinding:
         """FocalActorContext binding 로딩(Phase 1: 스텁)."""
-        return resolve_focal_actor_context_binding(project_context_id)
+        return resolve_focal_actor_context_binding(focal_actor_context_id)
 
 
 def calculate_combined_score(
@@ -396,8 +396,8 @@ def calculate_combined_score(
     """Combined Score 계산 (단일 규칙)
 
     규칙:
-    - Project Context 없음 → combined = structure_fit
-    - Project Context 있음 → combined = structure_fit × execution_fit
+    - FocalActorContext 없음 → combined = structure_fit
+    - FocalActorContext 있음 → combined = structure_fit × execution_fit
 
     Args:
         structure_fit: Structure Fit 점수
@@ -410,6 +410,3 @@ def calculate_combined_score(
         return structure_fit
     else:
         return structure_fit * execution_fit
-
-
-

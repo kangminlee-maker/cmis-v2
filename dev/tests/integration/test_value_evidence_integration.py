@@ -334,6 +334,3 @@ def test_value_program_tracking(value_engine_with_evidence, simple_graph):
 
     assert program2["use_evidence_engine"] == False
     assert len(program2["evidence_metrics"]) == 0
-
-
-

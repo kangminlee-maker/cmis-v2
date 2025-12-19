@@ -225,5 +225,3 @@ def test_kernel_run_mode_manual_executes_single_task_then_pauses(project_root: P
 
     run_store.close()
     ledger_store.close()
-
-

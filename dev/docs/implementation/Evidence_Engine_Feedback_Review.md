@@ -345,6 +345,3 @@ quality_profiles:
 **검토 완료**: 2025-12-09
 **승인 상태**: ✅ 구현 진행 승인
 **다음 문서**: Evidence_Engine_Implementation_Guide.md
-
-
-

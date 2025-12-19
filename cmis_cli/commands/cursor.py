@@ -233,7 +233,7 @@ def cmd_cursor_ask(args) -> None:
         "region": args.region,
         "segment": args.segment,
         "as_of": args.as_of,
-        "project_context_id": args.project_context,
+        "focal_actor_context_id": args.focal_actor_context_id,
         "role_id": args.role,
     }
     # remove None

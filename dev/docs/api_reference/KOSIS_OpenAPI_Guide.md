@@ -450,5 +450,3 @@ def _build_params(context, stat_table):
 **작성**: 2025-12-10
 **검증**: 2024년 전국 인구 (51,217,221명)
 **형식**: JSON (JavaScript JSON 파싱)
-
-

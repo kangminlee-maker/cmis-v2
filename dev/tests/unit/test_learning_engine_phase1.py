@@ -212,5 +212,3 @@ class TestLearningEngine:
         if result["learning_quality"]["valid_comparisons"] > 0:
             learning_result = engine.learning_history[-1]
             # Outlier 감지되었을 수 있음
-
-

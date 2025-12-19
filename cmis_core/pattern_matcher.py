@@ -365,6 +365,3 @@ def calculate_trait_score(
     final_score = min(required_score + optional_bonus, 1.0)
 
     return final_score
-
-
-
