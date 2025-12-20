@@ -1,0 +1,93 @@
+---
+# Search Strategy v3 Registry (Production-minimal v1)
+#
+# Design:
+# - dev/docs/architecture/Search_Strategy_Design_v3.md
+#
+# Notes:
+# - 이 파일은 전략 "레지스트리"이며, 런타임은 registry_digest를 pinning 하여 재현성을 확보합니다.
+# - 비밀키는 직접 저장하지 않고 *_ref 형태로만 보존합니다.
+
+registry_version: 3
+
+# v1에서 허용하는 phase_id 집합(unknown phase를 로드 단계에서 차단)
+phases_allowed:
+  - authoritative
+  - generic_web
+
+providers:
+  GenericWebSearch:
+    adapter: google_cse
+    api_key_ref: GOOGLE_API_KEY
+    default_timeout_sec: 10
+    rate_limit_qps: 1.0
+    burst: 2
+    cache_ttl_sec: 86400
+    locale_mapping: {}
+    notes:
+      search_engine_id_ref: GOOGLE_SEARCH_ENGINE_ID
+
+metrics:
+  MET-TAM:
+    reporting_strict:
+      phases:
+        - phase_id: generic_web
+          providers: [GenericWebSearch]
+          query_templates:
+            - "{domain} {region} market size {year}"
+          expansion:
+            deterministic: true
+            llm:
+              enabled: false
+          retrieval:
+            serp_top_k: 8
+            fetch_top_k: 3
+            fetch_depth: 0
+          filters:
+            recency_days: 365
+          scoring:
+            prefer_high_trust_domains: true
+          stop_conditions:
+            min_high_quality_evidence: 2
+
+    decision_balanced:
+      phases:
+        - phase_id: generic_web
+          providers: [GenericWebSearch]
+          query_templates:
+            - "{domain} {region} market size {year}"
+          expansion:
+            deterministic: true
+            llm:
+              enabled: true
+          retrieval:
+            serp_top_k: 8
+            fetch_top_k: 5
+            fetch_depth: 0
+          filters:
+            recency_days: 365
+          scoring:
+            prefer_high_trust_domains: true
+          stop_conditions:
+            min_high_quality_evidence: 2
+
+    exploration_friendly:
+      phases:
+        - phase_id: generic_web
+          providers: [GenericWebSearch]
+          query_templates:
+            - "{domain} {region} market size {year}"
+          expansion:
+            deterministic: true
+            llm:
+              enabled: true
+          retrieval:
+            serp_top_k: 10
+            fetch_top_k: 7
+            fetch_depth: 0
+          filters:
+            recency_days: 3650
+          scoring:
+            prefer_high_trust_domains: true
+          stop_conditions:
+            min_high_quality_evidence: 1

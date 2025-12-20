@@ -6,6 +6,7 @@ python-dotenv>=1.0.0
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 openpyxl>=3.1.5
+pypdf>=6.4.2
 
 # BeliefEngine (v3.5.0)
 asteval>=0.9.31

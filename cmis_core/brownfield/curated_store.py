@@ -185,6 +185,15 @@ class CuratedDatumStore:
             created_at=str(created_at),
         )
 
+    def find_datum_id(self, *, cur_payload_digest: str, semantic_key: str, schema_version: int = 1) -> Optional[str]:
+        """(cur_payload_digest, semantic_key, schema_version)로 datum_id를 조회합니다.
+
+        주의:
+        - curated_items는 digest 중심이므로, bundle→datum 링크를 복원할 때 사용합니다.
+        """
+
+        return self._find_existing(digest=str(cur_payload_digest), semantic_key=str(semantic_key), schema_version=int(schema_version))
+
     def _find_existing(self, *, digest: str, semantic_key: str, schema_version: int) -> Optional[str]:
         cur = self.conn.execute(
             """

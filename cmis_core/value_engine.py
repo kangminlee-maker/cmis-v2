@@ -96,6 +96,14 @@ class ValueEngine:
 
         policy_engine_v2 = PolicyEngine(project_root=self.config.project_root)
 
+        # Brownfield: focal_actor_context_id를 metric context로 전파(옵션)
+        if focal_actor_context_id:
+            for req in metric_requests:
+                if not isinstance(req.context, dict):
+                    req.context = {}
+                if "focal_actor_context_id" not in req.context:
+                    req.context["focal_actor_context_id"] = str(focal_actor_context_id)
+
         # 1. EvidenceEngine 호출 (옵션)
         if use_evidence_engine:
             try:

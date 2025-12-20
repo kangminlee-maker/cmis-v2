@@ -11,9 +11,9 @@
 
 ### 1.1 Core (SSoT)
 
-- `CMIS_Architecture_Blueprint_v3.6.0_km.md`
-  - v3.6.0 기준 전체 아키텍처 단일 문서(사람용 SSoT)
-  - 철학 v2 + 핵심 용어 + 폴더 구조 + planes/R-P-V-D/stores/ids/orchestration 요약
+- `CMIS_Architecture_Blueprint_v3.6.1_km.md`
+  - v3.6.0(`cmis.yaml` 계약) 기준 전체 아키텍처 단일 문서(사람용 블루프린트)
+  - “현재 구현(As-Is)”과 “향후 구현(To-Be)”을 구분해 전체 구조를 자연어로 설명
   - 기준 충돌 시 `cmis.yaml` 우선
 
 - `CMIS_Orchestration_Kernel_Design.md`
@@ -76,6 +76,6 @@
 
 ## 4. 빠른 링크
 
-- 전체 아키텍처(통합): `CMIS_Architecture_Blueprint_v3.6.0_km.md`
+- 전체 아키텍처(통합): `CMIS_Architecture_Blueprint_v3.6.1_km.md`
 - Orchestration: `CMIS_Orchestration_Kernel_Design.md`
 - Cursor 인터페이스: `CMIS_Cursor_Agent_Interface_Design.md`

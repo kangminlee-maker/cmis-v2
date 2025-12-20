@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 import time
+import os
 
 from cmis_core.config import CMISConfig
 from cmis_core.policy_engine import PolicyEngine
@@ -27,6 +28,8 @@ from cmis_core.evidence.ecos_source import ECOSSource
 from cmis_core.evidence.worldbank_source import WorldBankSource
 from cmis_core.evidence.fsc_financial_info_source import FSCCorpFinancialInfoSource
 from cmis_core.evidence.google_search_source import GoogleSearchSource
+from cmis_core.evidence.curated_internal_source import CuratedEvidenceSource
+from cmis_core.evidence.search_v3_source import SearchV3Source
 
 from .task import Task, TaskType
 
@@ -60,6 +63,14 @@ def build_default_source_registry(config: CMISConfig, enable_stub_source: bool =
         )
         registry.register_source(stub.source_id, stub.source_tier.value, stub)
 
+    # Curated internal (Brownfield) — 로컬 DB 기반 (항상 시도 가능)
+    try:
+        curated = CuratedEvidenceSource(project_root=config.project_root)
+        registry.register_source(curated.source_id, curated.source_tier.value, curated)
+    except Exception:
+        # local storage error 등은 graceful skip
+        pass
+
     # Official: KOSIS/ECOS/WorldBank (키 없으면 constructor에서 실패할 수 있음)
     if allow_http_fetch:
         for ctor, tier in [
@@ -74,6 +85,17 @@ def build_default_source_registry(config: CMISConfig, enable_stub_source: bool =
             except Exception:
                 # 환경(API key 등) 미설정 시 graceful skip
                 continue
+
+    # Web: Search v3 (선택, opt-in)
+    # - CMIS_ENABLE_SEARCH_V3=1 이고,
+    # - web_search + http_fetch 모두 허용될 때만 등록합니다.
+    enable_search_v3 = str(os.getenv("CMIS_ENABLE_SEARCH_V3") or "").strip().lower() in {"1", "true", "yes"}
+    if enable_search_v3 and allow_web_search and allow_http_fetch:
+        try:
+            sv3 = SearchV3Source(project_root=config.project_root)
+            registry.register_source(sv3.source_id, sv3.source_tier.value, sv3)
+        except Exception:
+            pass
 
     # Web: Google Search (선택)
     if allow_web_search:
@@ -225,7 +247,18 @@ class TaskExecutor:
     @staticmethod
     def _metric_context(run_context: Dict[str, Any]) -> Dict[str, Any]:
         context: Dict[str, Any] = {}
-        for k in ["domain_id", "region", "segment", "year", "as_of", "company_name"]:
+        for k in [
+            "domain_id",
+            "region",
+            "segment",
+            "year",
+            "as_of",
+            "company_name",
+            # Brownfield (CuratedEvidenceSource 등에서 사용)
+            "focal_actor_context_id",
+            "brownfield_pack_id",
+            "as_of_selector",
+        ]:
             if k in run_context and run_context[k] is not None:
                 context[k] = run_context[k]
         return context
