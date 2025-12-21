@@ -377,6 +377,7 @@ def main():
     llm_bench_run_parser.add_argument("--suite", required=True, help="Suite ID")
     llm_bench_run_parser.add_argument("--llm-mode", dest="llm_mode", default="auto", choices=["auto", "mock", "openai"], help="LLM mode")
     llm_bench_run_parser.add_argument("--dry-run", action="store_true", help="실행 없이 계획/저장 경로만 확인")
+    llm_bench_run_parser.add_argument("--fail-on-regression", dest="fail_on_regression", action="store_true", help="회귀 감지 시 non-zero exit")
     llm_bench_run_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
 
     llm_bench_report_parser = llm_bench_subparsers.add_parser(

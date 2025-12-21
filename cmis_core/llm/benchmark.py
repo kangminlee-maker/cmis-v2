@@ -463,6 +463,8 @@ class BenchmarkRunner:
             # regression detection (history baseline)
             baseline = self.store.load_last_summary(suite_id=suite_id)
             regression = self.store.detect_regression(summary, baseline)
+            summary.totals["regression_detected"] = bool(regression)
+            summary.totals["baseline_run_id"] = (baseline.get("bench_run_id") if baseline else None)
             if regression:
                 summary.task_results["regression"] = {"detected": True, "baseline": baseline.get("bench_run_id") if baseline else None}
 

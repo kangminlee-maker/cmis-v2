@@ -26,6 +26,12 @@ def cmd_llm_benchmark_run(args) -> None:
 
     print(json.dumps({"bench_run_id": bench_id, "run_dir": str(run_dir), "summary": summary.to_dict()}, ensure_ascii=False, indent=2))
 
+    # CI/운영용: 회귀 감지 시 실패로 종료(알림은 CI 실패로 대체)
+    fail_on_regression = bool(getattr(args, "fail_on_regression", False))
+    regression = bool((summary.totals or {}).get("regression_detected", False))
+    if fail_on_regression and regression:
+        raise SystemExit(2)
+
 
 def cmd_llm_benchmark_report(args) -> None:
     """cmis llm benchmark report --run <BENCH-...>"""

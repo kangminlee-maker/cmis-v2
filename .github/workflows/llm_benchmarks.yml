@@ -29,6 +29,6 @@ jobs:
 
       - name: Run benchmark smoke suite (mock)
         run: |
-          python -m cmis_cli llm benchmark run --suite evidence_extraction_unit_smoke --llm-mode mock --project-root .
+          python -m cmis_cli llm benchmark run --suite evidence_extraction_unit_smoke --llm-mode mock --fail-on-regression --project-root .
 
 
