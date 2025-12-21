@@ -85,6 +85,17 @@ def run_storage_doctor(
     warnings.extend(art_warnings)
     summary["checked"]["artifacts"] = art_summary
 
+    # 3) Cross-store reference checks (best-effort)
+    try:
+        artifact_ids = _load_artifact_id_set(paths)
+        bf_issues, bf_warnings, bf_summary = _check_brownfield_artifact_refs(paths, artifact_ids)
+        issues.extend(bf_issues)
+        warnings.extend(bf_warnings)
+        summary["checked"]["brownfield_refs"] = bf_summary
+    except Exception as e:
+        warnings.append(f"brownfield_ref_check_failed:{e}")
+        summary["checked"]["brownfield_refs"] = {"checked": False, "error": str(e)}
+
     return StorageDoctorResult(ok=(len(issues) == 0), issues=issues, warnings=warnings, summary=summary)
 
 
@@ -207,6 +218,101 @@ def _check_artifacts(paths: StoragePaths, *, include_orphan_files: bool) -> Tupl
                 warnings.append(f"artifact_orphan_scan_failed:{e}")
     except Exception as e:
         warnings.append(f"artifact_store_check_failed:{e}")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    return issues, warnings, summary
+
+
+def _load_artifact_id_set(paths: StoragePaths) -> set[str]:
+    """artifacts.db에서 artifact_id 집합을 로드합니다(best-effort)."""
+
+    db_path = paths.db_dir / "artifacts.db"
+    if not db_path.exists():
+        return set()
+
+    conn: Optional[sqlite3.Connection] = None
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, check_same_thread=False)
+        if not _sqlite_has_table(conn, "artifacts"):
+            return set()
+        cur = conn.execute("SELECT artifact_id FROM artifacts")
+        return {str(r[0]) for r in (cur.fetchall() or []) if r and r[0] is not None}
+    except Exception:
+        return set()
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _check_brownfield_artifact_refs(paths: StoragePaths, artifact_ids: set[str]) -> Tuple[List[str], List[str], Dict[str, Any]]:
+    """brownfield.db 내부의 artifact 참조가 ArtifactStore에 존재하는지 점검합니다."""
+
+    issues: List[str] = []
+    warnings: List[str] = []
+    summary: Dict[str, Any] = {
+        "brownfield_db": str(paths.db_dir / "brownfield.db"),
+        "checked": False,
+        "tables_checked": 0,
+        "refs_checked": 0,
+        "missing_refs": 0,
+    }
+
+    bf_path = paths.db_dir / "brownfield.db"
+    if not bf_path.exists():
+        summary["checked"] = True
+        return issues, warnings, summary
+
+    # ArtifactStore가 비어 있으면(아직 artifacts.db가 생성되지 않았으면) 교차 검증은 의미가 낮음
+    if not artifact_ids:
+        summary["checked"] = True
+        return issues, warnings, summary
+
+    conn: Optional[sqlite3.Connection] = None
+    try:
+        conn = sqlite3.connect(f"file:{bf_path}?mode=ro", uri=True, check_same_thread=False)
+
+        # (table, column) pairs
+        candidates = [
+            ("import_runs", "preview_report_artifact_id"),
+            ("import_runs", "validation_report_artifact_id"),
+            ("mappings", "artifact_id"),
+            ("mappings", "spec_ref_artifact_id"),
+            ("curated_data", "payload_ref_artifact_id"),
+            ("context_views", "view_payload_ref_artifact_id"),
+        ]
+
+        for table, col in candidates:
+            if not _sqlite_has_table(conn, table):
+                continue
+            cols = _sqlite_table_columns(conn, table)
+            if col not in cols:
+                continue
+            summary["tables_checked"] += 1
+
+            try:
+                cur = conn.execute(f"SELECT DISTINCT {col} FROM {table} WHERE {col} IS NOT NULL AND {col} != ''")
+                vals = [str(r[0]) for r in (cur.fetchall() or []) if r and r[0] is not None]
+            except Exception as e:
+                warnings.append(f"brownfield_ref_scan_failed:{table}.{col}:{e}")
+                continue
+
+            for aid in vals:
+                summary["refs_checked"] += 1
+                if aid not in artifact_ids:
+                    summary["missing_refs"] += 1
+                    issues.append(f"brownfield_missing_artifact_ref:{table}.{col}:{aid}")
+
+        summary["checked"] = True
+    except Exception as e:
+        warnings.append(f"brownfield_db_check_failed:{e}")
     finally:
         if conn is not None:
             try:
