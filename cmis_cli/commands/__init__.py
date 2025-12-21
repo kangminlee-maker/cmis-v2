@@ -34,6 +34,11 @@ from .brownfield import (
     cmd_brownfield_commit,
     cmd_brownfield_reconcile,
 )
+from .llm import (
+    cmd_llm_benchmark_run,
+    cmd_llm_benchmark_report,
+    cmd_llm_benchmark_list_suites,
+)
 
 __all__ = [
     "cmd_structure_analysis",
@@ -59,6 +64,9 @@ __all__ = [
     "cmd_brownfield_validate",
     "cmd_brownfield_commit",
     "cmd_brownfield_reconcile",
+    "cmd_llm_benchmark_run",
+    "cmd_llm_benchmark_report",
+    "cmd_llm_benchmark_list_suites",
 ]
 
 

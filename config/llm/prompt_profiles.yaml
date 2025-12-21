@@ -22,4 +22,11 @@ profiles:
       중요: 반드시 JSON만 출력하세요. 설명/코드블록/여분 텍스트를 포함하지 마세요.
       JSON 외의 문자가 섞이면 실패로 처리됩니다.
 
+  benchmark_judge_v1:
+    description: "벤치마크 judge용 JSON 스코어 출력"
+    prefix: |
+      중요: 반드시 JSON만 출력하세요. 설명/코드블록/여분 텍스트를 포함하지 마세요.
+      출력 스키마(예시):
+      {"score": 0.0, "notes": "string"}
+
 

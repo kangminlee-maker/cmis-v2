@@ -33,6 +33,9 @@ from cmis_cli.commands import (
     cmd_brownfield_validate,
     cmd_brownfield_commit,
     cmd_brownfield_reconcile,
+    cmd_llm_benchmark_run,
+    cmd_llm_benchmark_report,
+    cmd_llm_benchmark_list_suites,
     cmd_cursor_init,
     cmd_cursor_doctor,
     cmd_cursor_manifest,
@@ -348,6 +351,41 @@ def main():
     bf_reconcile_parser.add_argument("--retry-failed", dest="retry_failed", action="store_true", help="failed 항목도 재시도")
     bf_reconcile_parser.add_argument("--limit", type=int, default=50, help="처리 개수 제한")
 
+    # ========== llm ==========
+    llm_parser = subparsers.add_parser(
+        "llm",
+        help="LLM model management commands",
+    )
+    llm_subparsers = llm_parser.add_subparsers(dest="llm_command")
+
+    llm_bench_parser = llm_subparsers.add_parser(
+        "benchmark",
+        help="LLM benchmark commands",
+    )
+    llm_bench_subparsers = llm_bench_parser.add_subparsers(dest="bench_command")
+
+    llm_bench_list_parser = llm_bench_subparsers.add_parser(
+        "list-suites",
+        help="List benchmark suites",
+    )
+    llm_bench_list_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
+    llm_bench_run_parser = llm_bench_subparsers.add_parser(
+        "run",
+        help="Run benchmark suite",
+    )
+    llm_bench_run_parser.add_argument("--suite", required=True, help="Suite ID")
+    llm_bench_run_parser.add_argument("--llm-mode", dest="llm_mode", default="auto", choices=["auto", "mock", "openai"], help="LLM mode")
+    llm_bench_run_parser.add_argument("--dry-run", action="store_true", help="실행 없이 계획/저장 경로만 확인")
+    llm_bench_run_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
+    llm_bench_report_parser = llm_bench_subparsers.add_parser(
+        "report",
+        help="Show benchmark run summary",
+    )
+    llm_bench_report_parser.add_argument("--run", dest="run_id", required=True, help="BENCH-... run id")
+    llm_bench_report_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+
     # Parse
     args = parser.parse_args()
 
@@ -413,6 +451,18 @@ def main():
             cmd_brownfield_reconcile(args)
         else:
             brownfield_parser.print_help()
+    elif args.command == "llm":
+        if args.llm_command == "benchmark":
+            if args.bench_command == "run":
+                cmd_llm_benchmark_run(args)
+            elif args.bench_command == "report":
+                cmd_llm_benchmark_report(args)
+            elif args.bench_command == "list-suites":
+                cmd_llm_benchmark_list_suites(args)
+            else:
+                llm_bench_parser.print_help()
+        else:
+            llm_parser.print_help()
     else:
         parser.print_help()
 

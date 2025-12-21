@@ -1,0 +1,64 @@
+---
+# CMIS LLM Benchmark Suites (Phase 3)
+#
+# 목적(비개발자 설명):
+# - 벤치마크는 "모델/정책/프롬프트/게이트 변경"을 승격하기 전에
+#   품질/비용/지연이 회귀하지 않았는지 확인하기 위한 기준선입니다.
+# - Unit tier는 자동 채점이 가능한 케이스(결정적) 위주로 구성합니다.
+# - Scenario tier는 LLM judge를 사용해 정성 지표를 점수화할 수 있습니다(단, judge pinning 필요).
+schema_version: 1
+last_updated: "2025-12-21"
+
+benchmark_suites:
+  evidence_extraction_unit_smoke:
+    tier: "unit"
+    run_mode: "route"  # route|managed (기본: managed)
+    tasks:
+      - task_type: "evidence_number_extraction"
+        cases:
+          - id: "num-001"
+            input: "텍스트: '2023년 매출은 100억원 증가' → 숫자/단위/연도 추출"
+            expected_json:
+              value: 100
+              unit: "억원"
+              year: 2023
+
+  pattern_recognition_unit_smoke:
+    tier: "unit"
+    run_mode: "route"
+    tasks:
+      - task_type: "pattern_recognition"
+        cases:
+          - id: "pat-001"
+            input: "간단한 패턴 설명을 bullet claims 형태로 요약"
+            expected_text_contains:
+              - "- claim"
+
+  value_formula_unit_smoke:
+    tier: "unit"
+    run_mode: "route"
+    tasks:
+      - task_type: "value_formula_derivation"
+        cases:
+          - id: "val-001"
+            input: "TAM = 인구 * 보급률 * ARPU 를 bullet claims로 설명"
+            expected_text_contains:
+              - "-"
+
+  strategy_generation_scenario_smoke:
+    tier: "scenario"
+    run_mode: "route"
+    judge:
+      judge_task_type: "validation_sanity_check"
+      judge_prompt_profile: "benchmark_judge_v1"
+      judge_version_pin: false
+    tasks:
+      - task_type: "strategy_generation"
+        cases:
+          - id: "str-001"
+            input: "Goal: 한국 어학 시장 진입 전략. 최소 3개 전략을 bullet로 제시"
+            judge_expected_json:
+              score: 0.8
+              notes: "ok"
+
+
