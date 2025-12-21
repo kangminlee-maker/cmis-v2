@@ -118,11 +118,12 @@
 - **수용기준**
   - 사용자가 UI에서 최소 한 번 end-to-end를 수행 가능
 
-### P1-03 Search v3 Link Following 구현(설계 완료, 구현 예정)
+### P1-03 Search v3 Link Following 구현(설계/구현 완료, 기본 비활성)
 
 - **목표**: SERP 결과의 “요약 페이지”를 넘어 IR/PDF/리포트 등 실질 근거로 도달
+- **현재 구현 상태(2025-12-21 기준)**: Search v3 기본 파이프라인과 Link Following(SSV3-13~16)까지 구현되어 있습니다. 단, 기본 설정은 `fetch_depth=0`으로 비활성입니다.
 - **미구현/미완성 포인트**
-  - `fetch_depth` + `link_selection` 기반 BFS 탐색
+  - authoritative phase에서 `fetch_depth=1~2`를 점진 활성화하고, 운영 관점(budget/egress/SSRF/redirect/MIME)에서 안전하게 굳히기
   - LinkExtracted/LinkFollowed 계보 이벤트 기록
   - budget/egress/SSRF 보호를 depth 탐색에도 동일 적용
 - **수용기준**

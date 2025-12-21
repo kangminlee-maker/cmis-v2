@@ -93,7 +93,7 @@
    - HTML hyperlink를 따라가는 depth-based exploration
    - Section 7 전체 추가 (483줄)
    - LinkExtractor, LinkSelectionPolicy, BFS 알고리즘
-   - TODO: SSV3-13~16
+   - 구현 완료: SSV3-13~16 (기본 설정은 fetch_depth=0으로 비활성)
 
 3. ✅ **Search Strategy v2 → v3 완전 전환**
    - v2 관련 파일 모두 deprecated로 이동
@@ -151,59 +151,61 @@ cmis/
 
 #### 1. Search Strategy v3 기반 인프라 구현
 
-**배경**: 설계는 완료되었으나 구현이 필요. 재현성/안전성 확보가 최우선.
+**배경**: Search v3의 기본 파이프라인(검색 → 문서 fetch → 추출/합성 → 게이트 → trace)과 Link Following(SSV3-13~16)까지 구현되어 있고, 단위 테스트로 결정성/안전성 기준이 고정되어 있습니다. 단, 기본 설정은 `fetch_depth=0`으로 Link Following이 비활성입니다. 다음 세션의 우선 과제는 (1) 필요한 metric/phase에서 `fetch_depth`를 점진적으로 활성화하고 운영 보호장치(budget/egress/SSRF) 점검, (2) LLM Model Management Phase 1 구현입니다.
 
 ```
-[ ] SSV3-01: StrategyRegistry v3 구현
+[x] SSV3-01: StrategyRegistry v3 구현
     - 목표: YAML registry → compiled → digest pinning
-    - 파일: cmis_core/search_v3/registry.py (이미 존재, 확장 필요)
+    - 파일: cmis_core/search_v3/registry.py (구현 완료)
     - 설계: Search_Strategy_Design_v3.md Section 1.3
     - 수용기준: 동일 입력 → 동일 digest, unknown provider 로드 실패
     - 테스트: digest 안정성, schema validation
 
-[ ] SSV3-02: Trace/Event writer (append-only)
+[x] SSV3-02: Trace/Event writer (append-only)
     - 목표: events(JSONL) 기록, 원문은 ART에만
-    - 파일: cmis_core/search_v3/trace.py (이미 존재, 확장 필요)
+    - 파일: cmis_core/search_v3/trace.py (구현 완료)
     - 설계: Search_Strategy_Design_v3.md Section 2
     - 수용기준: query_text/snippet/html이 ledger에 직접 안 들어감
     - 테스트: ref-only 계약 검증
 
-[ ] SSV3-03: QueryArtifact 생성 규칙
+[x] SSV3-03: QueryArtifact 생성 규칙
     - 목표: 모든 query에 artifact_id 생성
-    - 파일: cmis_core/search_v3/query.py (신규 또는 확장)
+    - 파일: cmis_core/search_v3/query.py (구현 완료)
     - 설계: Search_Strategy_Design_v3.md Section 5.6
     - 수용기준: deterministic/LLM 모두 artifact 생성
     - 테스트: artifact 누락 없음
 
-[ ] SSV3-04: GenericWebSearch Provider
+[x] SSV3-04: GenericWebSearch Provider
     - 목표: google_cse adapter + 캐시/레이트리밋
-    - 파일: cmis_core/search_v3/generic_web_search.py (이미 존재)
+    - 파일: cmis_core/search_v3/generic_web_search.py (구현 완료)
     - 설계: Search_Strategy_Design_v3.md Section 3
     - 수용기준: 표준 에러 taxonomy, SerpSnapshotRef 생성
     - 테스트: HTTP 모킹 (429/timeout/authfail)
 
-[ ] SSV3-05: DocumentFetcher 안전장치
+[x] SSV3-05: DocumentFetcher 안전장치
     - 목표: SSRF/MIME/max_bytes/redirect 강제
-    - 파일: cmis_core/search_v3/document_fetcher.py (이미 존재)
+    - 파일: cmis_core/search_v3/document_fetcher.py (구현 완료)
     - 설계: Search_Strategy_Design_v3.md Section 4
     - 수용기준: SSRF/내부IP 차단, content-addressed DOC-*
     - 테스트: SSRF/redirect loop/max_bytes (필수)
 ```
 
+**확인**: `pytest dev/tests/unit/test_search_strategy_v3_*.py -v` (30 passed)
+
 #### 2. Brownfield 작업 완료
 
-**배경**: 현재 커밋되지 않은 변경사항이 있음.
+**배경**: outbox 패턴은 이미 구현/커밋되어 있으며, 현재 git 기준으로 로컬 미커밋 변경사항이 없습니다. 다음 세션에서는 outbox 운영(재처리) 경로와 UX/문서 정리를 점검하는 것이 유효합니다.
 
 ```
-[ ] Brownfield outbox.py 문서화 및 커밋
+[x] Brownfield outbox.py 문서화 및 커밋
     - 파일: cmis_core/brownfield/outbox.py (신규)
     - 관련: commit.py, db.py, import_run_store.py 변경사항
     - 목적: Commit → Outbox → External system 패턴
-    - 우선: git status 확인 → 변경사항 검토 → 커밋
+    - 상태: 구현 및 커밋 완료
 
-[ ] Brownfield CLI 명령어 확장 확인
+[x] Brownfield CLI 명령어 확장 확인
     - 파일: cmis_cli/commands/brownfield.py
-    - 변경사항 검토 및 문서화
+    - 상태: `cmis brownfield reconcile`로 outbox 재처리 지원
 ```
 
 ### P1: 다음 스프린트 (2주)
@@ -211,18 +213,18 @@ cmis/
 #### 3. Search Strategy v3 추출/합성/게이트
 
 ```
-[ ] SSV3-06: CandidateExtractor v1
+[x] SSV3-06: CandidateExtractor v1
     - 파일: cmis_core/search_v3/candidate_extractor.py (이미 존재)
     - 설계: Search_Strategy_Design_v3.md Section 1.3
     - 구현: 규칙 기반 수치/단위/기간 추출
     - 수용기준: independence_key 생성
 
-[ ] SSV3-07: Synthesizer v1
+[x] SSV3-07: Synthesizer v1
     - 파일: cmis_core/search_v3/synthesizer.py (이미 존재)
     - 구현: consensus (median) + outlier 완화
     - 수용기준: 결정적 출력 (동일 입력 → 동일 결과)
 
-[ ] SSV3-08: GatePolicyEnforcer v1
+[x] SSV3-08: GatePolicyEnforcer v1
     - 파일: cmis_core/search_v3/gate.py (이미 존재)
     - 구현: reporting_strict vs decision_balanced 차등
     - 수용기준: min_independent_sources 강제
@@ -231,17 +233,17 @@ cmis/
 #### 4. Search Strategy v3 통합
 
 ```
-[ ] SSV3-09: SearchRunner/SearchKernel
+[x] SSV3-09: SearchRunner/SearchKernel
     - 파일: cmis_core/search_v3/runner.py (이미 존재)
     - 구현: phase loop + stop condition + replan
     - 수용기준: budget/egress 위반 없음
 
-[ ] SSV3-10: EvidenceEngine 연결
+[x] SSV3-10: EvidenceEngine 연결
     - 파일: cmis_core/evidence_engine.py 확장
     - 통합: SearchKernel 호출 → EvidenceRecord 반환
     - 수용기준: 기존 소스와 충돌 없음
 
-[ ] SSV3-11: Run export/검증 연결
+[x] SSV3-11: Run export/검증 연결
     - 검증: trace envelope, ART refs, plan_digest_chain
     - Verifier: 재현 불가능 상태 탐지
 
@@ -383,25 +385,25 @@ cmis/
 ### P2: Link Following 구현 (2~3주)
 
 ```
-[ ] SSV3-13: LinkExtractor v1
-    - 파일: cmis_core/search_v3/link_extractor.py (신규)
+[x] SSV3-13: LinkExtractor v1
+    - 파일: cmis_core/search_v3/link_extractor.py
     - 설계: Search_Strategy_Design_v3.md Section 7.4.1
     - 구현: 규칙 기반 relevance scoring
     - 수용기준: LinkCandidate 생성, link_type 분류
 
-[ ] SSV3-14: DocumentFetcher depth-based exploration
-    - 파일: cmis_core/search_v3/document_fetcher.py 확장
+[x] SSV3-14: DocumentFetcher depth-based exploration
+    - 파일: cmis_core/search_v3/document_fetcher.py (확장)
     - 구현: BFS 알고리즘 + visited tracking
     - 수용기준: depth_from_serp, parent_doc_id 기록
 
-[ ] SSV3-15: LinkSelectionPolicy
-    - 파일: cmis_core/search_v3/link_selector.py (신규)
+[x] SSV3-15: LinkSelectionPolicy
+    - 파일: cmis_core/search_v3/link_selector.py
     - 구현: max_links_per_doc, min_relevance_score
     - 수용기준: budget 내 선택, same_domain_only 강제
 
-[ ] SSV3-16: Link events/trace
+[x] SSV3-16: Link events/trace
     - 이벤트: LinkExtracted, LinkFollowed, DepthExplorationCompleted
-    - Config: search_strategy_registry_v3.yaml link_selection 활성화
+    - Config: config/search_strategy_registry_v3.yaml에 link_selection 설정 반영(기본 fetch_depth=0 유지)
 ```
 
 ### P3: 중장기 (1~2개월)
@@ -505,16 +507,15 @@ dev/docs/notebooklm_export/
 
 ### 1. Search Strategy v3
 
-- **현재 상태**: 설계 완료, 구현 대기
-- **Link Following**: 설계만 완료 (Section 7)
-- **fetch_depth**: 모두 0으로 설정됨 (비활성화)
+- **현재 상태**: 기본 파이프라인 구현 및 단위 테스트 통과로 기준선이 고정됨
+- **Link Following**: 구현 완료(SSV3-13~16), 기본 설정은 `fetch_depth=0`으로 비활성
+- **fetch_depth**: 0이면 비활성, 1~2로 점진 활성화 권장. `link_selection`은 fetch_depth>0일 때만 적용됨
+- **실행 조건(옵트인)**: Orchestration에서 `CMIS_ENABLE_SEARCH_V3=1`일 때만 SearchV3 소스가 등록되며, 외부 호출은 `GOOGLE_API_KEY`/`GOOGLE_SEARCH_ENGINE_ID` 등 환경변수 설정이 필요함
 
 ### 2. Brownfield
 
-- **커밋되지 않은 변경사항 있음**:
-  - outbox.py (신규)
-  - commit.py, db.py, import_run_store.py (수정)
-- **우선 검토 필요**
+- **현재 상태**: outbox 패턴 구현/커밋 완료, 로컬 미커밋 변경사항 없음
+- **운영 관점**: outbox 재처리는 `cmis brownfield reconcile`로 수행 가능(실패 항목 존재 시 명령이 실패로 종료: exit code 1)
 
 ### 3. LLM Model Management
 
