@@ -246,6 +246,7 @@ flowchart TB
 - 테스트/격리를 위해, 환경변수 `CMIS_STORAGE_ROOT`가 설정되면 `.cmis/`가 **해당 경로 아래**에 생성됩니다.
   - 예: `CMIS_STORAGE_ROOT=/mnt/cmis_storage`이면 `/mnt/cmis_storage/.cmis/`가 저장 루트가 됩니다.
 - 구현 관점에서는 “스토어 생성 규칙”을 한 곳(`StoreFactory`)로 모아, 추후 인프라(PostgreSQL/S3 등)로 전환할 때 변경 지점을 최소화하도록 준비되어 있습니다.
+- 운영 점검 관점에서는 `cmis cursor doctor`가 **설정(YAML) 문법**, **SQLite 무결성(quick_check)**, **ART 파일 존재 여부(메타↔파일)** 를 빠르게 점검합니다.
 
 | Store(논리 이름) | 구현체(코드) | 저장 방식 | 기본 경로(예시) | 상태(현재) | 비고 |
 |---|---|---|---|---|---|

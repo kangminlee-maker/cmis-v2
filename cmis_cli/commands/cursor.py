@@ -19,6 +19,7 @@ from cmis_core.orchestration import OrchestrationKernel, RunRequest
 from cmis_core.policy_engine import PolicyEngine
 from cmis_core.run_exporter import RunExporter
 from cmis_core.stores import StoreFactory
+from cmis_core.stores.doctor import run_storage_doctor
 from cmis_core.stores.sqlite_base import StoragePaths
 
 
@@ -62,6 +63,15 @@ def _collect_doctor_issues(project_root: Path) -> list[str]:
     except Exception as e:
         issues.append(f"store_init_failed:{e}")
 
+    # 3) Runtime storage integrity checks (best-effort)
+    try:
+        result = run_storage_doctor(project_root=project_root, include_orphan_files=False)
+        if not result.ok:
+            issues.extend(list(result.issues or []))
+    except Exception as e:
+        # doctor는 best-effort: check 자체 실패는 issue로만 기록합니다.
+        issues.append(f"storage_doctor_failed:{e}")
+
     return issues
 
 
@@ -104,7 +114,7 @@ def cmd_cursor_doctor(args) -> None:
         print("CMIS Doctor: FAIL")
         for it in issues:
             print(f"- {it}")
-        return
+        raise SystemExit(1)
 
     print("CMIS Doctor: OK")
     print(f"- project_root: {project_root}")
