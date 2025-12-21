@@ -82,6 +82,9 @@ def connect_sqlite(db_path: Path) -> sqlite3.Connection:
     """SQLite 연결 (non-thread-safe 사용은 호출자가 책임)"""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    # 기본 동시성/안전성 설정 (local-first 운영 기본값)
+    conn.execute("PRAGMA busy_timeout=5000;")  # ms
+    conn.execute("PRAGMA foreign_keys=ON;")
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
     return conn
