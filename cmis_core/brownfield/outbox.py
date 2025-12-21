@@ -113,7 +113,9 @@ def _process(
     limit: int,
     retry_failed: bool,
 ) -> Dict[str, Any]:
-    statuses = ["pending"]
+    # NOTE: local-first에서는 crash 등으로 processing 상태가 남을 수 있으므로,
+    # processing도 재시도 대상으로 취급합니다(멱등 전제).
+    statuses = ["pending", "processing"]
     if retry_failed:
         statuses.append("failed")
 
