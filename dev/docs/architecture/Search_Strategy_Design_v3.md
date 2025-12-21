@@ -979,3 +979,486 @@ LLM은 “다음 행동”을 **Plan delta**로 제안합니다.
   - **목표**: 런타임 무음 변경 금지(온라인 변경 0), 오프라인에서만 승격 제안
   - **수용기준**: learner는 제안만 생성하고, 런타임 registry를 직접 수정하지 않음
   - **테스트**: lookback 기반 제안 생성 스모크 테스트
+
+### 6.4 P1-P2 — Link Following (확장/품질 향상)
+
+- [ ] **SSV3-13 LinkExtractor v1(규칙 기반) + relevance scoring**
+  - **목표**: HTML에서 유망한 링크 추출 및 relevance scoring (metric/domain 키워드, URL pattern, anchor text)
+  - **수용기준**: `LinkCandidate` 생성, score 기준 상위 N개 반환, link_type 분류
+  - **테스트**: 샘플 HTML에서 IR/report/PDF 링크 추출 및 점수화
+
+- [ ] **SSV3-14 DocumentFetcher depth-based exploration (BFS) + visited tracking**
+  - **목표**: `fetch_depth` 지원, 링크를 따라가며 문서 수집, 순환 참조 방지
+  - **수용기준**: `DocumentSnapshot.depth_from_serp`, `parent_doc_id`, `link_path` 기록
+  - **테스트**: depth=0/1/2 케이스, visited set 중복 제거, max_depth 준수
+
+- [ ] **SSV3-15 LinkSelectionPolicy + budget integration**
+  - **목표**: 정책 기반 링크 선택 (max_links_per_doc, min_relevance_score, same_domain_only)
+  - **수용기준**: budget 내에서 링크 선택, phase별 정책 차등 적용
+  - **테스트**: budget 초과 시 조기 중단, same_domain_only 강제
+
+- [ ] **SSV3-16 Link events/trace + phase config 확장**
+  - **목표**: LinkExtracted/LinkFollowed/DepthExplorationCompleted 이벤트 기록
+  - **수용기준**: SearchPhase.retrieval.fetch_depth/link_selection 설정 지원
+  - **테스트**: trace에 link exploration 계보가 재현 가능하게 기록됨
+
+---
+
+## 7) Link Following (Depth-based Exploration) 확장
+
+### 7.1 문제 인식
+
+현재 Search v3는 SERP → Document → Synthesis의 "1-depth" 구조로 설계되어 있습니다.
+그러나 실제 유용한 데이터는 종종 다음과 같은 경로에 있습니다:
+
+- **SERP 결과** → 요약 페이지 → **"상세 리포트 다운로드"** 링크 → 실제 데이터
+- **뉴스 기사** → "전체 통계 보기" → **통계 테이블 페이지**
+- **회사 홈페이지** → "IR 자료실" → **연간 보고서 PDF**
+
+HTML 문서에는 추가 탐색 가능한 hyperlink가 반드시 존재하며, 이를 활용하지 않으면 고품질 evidence를 놓칠 수 있습니다.
+
+### 7.2 설계 목표
+
+- **fetch_depth 파라미터 활용**: SearchPhase.retrieval에 이미 언급된 `fetch_depth`를 구현
+- **Budget/정책 준수**: 링크 탐색도 fetch budget을 소비하며, egress policy를 따름
+- **재현성 보장**: 링크 탐색 계보(parent→child)를 trace/event로 기록
+- **안전장치**: 순환 참조 방지, SSRF 보호, 링크 폭발 방지
+
+### 7.3 핵심 데이터 모델 확장
+
+#### 7.3.1 LinkCandidate (새 타입)
+
+```python
+@dataclass(frozen=True)
+class LinkCandidate:
+    """문서 내에서 발견된 유망한 링크"""
+    url: str
+    canonical_url: str
+    parent_doc_id: str              # 링크를 발견한 문서
+    anchor_text: str                # <a> 태그 텍스트
+    context_snippet: str            # 주변 텍스트 (최대 200자)
+    relevance_score: float          # 0~1
+    link_type: str                  # "pdf" | "spreadsheet" | "download" | "detail" | "table" | "report" | "general"
+    depth_from_serp: int            # 0=SERP, 1=1차 링크, 2=2차 링크
+    extraction_meta: Dict[str, Any] # URL pattern, DOM path 등
+```
+
+#### 7.3.2 DocumentSnapshot 확장
+
+```python
+@dataclass(frozen=True)
+class DocumentSnapshot:
+    # ... 기존 필드
+    depth_from_serp: int = 0           # ← 추가: 링크 깊이
+    parent_doc_id: Optional[str] = None # ← 추가: 어디서 왔는지
+    link_path: List[str] = field(default_factory=list)  # ← 추가: [DOC-A, DOC-B, DOC-C] 경로
+```
+
+### 7.4 컴포넌트 인터페이스
+
+#### 7.4.1 LinkExtractor
+
+```python
+class LinkExtractor(Protocol):
+    """DocumentSnapshot에서 유망한 링크를 추출"""
+
+    def extract_links(
+        self,
+        doc: DocumentSnapshot,
+        request: SearchRequest,
+        context: SearchContext,
+        current_depth: int
+    ) -> List[LinkCandidate]:
+        """
+        HTML에서 링크를 추출하고 relevance scoring
+
+        Scoring 기준:
+        - anchor text가 metric/domain 키워드 포함
+        - URL pattern (pdf, xlsx, /ir/, /report/ 등)
+        - link context (주변 텍스트에 수치/날짜)
+        - same domain bonus (authoritative phase)
+
+        Returns:
+            상위 N개 LinkCandidate (score 기준 정렬)
+        """
+        ...
+```
+
+**규칙 기반 Relevance Scoring 예시**:
+
+```python
+def _score_relevance(
+    self,
+    url: str,
+    anchor_text: str,
+    context_snippet: str,
+    request: SearchRequest,
+    domain: str
+) -> float:
+    score = 0.0
+
+    # Metric 키워드 매칭
+    metric_keywords = self._extract_keywords(request.metric_definition)
+    if any(kw in anchor_text.lower() for kw in metric_keywords):
+        score += 0.3
+    if any(kw in context_snippet.lower() for kw in metric_keywords):
+        score += 0.2
+
+    # URL 패턴 bonus
+    priority_patterns = [
+        (r'\.pdf$', 0.3),
+        (r'\.xlsx?$', 0.3),
+        (r'/ir/', 0.2),
+        (r'/investor/', 0.2),
+        (r'/report/', 0.2),
+        (r'/annual/', 0.15),
+        (r'/statistics/', 0.15),
+    ]
+    for pattern, bonus in priority_patterns:
+        if re.search(pattern, url.lower()):
+            score += bonus
+
+    # Anchor text 품질
+    if len(anchor_text) > 10:  # 설명적인 텍스트
+        score += 0.1
+
+    # Year matching
+    if request.as_of:
+        year = request.as_of[:4]
+        if year in anchor_text or year in context_snippet:
+            score += 0.2
+
+    return min(score, 1.0)
+```
+
+#### 7.4.2 LinkSelectionPolicy
+
+```python
+class LinkSelectionPolicy(Protocol):
+    """Budget/정책 내에서 어떤 링크를 따라갈지 결정"""
+
+    def select_links(
+        self,
+        candidates: List[LinkCandidate],
+        budget_remaining: Budget,
+        phase: SearchPhase,
+        context: SearchContext,
+        visited: Set[str]
+    ) -> List[LinkCandidate]:
+        """
+        정책 기반 링크 선택:
+        - max_links_per_doc (기본 3개)
+        - min_relevance_score (phase별 차등)
+        - fetch_depth limit
+        - domain policy (same_domain_only for authoritative)
+        - visited set (순환 방지)
+        - budget 제약
+        """
+        ...
+```
+
+#### 7.4.3 DocumentFetcher 확장
+
+```python
+class DocumentFetcher(Protocol):
+    def fetch(
+        self,
+        url: str,
+        timeout_sec: int,
+        depth: int = 0,              # ← 추가
+        parent_doc_id: Optional[str] = None  # ← 추가
+    ) -> Optional[DocumentSnapshot]:
+        ...
+
+    def fetch_with_links(
+        self,
+        initial_urls: List[str],
+        max_depth: int,
+        link_extractor: LinkExtractor,
+        link_selector: LinkSelectionPolicy,
+        budget: Budget,
+        context: SearchContext
+    ) -> List[DocumentSnapshot]:
+        """
+        BFS로 링크를 따라가며 문서 수집
+
+        알고리즘:
+        1. depth=0: initial_urls (SERP 결과)
+        2. 각 문서에서 LinkExtractor로 링크 추출
+        3. LinkSelectionPolicy로 필터링
+        4. visited set으로 중복 제거
+        5. budget 체크 후 fetch
+        6. max_depth까지 반복
+
+        Returns:
+            모든 depth의 DocumentSnapshot 리스트
+        """
+        ...
+```
+
+**구현 스케치**:
+
+```python
+def fetch_with_links(
+    self,
+    initial_urls: List[str],
+    max_depth: int,
+    link_extractor: LinkExtractor,
+    link_selector: LinkSelectionPolicy,
+    budget: Budget,
+    context: SearchContext
+) -> List[DocumentSnapshot]:
+    visited = set()
+    all_docs = []
+    current_level = [(url, 0, None) for url in initial_urls]  # (url, depth, parent_doc_id)
+
+    fetches_used = 0
+    start_time = time.time()
+
+    for depth in range(max_depth + 1):
+        if not current_level:
+            break
+
+        next_level = []
+
+        for url, current_depth, parent_doc_id in current_level:
+            # Budget check
+            if fetches_used >= budget.max_fetches:
+                break
+            elapsed_sec = time.time() - start_time
+            if elapsed_sec >= budget.max_time_sec:
+                break
+
+            canonical_url = canonicalize_url(url)
+
+            # Visited check
+            if canonical_url in visited:
+                continue
+            visited.add(canonical_url)
+
+            # Fetch document
+            doc = self.fetch(url, timeout_sec=10, depth=current_depth, parent_doc_id=parent_doc_id)
+            if not doc:
+                continue
+
+            all_docs.append(doc)
+            fetches_used += 1
+
+            # Extract links (if not max depth)
+            if current_depth < max_depth:
+                link_candidates = link_extractor.extract_links(
+                    doc=doc,
+                    request=request,
+                    context=context,
+                    current_depth=current_depth
+                )
+
+                # Select links
+                selected_links = link_selector.select_links(
+                    candidates=link_candidates,
+                    budget_remaining=Budget(
+                        max_fetches=budget.max_fetches - fetches_used,
+                        max_time_sec=budget.max_time_sec - int(elapsed_sec),
+                        ...
+                    ),
+                    phase=phase,
+                    context=context,
+                    visited=visited
+                )
+
+                # Queue for next level
+                for link in selected_links:
+                    next_level.append((link.url, current_depth + 1, doc.doc_id))
+
+        current_level = next_level
+
+    return all_docs
+```
+
+### 7.5 SearchPhase 설정 확장
+
+```yaml
+# search_strategy_registry_v3.yaml 예시
+metrics:
+  MET-Revenue:
+    decision_balanced:
+      phases:
+        - phase_id: authoritative
+          retrieval:
+            serp_top_k: 5
+            fetch_top_k: 3
+            fetch_depth: 1              # ← 공식 사이트 내부 링크 1단계
+            link_selection:
+              max_links_per_doc: 3
+              min_relevance_score: 0.6
+              same_domain_only: true    # authoritative는 같은 도메인만
+              priority_patterns:        # 우선 패턴
+                - "*.pdf"
+                - "*/ir/*"
+                - "*/investor/*"
+                - "*report*"
+
+        - phase_id: generic_web
+          retrieval:
+            serp_top_k: 8
+            fetch_top_k: 5
+            fetch_depth: 0              # ← 일반 웹은 링크 따라가지 않음 (보수적)
+            # 또는 fetch_depth: 1 + 엄격한 필터
+            link_selection:
+              max_links_per_doc: 2
+              min_relevance_score: 0.7
+              same_domain_only: false
+```
+
+### 7.6 Event/Trace 확장
+
+#### 7.6.1 LinkExtracted
+
+```json
+{
+  "type": "LinkExtracted",
+  "payload": {
+    "parent_doc_id": "DOC-abc123",
+    "links_found": 15,
+    "links_filtered": 3,
+    "top_links": [
+      {
+        "url": "https://example.com/ir/annual-report.pdf",
+        "canonical_url": "https://example.com/ir/annual-report.pdf",
+        "anchor_text": "2024 Annual Report",
+        "relevance_score": 0.85,
+        "link_type": "pdf",
+        "depth_from_serp": 1
+      }
+    ]
+  }
+}
+```
+
+#### 7.6.2 LinkFollowed
+
+```json
+{
+  "type": "LinkFollowed",
+  "payload": {
+    "parent_doc_id": "DOC-abc123",
+    "child_doc_id": "DOC-def456",
+    "url": "https://example.com/ir/annual-report.pdf",
+    "canonical_url": "https://example.com/ir/annual-report.pdf",
+    "depth_from_serp": 1,
+    "relevance_score": 0.85,
+    "link_type": "pdf"
+  }
+}
+```
+
+#### 7.6.3 DepthExplorationCompleted
+
+```json
+{
+  "type": "DepthExplorationCompleted",
+  "payload": {
+    "phase_id": "authoritative",
+    "max_depth_reached": 1,
+    "total_docs_fetched": 8,
+    "by_depth": {
+      "0": 3,
+      "1": 5
+    },
+    "links_pruned": {
+      "budget_limit": 2,
+      "relevance_low": 7,
+      "visited_duplicate": 3,
+      "same_domain_policy": 4
+    }
+  }
+}
+```
+
+### 7.7 안전장치 (필수)
+
+#### 7.7.1 순환 참조 방지
+
+```python
+class VisitedTracker:
+    """URL 중복 방문 방지"""
+
+    def __init__(self):
+        self._visited: Set[str] = set()  # canonical_url 기준
+
+    def is_visited(self, canonical_url: str) -> bool:
+        return canonical_url in self._visited
+
+    def mark_visited(self, canonical_url: str) -> None:
+        self._visited.add(canonical_url)
+```
+
+#### 7.7.2 Budget 보호
+
+- 링크 탐색도 `budget.max_fetches`를 소비
+- 각 depth 전환 시 남은 budget 체크
+- `max_time_sec` 초과 시 즉시 중단
+
+#### 7.7.3 SSRF 보호
+
+- DocumentFetcher의 기존 가드레일이 모든 depth에 적용됨:
+  - URL scheme allowlist
+  - DNS/IP validation (loopback/private 차단)
+  - Domain policy (deny_domains)
+  - Redirect limit
+
+#### 7.7.4 링크 폭발 방지
+
+- `max_links_per_doc`: 문서당 최대 링크 수 (기본 3개)
+- `min_relevance_score`: 최소 relevance threshold
+- `max_depth`: 최대 탐색 깊이 (authoritative=1~2, generic_web=0~1)
+
+### 7.8 Phase별 전략 권장
+
+| Phase | fetch_depth | 링크 정책 | 이유 |
+|-------|-------------|----------|------|
+| **authoritative** | 1~2 | `same_domain_only=true`<br>`min_relevance_score=0.6`<br>`max_links_per_doc=3` | 공식 사이트는 신뢰할 수 있고, IR/통계 섹션으로 이동 시 더 좋은 데이터 |
+| **generic_web** | 0 (또는 1 제한적) | `min_relevance_score=0.7`<br>`max_links_per_doc=2`<br>`same_domain_only=false` | 일반 웹은 링크 품질이 낮고, 예산 낭비 위험 |
+
+### 7.9 예상 효과
+
+**Before (현재)**:
+```
+SERP → [homepage.com, news.com, blog.com]
+     → 각 페이지에서 직접 추출
+     → 제한된 evidence
+```
+
+**After (link following)**:
+```
+SERP → [homepage.com/ir, news.com/article, ...]
+     ↓
+     homepage.com/ir → "2024 Annual Report.pdf" (링크 발견, score=0.85)
+     ↓
+     homepage.com/ir/annual-report.pdf → 완전한 재무 테이블
+     → 고품질 evidence 확보!
+```
+
+### 7.10 구현 우선순위
+
+#### P1 (핵심)
+- LinkExtractor (규칙 기반) 구현
+- fetch_depth=1 지원 (BFS)
+- visited set (순환 방지)
+- Budget 통합
+- Event/trace 기록
+
+#### P2 (품질 향상)
+- LinkSelectionPolicy 고도화
+- link_type별 차등 처리
+- depth별 evidence 품질 추적
+- Phase별 link_selection 설정 지원
+
+#### P3 (최적화)
+- LLM 기반 link relevance scoring
+- Domain-specific link pattern 학습
+- Parallel fetch (depth별 병렬)
+
+---
+
+**문서 종료**
