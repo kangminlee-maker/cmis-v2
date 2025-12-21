@@ -59,12 +59,16 @@ def _ensure_str(obj: Any, *, where: str) -> str:
 @dataclass(frozen=True)
 class BenchmarkJudgeSpec:
     judge_task_type: str
+    judge_model_id: Optional[str] = None
+    judge_policy_ref: Optional[str] = None
     judge_prompt_profile: str = "benchmark_judge_v1"
     judge_version_pin: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "judge_task_type": str(self.judge_task_type),
+            "judge_model_id": (None if self.judge_model_id is None else str(self.judge_model_id)),
+            "judge_policy_ref": (None if self.judge_policy_ref is None else str(self.judge_policy_ref)),
             "judge_prompt_profile": str(self.judge_prompt_profile),
             "judge_version_pin": bool(self.judge_version_pin),
         }
@@ -102,6 +106,9 @@ class BenchmarkSuite:
     suite_id: str
     tier: str  # unit|scenario|human
     run_mode: str = "managed"  # managed|route
+    policy_ref: Optional[str] = None
+    budget_remaining_usd: float = 1.0
+    max_attempts: int = 1
     judge: Optional[BenchmarkJudgeSpec] = None
     tasks: List[BenchmarkTaskSpec] = field(default_factory=list)
 
@@ -110,6 +117,9 @@ class BenchmarkSuite:
             "suite_id": str(self.suite_id),
             "tier": str(self.tier),
             "run_mode": str(self.run_mode),
+            "policy_ref": (None if self.policy_ref is None else str(self.policy_ref)),
+            "budget_remaining_usd": float(self.budget_remaining_usd),
+            "max_attempts": int(self.max_attempts),
             "tasks": [t.to_dict() for t in (self.tasks or [])],
         }
         if self.judge is not None:
@@ -154,11 +164,26 @@ class BenchmarkSuiteRegistry:
             if run_mode not in {"managed", "route"}:
                 raise BenchmarkError(f"benchmark_suites.{sid}.run_mode must be 'managed' or 'route'")
 
+            policy_ref = s.get("policy_ref")
+            if policy_ref is not None:
+                policy_ref = _ensure_str(policy_ref, where=f"benchmark_suites.{sid}.policy_ref")
+
+            try:
+                budget_remaining_usd = float(s.get("budget_remaining_usd", 1.0) or 1.0)
+            except Exception:
+                budget_remaining_usd = 1.0
+            try:
+                max_attempts = int(s.get("max_attempts", 1) or 1)
+            except Exception:
+                max_attempts = 1
+
             judge: Optional[BenchmarkJudgeSpec] = None
             if "judge" in s and s.get("judge") is not None:
                 j = _ensure_dict(s.get("judge"), where=f"benchmark_suites.{sid}.judge")
                 judge = BenchmarkJudgeSpec(
                     judge_task_type=_ensure_str(j.get("judge_task_type"), where=f"benchmark_suites.{sid}.judge.judge_task_type"),
+                    judge_model_id=(None if j.get("judge_model_id") is None else _ensure_str(j.get("judge_model_id"), where=f"benchmark_suites.{sid}.judge.judge_model_id")),
+                    judge_policy_ref=(None if j.get("judge_policy_ref") is None else _ensure_str(j.get("judge_policy_ref"), where=f"benchmark_suites.{sid}.judge.judge_policy_ref")),
                     judge_prompt_profile=str(j.get("judge_prompt_profile", "benchmark_judge_v1") or "benchmark_judge_v1"),
                     judge_version_pin=bool(j.get("judge_version_pin", False)),
                 )
@@ -196,7 +221,16 @@ class BenchmarkSuiteRegistry:
                     )
                 tasks.append(BenchmarkTaskSpec(task_type=task_type, cases=cases))
 
-            suites[sid] = BenchmarkSuite(suite_id=sid, tier=tier, run_mode=run_mode, judge=judge, tasks=tasks)
+            suites[sid] = BenchmarkSuite(
+                suite_id=sid,
+                tier=tier,
+                run_mode=run_mode,
+                policy_ref=(None if policy_ref is None else str(policy_ref)),
+                budget_remaining_usd=float(budget_remaining_usd),
+                max_attempts=int(max_attempts),
+                judge=judge,
+                tasks=tasks,
+            )
 
         compiled = {"schema_version": schema_version, "benchmark_suites": {sid: suites[sid].to_dict() for sid in sorted(suites.keys())}}
         digest = canonical_digest(compiled)
@@ -504,8 +538,7 @@ class BenchmarkRunner:
         if suite.run_mode == "route":
             output = self._call_by_route(task_type=task_type, out_format=out_format, prompt=prompt)
         else:
-            # managed: 기본 정책은 호출자가 CLI에서 제공(향후 확장). 여기서는 route에 준해 수행.
-            output = self._call_by_route(task_type=task_type, out_format=out_format, prompt=prompt)
+            output = self._call_managed(suite, task_type=task_type, out_format=out_format, prompt=prompt, bench_run_id=bench_run_id)
 
         latency_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
         passed, metrics = self._evaluate_case(task_type=task_type, out_format=out_format, case=case, output=output, suite=suite, bench_run_id=bench_run_id)
@@ -542,6 +575,34 @@ class BenchmarkRunner:
             return self.llm.call_structured(tt, prompt, enable_quality_gates=False, enable_escalation=False, max_attempts=1)
         return self.llm.call(tt, prompt)
 
+    def _call_managed(self, suite: BenchmarkSuite, *, task_type: str, out_format: str, prompt: str, bench_run_id: str) -> Any:
+        """policy_ref 기반 managed 실행."""
+
+        policy_ref = str(suite.policy_ref or "").strip()
+        if not policy_ref:
+            raise BenchmarkError("managed run_mode requires suite.policy_ref")
+
+        tt = CMISTaskType(task_type)
+        if out_format == "json":
+            return self.llm.call_structured(
+                tt,
+                prompt,
+                policy_ref=policy_ref,
+                run_id=bench_run_id,
+                call_intent=("extract" if suite.tier == "unit" else "draft"),
+                budget_remaining_usd=float(suite.budget_remaining_usd),
+                max_attempts=int(max(1, suite.max_attempts)),
+                enable_quality_gates=True,
+                enable_escalation=True,
+            )
+        return self.llm.call(
+            tt,
+            prompt,
+            policy_ref=policy_ref,
+            run_id=bench_run_id,
+            call_intent=("draft" if suite.tier != "scenario" else "draft"),
+            budget_remaining_usd=float(suite.budget_remaining_usd),
+        )
     def _evaluate_case(
         self,
         *,
@@ -605,6 +666,28 @@ class BenchmarkRunner:
             f"OUTPUT:\n{str(output)}\n\n"
             f"채점 기준: 0~1 점수로 평가 (0=실패, 1=매우 우수)\n"
         )
+        # managed + judge pinning(옵션)
+        if suite.run_mode == "managed" and suite.judge.judge_version_pin and suite.judge.judge_model_id:
+            judge_policy_ref = str(suite.judge.judge_policy_ref or suite.policy_ref or "").strip()
+            if not judge_policy_ref:
+                raise BenchmarkError("judge_version_pin requires judge_policy_ref or suite.policy_ref")
+            try:
+                decision, _ = self.llm._select_managed(  # type: ignore[attr-defined]
+                    task_type=judge_task_type,
+                    policy_ref=judge_policy_ref,
+                    call_intent="judge",
+                    quality_target="medium",
+                    confidentiality="public",
+                    budget_remaining_usd=float(suite.budget_remaining_usd),
+                    max_latency_ms=None,
+                    attempt_index=0,
+                    failure_codes=[],
+                )
+                if str(decision.model_id) != str(suite.judge.judge_model_id):
+                    raise BenchmarkError(f"judge pin mismatch: expected {suite.judge.judge_model_id} but selected {decision.model_id}")
+            except Exception as e:
+                raise BenchmarkError(str(e))
+
         return self.llm.call_structured(
             judge_task_type,
             judge_prompt,
