@@ -18,6 +18,9 @@ from cmis_core.search_v3.candidate_extractor import RuleBasedCandidateExtractor
 from cmis_core.search_v3.document_fetcher import DocumentFetcher
 from cmis_core.search_v3.gate import GatePolicyEnforcerV1
 from cmis_core.search_v3.generic_web_search import GoogleCseProvider
+from cmis_core.search_v3.link_extractor import LinkExtractorV1
+from cmis_core.search_v3.link_selector import LinkSelectionPolicyV1
+from cmis_core.search_v3.query_learner import QueryLearnerV1
 from cmis_core.search_v3.registry import StrategyRegistryV3
 from cmis_core.search_v3.runner import SearchKernelV1
 from cmis_core.search_v3.synthesizer import SynthesizerV1
@@ -71,6 +74,9 @@ class SearchV3Source(BaseDataSource):
         extractor = RuleBasedCandidateExtractor(artifact_store=self.artifacts)
         synthesizer = SynthesizerV1()
         gate = GatePolicyEnforcerV1()
+        learner = QueryLearnerV1(artifact_store=self.artifacts)
+        link_extractor = LinkExtractorV1(artifact_store=self.artifacts)
+        link_selector = LinkSelectionPolicyV1()
 
         self.kernel = SearchKernelV1(
             registry=registry,
@@ -79,6 +85,9 @@ class SearchV3Source(BaseDataSource):
             extractor=extractor,
             synthesizer=synthesizer,
             gate=gate,
+            learner=learner,
+            link_extractor=link_extractor,
+            link_selector=link_selector,
         )
 
     def can_handle(self, request: Any) -> bool:
@@ -160,6 +169,7 @@ class SearchV3Source(BaseDataSource):
             "plan_digest_chain": list(result.plan_digest_chain),
             "trace_envelope_artifact_id": result.trace_envelope_artifact_id,
             "events_artifact_id": result.events_artifact_id,
+            "query_learner_artifact_id": result.query_learner_artifact_id,
         }
 
         # Verifier hook (ref-only SSoT)

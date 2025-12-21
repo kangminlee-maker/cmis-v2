@@ -42,16 +42,11 @@ metrics:
           retrieval:
             serp_top_k: 8
             fetch_top_k: 3
-            fetch_depth: 0  # Link Following: 0=disabled, 1=1-depth, 2=2-depth (Section 7 설계 완료, 구현 예정)
-            # link_selection:  # Link Following 활성화 시 필요 (구현 예정)
-            #   max_links_per_doc: 3
-            #   min_relevance_score: 0.6
-            #   same_domain_only: true
-            #   priority_patterns:
-            #     - "*.pdf"
-            #     - "*/ir/*"
-            #     - "*/investor/*"
-            #     - "*report*"
+            fetch_depth: 0  # Link Following: 0=disabled, 1=1-depth, 2=2-depth (SSV3-14~16 구현 완료, 기본은 비활성)
+            link_selection:  # fetch_depth>0일 때만 사용
+              max_links_per_doc: 2
+              min_relevance_score: 0.7
+              same_domain_only: false
           filters:
             recency_days: 365
           scoring:
@@ -72,7 +67,11 @@ metrics:
           retrieval:
             serp_top_k: 8
             fetch_top_k: 5
-            fetch_depth: 0  # Link Following (구현 예정)
+            fetch_depth: 0  # Link Following: 0=disabled
+            link_selection:  # fetch_depth>0일 때만 사용
+              max_links_per_doc: 2
+              min_relevance_score: 0.7
+              same_domain_only: false
           filters:
             recency_days: 365
           scoring:
@@ -93,7 +92,11 @@ metrics:
           retrieval:
             serp_top_k: 10
             fetch_top_k: 7
-            fetch_depth: 0  # Link Following (구현 예정)
+            fetch_depth: 0  # Link Following: 0=disabled
+            link_selection:  # fetch_depth>0일 때만 사용
+              max_links_per_doc: 2
+              min_relevance_score: 0.7
+              same_domain_only: false
           filters:
             recency_days: 3650
           scoring:

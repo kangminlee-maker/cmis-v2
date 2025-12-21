@@ -69,6 +69,9 @@ def verify_search_v3_trace(
         if typ == "DocumentFetched":
             _require_artifact_ref(store, payload.get("artifact_id"), issues, "missing_document_artifact")
 
+        if typ == "LinkExtracted":
+            _require_artifact_ref(store, payload.get("links_artifact_id"), issues, "missing_links_artifact")
+
         if typ == "EvidenceCommitted":
             src_refs = payload.get("source_refs") or {}
             if isinstance(src_refs, dict):

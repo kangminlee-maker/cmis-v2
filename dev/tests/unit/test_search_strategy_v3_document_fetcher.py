@@ -10,6 +10,8 @@ import pytest
 
 from cmis_core.digest import sha256_digest
 from cmis_core.search_v3.document_fetcher import DocumentFetchError, DocumentFetcher
+from cmis_core.search_v3.link_extractor import LinkExtractorV1
+from cmis_core.search_v3.candidate import SearchRequest
 from cmis_core.stores import ArtifactStore
 
 
@@ -170,5 +172,95 @@ def test_document_fetcher_doc_id_content_addressed(project_root: Path, tmp_path:
     text = Path(text_meta["file_path"]).read_text(encoding="utf-8").strip()
     assert text == "Hello 123"
     assert snap.content_digest == sha256_digest(text.encode("utf-8"))
+
+    store.close()
+
+
+def test_document_fetcher_records_depth_and_parent(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+    store = ArtifactStore(project_root=project_root)
+
+    mapping: Dict[str, _FakeResponse] = {
+        "https://example.com/root": _FakeResponse(
+            url="https://example.com/root",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body><a href='/child'>child</a></body></html>",
+        ),
+        "https://example.com/child": _FakeResponse(
+            url="https://example.com/child",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body>child page</body></html>",
+        ),
+    }
+
+    def http_get(url: str, *, timeout: int) -> _FakeResponse:
+        return mapping[url]
+
+    f = DocumentFetcher(artifact_store=store, dns_resolver=_safe_dns, http_get=http_get, max_bytes=1000)
+    root = f.fetch("https://example.com/root", timeout_sec=5, depth=0)
+    assert root is not None
+    assert root.depth_from_serp == 0
+    assert root.parent_doc_id is None
+    assert root.link_path == [root.doc_id]
+
+    child = f.fetch("https://example.com/child", timeout_sec=5, depth=1, parent_doc_id=root.doc_id)
+    assert child is not None
+    assert child.depth_from_serp == 1
+    assert child.parent_doc_id == root.doc_id
+    assert child.link_path == [root.doc_id, child.doc_id]
+
+    store.close()
+
+
+def test_document_fetcher_fetch_with_links_bfs_tracks_depth_and_visited(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+    store = ArtifactStore(project_root=project_root)
+
+    mapping: Dict[str, _FakeResponse] = {
+        "https://example.com/root": _FakeResponse(
+            url="https://example.com/root",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body><a href='/child'>2024 Annual Report (PDF)</a><a href='/root'>self</a></body></html>",
+        ),
+        "https://example.com/child": _FakeResponse(
+            url="https://example.com/child",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body><a href='/root'>back</a></body></html>",
+        ),
+    }
+
+    def http_get(url: str, *, timeout: int) -> _FakeResponse:
+        return mapping[url]
+
+    f = DocumentFetcher(artifact_store=store, dns_resolver=_safe_dns, http_get=http_get, max_bytes=1000)
+    extractor = LinkExtractorV1(artifact_store=store)
+    req = SearchRequest(metric_id="MET-TAM", expected_unit=None, as_of="2024")
+
+    docs = f.fetch_with_links(
+        ["https://example.com/root"],
+        timeout_sec=5,
+        max_depth=1,
+        link_extractor=extractor,
+        request=req,
+        max_fetches=10,
+        max_links_per_doc=5,
+        min_relevance_score=0.0,
+        same_domain_only=True,
+    )
+    assert len(docs) == 2
+    root = docs[0]
+    child = docs[1]
+
+    assert root.depth_from_serp == 0
+    assert root.parent_doc_id is None
+    assert root.link_path == [root.doc_id]
+
+    assert child.depth_from_serp == 1
+    assert child.parent_doc_id == root.doc_id
+    assert child.link_path == [root.doc_id, child.doc_id]
 
     store.close()

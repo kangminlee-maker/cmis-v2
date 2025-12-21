@@ -19,6 +19,9 @@ from cmis_core.search_v3.candidate_extractor import RuleBasedCandidateExtractor
 from cmis_core.search_v3.document_fetcher import DocumentFetcher, DocumentSnapshot
 from cmis_core.search_v3.gate import GatePolicyEnforcerV1
 from cmis_core.search_v3.generic_web_search import GoogleCseProvider
+from cmis_core.search_v3.link_extractor import LinkExtractorV1
+from cmis_core.search_v3.link_selector import LinkSelectionConfig, LinkSelectionPolicyV1
+from cmis_core.search_v3.query_learner import QueryLearnerV1
 from cmis_core.search_v3.query import SearchQueryRequest, finalize_query_request
 from cmis_core.search_v3.registry import StrategyRegistryV3
 from cmis_core.search_v3.serp import SerpSnapshotRef
@@ -37,6 +40,7 @@ class SearchRunResult:
     events: List[Dict[str, Any]] = field(default_factory=list)
     trace_envelope_artifact_id: Optional[str] = None
     events_artifact_id: Optional[str] = None
+    query_learner_artifact_id: Optional[str] = None
 
 
 def _utc_now_iso_z() -> str:
@@ -55,6 +59,9 @@ class SearchKernelV1:
         extractor: RuleBasedCandidateExtractor,
         synthesizer: SynthesizerV1,
         gate: GatePolicyEnforcerV1,
+        learner: Optional[QueryLearnerV1] = None,
+        link_extractor: Optional[LinkExtractorV1] = None,
+        link_selector: Optional[LinkSelectionPolicyV1] = None,
     ) -> None:
         self.registry = registry
         self.provider = provider
@@ -62,6 +69,9 @@ class SearchKernelV1:
         self.extractor = extractor
         self.synthesizer = synthesizer
         self.gate = gate
+        self.learner = learner
+        self.link_extractor = link_extractor
+        self.link_selector = link_selector
 
     def fetch_evidence(
         self,
@@ -120,6 +130,9 @@ class SearchKernelV1:
             retrieval = dict(phase.get("retrieval") or {})
             serp_top_k = int(retrieval.get("serp_top_k", 8))
             fetch_top_k = int(retrieval.get("fetch_top_k", 3))
+            fetch_depth = int(retrieval.get("fetch_depth", 0) or 0)
+            link_sel_cfg_raw = retrieval.get("link_selection") or {}
+            link_sel_cfg = dict(link_sel_cfg_raw) if isinstance(link_sel_cfg_raw, dict) else {}
 
             for tpl in query_templates:
                 if queries_used >= int(budget_max_queries):
@@ -169,26 +182,79 @@ class SearchKernelV1:
 
                 fetched_docs: List[DocumentSnapshot] = []
                 docs_to_fetch = list(serp.hits)[: min(fetch_top_k, len(serp.hits))]
-                for hit in docs_to_fetch:
-                    if fetches_used >= int(budget_max_fetches):
-                        break
-                    doc = self.fetcher.fetch(hit.url, timeout_sec=int(phase.get("timeout_sec", 10) or 10))
-                    fetches_used += 1
-                    if doc is None:
-                        continue
-                    fetched_docs.append(doc)
-                    trace.emit(
-                        "DocumentFetched",
-                        phase_id=phase_id,
-                        payload={
-                            "url": hit.url,
-                            "canonical_url": hit.canonical_url,
-                            "doc_id": doc.doc_id,
-                            "artifact_id": doc.artifact_id,
-                            "content_digest": doc.content_digest,
-                            "http_status": (doc.http_meta or {}).get("status_code"),
-                        },
-                    )
+
+                if int(fetch_depth) <= 0:
+                    for hit in docs_to_fetch:
+                        if fetches_used >= int(budget_max_fetches):
+                            break
+                        doc = self.fetcher.fetch(hit.url, timeout_sec=int(phase.get("timeout_sec", 10) or 10))
+                        fetches_used += 1
+                        if doc is None:
+                            continue
+                        fetched_docs.append(doc)
+                        trace.emit(
+                            "DocumentFetched",
+                            phase_id=phase_id,
+                            payload={
+                                "url": hit.url,
+                                "canonical_url": hit.canonical_url,
+                                "doc_id": doc.doc_id,
+                                "artifact_id": doc.artifact_id,
+                                "content_digest": doc.content_digest,
+                                "http_status": (doc.http_meta or {}).get("status_code"),
+                                "depth_from_serp": int(getattr(doc, "depth_from_serp", 0) or 0),
+                                "parent_doc_id": getattr(doc, "parent_doc_id", None),
+                                "link_path": list(getattr(doc, "link_path", []) or []),
+                            },
+                        )
+                else:
+                    # Link Following: BFS exploration inside DocumentFetcher (SSV3-14~16)
+                    budget_remaining = int(budget_max_fetches) - int(fetches_used)
+                    if budget_remaining > 0 and docs_to_fetch:
+                        if self.link_extractor is None:
+                            self.link_extractor = LinkExtractorV1(artifact_store=self.fetcher.artifacts)
+                        if self.link_selector is None:
+                            self.link_selector = LinkSelectionPolicyV1()
+
+                        def _sink(ev_type: str, payload: Dict[str, Any]) -> None:
+                            trace.emit(ev_type, phase_id=phase_id, payload=payload)
+
+                        max_links_per_doc = int(link_sel_cfg.get("max_links_per_doc", 3) or 3)
+                        min_relevance_score = float(link_sel_cfg.get("min_relevance_score", 0.6) or 0.6)
+                        same_domain_only = bool(link_sel_cfg.get("same_domain_only", False))
+
+                        docs = self.fetcher.fetch_with_links(
+                            [h.url for h in docs_to_fetch],
+                            timeout_sec=int(phase.get("timeout_sec", 10) or 10),
+                            max_depth=int(fetch_depth),
+                            link_extractor=self.link_extractor,
+                            link_selector=self.link_selector,
+                            event_sink=_sink,
+                            request=req,
+                            domain_hint=str(template_vars.get("domain") or ""),
+                            max_fetches=budget_remaining,
+                            max_links_per_doc=max_links_per_doc,
+                            min_relevance_score=min_relevance_score,
+                            same_domain_only=same_domain_only,
+                        )
+                        fetches_used += len(docs)
+                        for doc in docs:
+                            fetched_docs.append(doc)
+                            trace.emit(
+                                "DocumentFetched",
+                                phase_id=phase_id,
+                                payload={
+                                    "url": doc.url,
+                                    "canonical_url": doc.canonical_url,
+                                    "doc_id": doc.doc_id,
+                                    "artifact_id": doc.artifact_id,
+                                    "content_digest": doc.content_digest,
+                                    "http_status": (doc.http_meta or {}).get("status_code"),
+                                    "depth_from_serp": int(getattr(doc, "depth_from_serp", 0) or 0),
+                                    "parent_doc_id": getattr(doc, "parent_doc_id", None),
+                                    "link_path": list(getattr(doc, "link_path", []) or []),
+                                },
+                            )
 
                 for doc in fetched_docs:
                     new_cands = self.extractor.extract(doc, req)
@@ -232,7 +298,7 @@ class SearchKernelV1:
                     break
 
                 # heuristic replan: fetch_top_k 증가 (1회)
-                if (not replan_done) and str(policy_ref) == "reporting_strict" and len(serp.hits) > fetch_top_k:
+                if int(fetch_depth) <= 0 and (not replan_done) and str(policy_ref) == "reporting_strict" and len(serp.hits) > fetch_top_k:
                     prev = plan_digest_chain[-1]
                     new_fetch_top_k = min(len(serp.hits), fetch_top_k + 1)
                     next_plan = dict(plan_obj)
@@ -271,6 +337,9 @@ class SearchKernelV1:
                                 "artifact_id": doc.artifact_id,
                                 "content_digest": doc.content_digest,
                                 "http_status": (doc.http_meta or {}).get("status_code"),
+                                "depth_from_serp": int(getattr(doc, "depth_from_serp", 0) or 0),
+                                "parent_doc_id": getattr(doc, "parent_doc_id", None),
+                                "link_path": list(getattr(doc, "link_path", []) or []),
                             },
                         )
                         new_cands = self.extractor.extract(doc, req)
@@ -345,6 +414,7 @@ class SearchKernelV1:
         )
 
         # Persist trace artifacts (ref-only SSoT)
+        run_summary = {"queries_used": queries_used, "fetches_used": fetches_used, "evidence_ids": [e.evidence_id for e in committed]}
         events_artifact_id = trace.flush_events_jsonl(self.fetcher.artifacts)
         envelope_artifact_id = self.fetcher.artifacts.put_json(
             {
@@ -363,11 +433,30 @@ class SearchKernelV1:
                 "started_at": started_at,
                 "ended_at": _utc_now_iso_z(),
                 "budget_initial": {"max_queries": int(budget_max_queries), "max_fetches": int(budget_max_fetches)},
-                "summary": {"queries_used": queries_used, "fetches_used": fetches_used, "evidence_ids": [e.evidence_id for e in committed]},
+                "summary": run_summary,
                 "events_artifact_id": events_artifact_id,
             },
             kind="search_v3_trace_envelope",
         )
+
+        learner_artifact_id: Optional[str] = None
+        if self.learner is not None:
+            try:
+                learner_artifact_id = self.learner.record_search_run(
+                    search_run_id=search_run_id,
+                    metric_id=str(metric_id),
+                    policy_ref=str(policy_ref),
+                    registry_digest=self.registry.get_strategy_ref().registry_digest,
+                    initial_plan_digest=initial_plan_digest,
+                    plan_digest_chain=list(plan_digest_chain),
+                    events=list(trace.events),
+                    trace_envelope_artifact_id=envelope_artifact_id,
+                    events_artifact_id=events_artifact_id,
+                    run_summary=run_summary,
+                )
+            except Exception:
+                # learner는 best-effort이며, 실패해도 run 자체를 실패시키지 않습니다.
+                learner_artifact_id = None
 
         return SearchRunResult(
             search_run_id=search_run_id,
@@ -378,6 +467,7 @@ class SearchKernelV1:
             events=[{"type": e.type, "payload": e.payload, "phase_id": e.phase_id} for e in trace.events],
             trace_envelope_artifact_id=envelope_artifact_id,
             events_artifact_id=events_artifact_id,
+            query_learner_artifact_id=learner_artifact_id,
         )
 
 

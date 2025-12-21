@@ -14,16 +14,18 @@ Production-minimal v1:
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import ipaddress
 import re
 import socket
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Deque, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlsplit
 
 from cmis_core.digest import sha256_digest
 from cmis_core.search_v3.url_utils import canonicalize_url
+from cmis_core.search_v3.link_selector import LinkSelectionConfig, LinkSelectionPolicyV1
 from cmis_core.stores.artifact_store import ArtifactStore
 
 
@@ -42,6 +44,10 @@ class DocumentSnapshot:
     fetched_at: str  # ISO8601
     http_meta: Dict[str, Any] = field(default_factory=dict)
     readability: Dict[str, Any] = field(default_factory=dict)
+    # Link-following lineage (SSV3-14)
+    depth_from_serp: int = 0
+    parent_doc_id: Optional[str] = None
+    link_path: List[str] = field(default_factory=list)
 
 
 def _utc_now_iso_z() -> str:
@@ -113,8 +119,23 @@ class DocumentFetcher:
         self.max_bytes = int(max_bytes)
         self.allowed_ports = set(int(p) for p in (allowed_ports or {80, 443}))
 
-    def fetch(self, url: str, timeout_sec: int) -> Optional[DocumentSnapshot]:
-        """문서를 fetch하여 ART로 저장하고 DocumentSnapshot을 반환합니다."""
+    def fetch(
+        self,
+        url: str,
+        timeout_sec: int,
+        *,
+        depth: int = 0,
+        parent_doc_id: Optional[str] = None,
+        link_path_prefix: Optional[List[str]] = None,
+    ) -> Optional[DocumentSnapshot]:
+        """문서를 fetch하여 ART로 저장하고 DocumentSnapshot을 반환합니다.
+
+        Args:
+            url: 대상 URL
+            timeout_sec: HTTP timeout (초)
+            depth: SERP 기준 depth (0=SERP hit 문서, 1=1차 링크, ...)
+            parent_doc_id: 링크를 따라온 경우, parent 문서의 doc_id
+        """
 
         start_url = str(url)
         current_url = start_url
@@ -173,11 +194,24 @@ class DocumentFetcher:
                 meta={"url": current_url, "canonical_url": canonical_url, "doc_id": doc_id, "digest": content_digest},
             )
 
+            depth_i = int(depth)
+            parent_id = (str(parent_doc_id) if parent_doc_id is not None else None)
+            prefix = [str(x) for x in (link_path_prefix or []) if str(x).strip()]
+            if prefix:
+                link_path = prefix + [doc_id]
+            elif parent_id:
+                link_path = [parent_id, doc_id]
+            else:
+                link_path = [doc_id]
+
             meta_artifact_id = self.artifacts.put_json(
                 {
                     "doc_id": doc_id,
                     "url": current_url,
                     "canonical_url": canonical_url,
+                    "depth_from_serp": depth_i,
+                    "parent_doc_id": parent_id,
+                    "link_path": list(link_path),
                     "fetched_at": _utc_now_iso_z(),
                     "http": {
                         "status_code": status,
@@ -214,6 +248,9 @@ class DocumentFetcher:
                     "text_artifact_id": text_artifact_id,
                 },
                 readability=readability,
+                depth_from_serp=depth_i,
+                parent_doc_id=parent_id,
+                link_path=list(link_path),
             )
 
     # --------------------------
@@ -314,6 +351,174 @@ class DocumentFetcher:
             return _normalize_text(text), {"format": "application/pdf"}
 
         raise DocumentFetchError(f"unsupported mime: {mime}")
+
+    # --------------------------
+    # Link following (SSV3-14)
+    # --------------------------
+
+    def fetch_with_links(
+        self,
+        initial_urls: List[str],
+        *,
+        timeout_sec: int,
+        max_depth: int,
+        link_extractor: Any,
+        link_selector: Optional[Any] = None,
+        event_sink: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+        request: Any,
+        domain_hint: Optional[str] = None,
+        max_fetches: int = 20,
+        max_links_per_doc: int = 3,
+        min_relevance_score: float = 0.6,
+        same_domain_only: bool = False,
+    ) -> List[DocumentSnapshot]:
+        """BFS로 링크를 따라가며 문서를 수집합니다.
+
+        이 메서드는 SSV3-15(LinkSelectionPolicy) 없이도 작동할 수 있도록
+        안전한 기본 선택 규칙(top-N + threshold + visited)을 포함합니다.
+
+        Args:
+            initial_urls: SERP 결과 URL 목록 (depth=0)
+            timeout_sec: 각 fetch의 timeout
+            max_depth: 최대 탐색 depth (0이면 initial_urls만 fetch)
+            link_extractor: extract_links(doc, request, current_depth=..., domain_hint=..., max_candidates=...)를 제공하는 객체
+            request: 링크 relevance scoring에 사용할 request (SearchRequest 등)
+            domain_hint: 도메인/키워드 힌트(선택)
+            max_fetches: 총 fetch budget (문서 개수 상한)
+            max_links_per_doc: 문서 당 따라갈 링크 수 상한
+            min_relevance_score: 링크 선택 최소 점수
+            same_domain_only: true면 parent 문서와 동일 도메인 링크만 follow
+        """
+
+        max_d = max(0, int(max_depth))
+        budget = max(0, int(max_fetches))
+        per_doc = max(0, int(max_links_per_doc))
+        thr = float(min_relevance_score)
+
+        visited: Set[str] = set()
+        q: Deque[Tuple[str, int, Optional[str], List[str]]] = deque()
+        out: List[DocumentSnapshot] = []
+        selected_links_total = 0
+
+        for url in list(initial_urls or []):
+            u = str(url or "").strip()
+            if not u:
+                continue
+            canon = canonicalize_url(u)
+            if not canon or canon in visited:
+                continue
+            visited.add(canon)
+            q.append((u, 0, None, []))
+
+        while q and len(out) < budget:
+            url, depth, parent_doc_id, parent_path = q.popleft()
+            if int(depth) > max_d:
+                continue
+
+            snap = self.fetch(
+                url,
+                timeout_sec=int(timeout_sec),
+                depth=int(depth),
+                parent_doc_id=parent_doc_id,
+                link_path_prefix=list(parent_path),
+            )
+            if snap is None:
+                continue
+            out.append(snap)
+
+            if int(depth) >= max_d:
+                continue
+
+            # extract candidates from HTML only (best-effort)
+            try:
+                candidates = link_extractor.extract_links(
+                    snap,
+                    request,
+                    current_depth=int(depth) + 1,
+                    domain_hint=domain_hint,
+                    max_candidates=50,
+                )
+            except TypeError:
+                # compatible fallback for different extractor signatures
+                candidates = link_extractor.extract_links(snap, request, current_depth=int(depth) + 1)
+            except Exception:
+                candidates = []
+
+            # LinkExtracted event: store full candidates as ART, emit only ref/summary
+            links_artifact_id = self.artifacts.put_json(
+                {
+                    "schema_version": 1,
+                    "parent_doc_id": snap.doc_id,
+                    "parent_canonical_url": snap.canonical_url,
+                    "depth_from_serp": int(depth),
+                    "candidates": [
+                        {
+                            "url": str(getattr(c, "url", "") or ""),
+                            "canonical_url": str(getattr(c, "canonical_url", "") or ""),
+                            "relevance_score": float(getattr(c, "relevance_score", 0.0) or 0.0),
+                            "link_type": str(getattr(c, "link_type", "") or ""),
+                        }
+                        for c in (candidates or [])
+                        if c is not None
+                    ],
+                },
+                kind="search_v3_links",
+            )
+            if event_sink is not None:
+                event_sink(
+                    "LinkExtracted",
+                    {
+                        "parent_doc_id": snap.doc_id,
+                        "parent_canonical_url": snap.canonical_url,
+                        "depth_from_serp": int(depth),
+                        "links_artifact_id": links_artifact_id,
+                        "candidate_count": (len(candidates) if isinstance(candidates, list) else 0),
+                    },
+                )
+
+            cfg = LinkSelectionConfig(max_links_per_doc=per_doc, min_relevance_score=thr, same_domain_only=bool(same_domain_only))
+            selector = link_selector or LinkSelectionPolicyV1()
+            try:
+                selected = selector.select_links(candidates, visited=visited, parent_url=str(snap.canonical_url or snap.url), config=cfg)
+            except Exception:
+                selected = []
+            selected_links_total += len(selected)
+
+            for c in selected:
+                next_url = str(getattr(c, "url", "") or getattr(c, "canonical_url", "") or "").strip()
+                next_canon = str(getattr(c, "canonical_url", "") or "").strip() or canonicalize_url(next_url)
+                if not next_url or not next_canon or next_canon in visited:
+                    continue
+                visited.add(next_canon)
+                if event_sink is not None:
+                    try:
+                        score = float(getattr(c, "relevance_score", 0.0) or 0.0)
+                    except Exception:
+                        score = 0.0
+                    event_sink(
+                        "LinkFollowed",
+                        {
+                            "from_doc_id": snap.doc_id,
+                            "to_url": next_url,
+                            "to_canonical_url": next_canon,
+                            "depth_from_serp": int(depth) + 1,
+                            "relevance_score": score,
+                            "link_type": str(getattr(c, "link_type", "") or ""),
+                        },
+                    )
+                q.append((next_url, int(depth) + 1, str(snap.doc_id), list(snap.link_path)))
+
+        if event_sink is not None:
+            event_sink(
+                "DepthExplorationCompleted",
+                {
+                    "max_depth": int(max_d),
+                    "documents_fetched": len(out),
+                    "visited_count": len(visited),
+                    "selected_links": int(selected_links_total),
+                },
+            )
+        return out
 
 
 def _headers_subset(headers: Dict[str, Any]) -> Dict[str, Any]:

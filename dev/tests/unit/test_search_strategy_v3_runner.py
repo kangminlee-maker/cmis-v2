@@ -170,3 +170,108 @@ metrics:
     assert "RunCompleted" in event_types
 
     store.close()
+
+
+def test_kernel_link_following_emits_link_events(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+    store = ArtifactStore(project_root=project_root)
+
+    reg_yaml = tmp_path / "search_strategy_registry_v3_test_link.yaml"
+    reg_yaml.write_text(
+        """---
+registry_version: 3
+phases_allowed: [generic_web]
+providers:
+  GenericWebSearch:
+    adapter: google_cse
+    api_key_ref: GOOGLE_API_KEY
+metrics:
+  MET-TAM:
+    decision_balanced:
+      phases:
+        - phase_id: generic_web
+          providers: [GenericWebSearch]
+          query_templates: ["{domain} {region} market size {year}"]
+          retrieval:
+            serp_top_k: 1
+            fetch_top_k: 1
+            fetch_depth: 1
+            link_selection:
+              max_links_per_doc: 2
+              min_relevance_score: 0.0
+              same_domain_only: true
+          filters: {}
+""",
+        encoding="utf-8",
+    )
+
+    registry = StrategyRegistryV3(reg_yaml)
+    registry.compile()
+
+    def http_get_serp(_url: str, *, params: Dict[str, Any], timeout: int) -> _FakeResponse:
+        return _FakeResponse(
+            200,
+            {
+                "items": [
+                    {"title": "R1", "snippet": "S1", "link": "https://a.example.com/doc1"},
+                ]
+            },
+        )
+
+    provider = GoogleCseProvider(
+        _provider_cfg(),
+        api_key="test-key",
+        search_engine_id="test-cx",
+        artifact_store=store,
+        http_get=http_get_serp,
+    )
+
+    docs: Dict[str, _FakeDocResponse] = {
+        "https://a.example.com/doc1": _FakeDocResponse(
+            url="https://a.example.com/doc1",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body>\xec\x8b\x9c\xec\x9e\xa5 \xea\xb7\x9c\xeb\xaa\xa8 1000\xec\x96\xb5\xec\x9b\x90 (2024)"
+            b"<a href='/ir/report_2024.pdf'>2024 Annual Report (PDF)</a></body></html>",
+        ),
+        "https://a.example.com/ir/report_2024.pdf": _FakeDocResponse(
+            url="https://a.example.com/ir/report_2024.pdf",
+            status_code=200,
+            headers={"Content-Type": "application/pdf"},
+            body=b"%PDF-1.4 fake",
+        ),
+    }
+
+    def http_get_doc(url: str, *, timeout: int) -> _FakeDocResponse:
+        return docs[url]
+
+    fetcher = DocumentFetcher(artifact_store=store, dns_resolver=_safe_dns, http_get=http_get_doc)
+    extractor = RuleBasedCandidateExtractor(artifact_store=store)
+    synthesizer = SynthesizerV1()
+    gate = GatePolicyEnforcerV1()
+
+    kernel = SearchKernelV1(registry=registry, provider=provider, fetcher=fetcher, extractor=extractor, synthesizer=synthesizer, gate=gate)
+    result = kernel.fetch_evidence(
+        metric_id="MET-TAM",
+        policy_ref="decision_balanced",
+        template_vars={"domain": "edtech", "year": 2024},
+        expected_unit="KRW",
+        as_of="2024",
+        language="ko",
+        region="KR",
+        budget_max_queries=1,
+        budget_max_fetches=10,
+    )
+
+    event_types = [e["type"] for e in result.events]
+    assert "LinkExtracted" in event_types
+    assert "LinkFollowed" in event_types
+    assert "DepthExplorationCompleted" in event_types
+
+    # DocumentFetched should include depth/parent/link_path fields
+    fetched = [e for e in result.events if e["type"] == "DocumentFetched"]
+    assert len(fetched) >= 2
+    assert any((isinstance(e["payload"], dict) and e["payload"].get("depth_from_serp") == 1) for e in fetched)
+    assert any((isinstance(e["payload"], dict) and e["payload"].get("parent_doc_id")) for e in fetched)
+
+    store.close()
