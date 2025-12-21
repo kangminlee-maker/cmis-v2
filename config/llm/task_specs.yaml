@@ -1,0 +1,96 @@
+---
+# CMIS LLM Task Specs (full)
+#
+# 목적(비개발자 설명):
+# - CMIS가 LLM에게 시키는 "작업(Task)"별로 필요한 최소 능력과 기대 출력 형태를 선언합니다.
+# - Phase 2부터는 quality gate(품질 점검)와 escalation(실패 시 재시도/모델 변경)을 수행하므로,
+#   각 Task의 output_contract/quality_gates가 실제 운영 안전에 직접 영향을 줍니다.
+#
+# 주의:
+# - 이 파일은 "정책(allow_models 등)"을 대체하지 않습니다.
+# - TaskSpec은 "작업 요구사항"이고, 모델 선택은 PolicyEngine effective_policy.llm + ModelRegistry와 합쳐져 결정됩니다.
+schema_version: 1
+registry_version: "1.1.0-alpha"
+
+tasks:
+  # Evidence
+  evidence_account_matching:
+    required_capabilities: {}
+    output_contract:
+      format: "text"
+    quality_gates: []
+
+  evidence_number_extraction:
+    required_capabilities:
+      supports_json_mode: true
+    output_contract:
+      format: "json"
+    quality_gates:
+      - gate_id: "json_parseable"
+
+  # Pattern
+  pattern_recognition:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  pattern_gap_analysis:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  # Value
+  value_prior_estimation:
+    required_capabilities:
+      min_max_input_tokens: 8000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  value_formula_derivation:
+    required_capabilities:
+      min_max_input_tokens: 8000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  # Strategy
+  strategy_generation:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_strategies"
+
+  strategy_evaluation:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  # Validation
+  validation_sanity_check:
+    required_capabilities: {}
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  _default:
+    required_capabilities: {}
+    output_contract:
+      format: "text"
+    quality_gates: []
+
+

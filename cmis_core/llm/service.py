@@ -371,7 +371,9 @@ class LLMService:
                 self.model_registry.compile()
 
         if self.task_specs is None:
-            self.task_specs = TaskSpecRegistry(self.config.project_root / "config" / "llm" / "task_specs_minimal.yaml")
+            full_path = self.config.project_root / "config" / "llm" / "task_specs.yaml"
+            minimal_path = self.config.project_root / "config" / "llm" / "task_specs_minimal.yaml"
+            self.task_specs = TaskSpecRegistry(full_path if full_path.exists() else minimal_path)
             self.task_specs.compile()
         else:
             try:
@@ -557,8 +559,13 @@ class LLMService:
         # 5. Provider 조회
         provider = self.registry.get_provider(route.provider_id)
 
+        # 운영 안전: ModelSelector로 선택된 provider는 "침묵 fallback"을 허용하지 않습니다.
+        # (prod에서 mock으로 조용히 떨어지는 사고를 예방)
+        if decision is not None and not provider:
+            raise ProviderNotAvailableError(f"No provider for selected decision: {route.provider_id}")
+
         if not provider:
-            # Fallback: default provider
+            # Fallback: default provider (legacy routing only)
             provider = self.registry.get_provider("__default__")
 
         if not provider:
@@ -774,9 +781,9 @@ class LLMService:
                 enable_cache=bool(base_route.enable_cache),
             )
 
-            provider = self.registry.get_provider(route.provider_id) or self.registry.get_provider("__default__")
+            provider = self.registry.get_provider(route.provider_id)
             if not provider:
-                raise ProviderNotAvailableError("No provider available")
+                raise ProviderNotAvailableError(f"No provider for selected decision: {route.provider_id}")
 
             cost = float(cur_decision.estimated_cost_usd) if (cur_decision.estimated_cost_usd is not None) else provider.get_cost_estimate(prompt)
 
