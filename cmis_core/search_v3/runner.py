@@ -131,6 +131,13 @@ class SearchKernelV1:
             serp_top_k = int(retrieval.get("serp_top_k", 8))
             fetch_top_k = int(retrieval.get("fetch_top_k", 3))
             fetch_depth = int(retrieval.get("fetch_depth", 0) or 0)
+            # Link Following wall-clock timeout (best-effort). 0/None이면 제한 없음.
+            max_time_sec_raw = retrieval.get("max_time_sec")
+            try:
+                max_time_sec = int(max_time_sec_raw) if max_time_sec_raw is not None else 30
+            except Exception:
+                max_time_sec = 30
+            max_time_sec_opt: Optional[int] = int(max_time_sec) if int(max_time_sec) > 0 else None
             link_sel_cfg_raw = retrieval.get("link_selection") or {}
             link_sel_cfg = dict(link_sel_cfg_raw) if isinstance(link_sel_cfg_raw, dict) else {}
 
@@ -227,6 +234,7 @@ class SearchKernelV1:
                             [h.url for h in docs_to_fetch],
                             timeout_sec=int(phase.get("timeout_sec", 10) or 10),
                             max_depth=int(fetch_depth),
+                            max_time_sec=max_time_sec_opt,
                             link_extractor=self.link_extractor,
                             link_selector=self.link_selector,
                             event_sink=_sink,

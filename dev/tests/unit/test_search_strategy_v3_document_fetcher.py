@@ -264,3 +264,73 @@ def test_document_fetcher_fetch_with_links_bfs_tracks_depth_and_visited(project_
     assert child.link_path == [root.doc_id, child.doc_id]
 
     store.close()
+
+
+def test_document_fetcher_fetch_with_links_stops_on_wall_timeout(project_root: Path, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CMIS_STORAGE_ROOT", str(tmp_path))
+    store = ArtifactStore(project_root=project_root)
+
+    mapping: Dict[str, _FakeResponse] = {
+        "https://example.com/root": _FakeResponse(
+            url="https://example.com/root",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body><a href='/child'>child</a></body></html>",
+        ),
+        "https://example.com/child": _FakeResponse(
+            url="https://example.com/child",
+            status_code=200,
+            headers={"Content-Type": "text/html; charset=utf-8"},
+            body=b"<html><body>child page</body></html>",
+        ),
+    }
+
+    # controllable monotonic clock to simulate wall timeout after the first fetch
+    import cmis_core.search_v3.document_fetcher as df_mod
+
+    now: Dict[str, float] = {"t": 0.0}
+
+    def fake_monotonic() -> float:
+        return float(now["t"])
+
+    monkeypatch.setattr(df_mod.time, "monotonic", fake_monotonic)
+
+    def http_get(url: str, *, timeout: int) -> _FakeResponse:
+        resp = mapping[url]
+        if url == "https://example.com/root":
+            # advance time beyond deadline before the next BFS iteration
+            now["t"] = 999.0
+        return resp
+
+    events: list[tuple[str, Dict[str, Any]]] = []
+
+    def sink(typ: str, payload: Dict[str, Any]) -> None:
+        events.append((str(typ), dict(payload)))
+
+    f = DocumentFetcher(artifact_store=store, dns_resolver=_safe_dns, http_get=http_get, max_bytes=1000)
+    extractor = LinkExtractorV1(artifact_store=store)
+    req = SearchRequest(metric_id="MET-TAM", expected_unit=None, as_of="2024")
+
+    docs = f.fetch_with_links(
+        ["https://example.com/root"],
+        timeout_sec=5,
+        max_depth=1,
+        max_time_sec=1,
+        link_extractor=extractor,
+        event_sink=sink,
+        request=req,
+        max_fetches=10,
+        max_links_per_doc=5,
+        min_relevance_score=0.0,
+        same_domain_only=True,
+    )
+    assert len(docs) == 1  # child was queued but exploration stopped before fetching it
+
+    completed = [p for t, p in events if t == "DepthExplorationCompleted"]
+    assert completed, "DepthExplorationCompleted event should be emitted even on timeout"
+    payload = completed[-1]
+    assert payload.get("timed_out") is True
+    assert payload.get("stop_reason") == "timeout"
+    assert payload.get("documents_fetched") == 1
+
+    store.close()

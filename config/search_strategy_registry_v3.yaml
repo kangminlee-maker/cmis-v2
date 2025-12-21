@@ -42,7 +42,8 @@ metrics:
           retrieval:
             serp_top_k: 8
             fetch_top_k: 3
-            fetch_depth: 0  # Link Following: 0=disabled, 1=1-depth, 2=2-depth (SSV3-14~16 구현 완료, 기본은 비활성)
+            fetch_depth: 1  # Link Following: 0=disabled, 1=1-depth, 2=2-depth
+            max_time_sec: 30  # Link Following: BFS wall-clock timeout (sec). fetch_depth>0일 때만 의미가 있습니다.
             link_selection:  # fetch_depth>0일 때만 사용
               max_links_per_doc: 2
               min_relevance_score: 0.7
@@ -67,7 +68,8 @@ metrics:
           retrieval:
             serp_top_k: 8
             fetch_top_k: 5
-            fetch_depth: 0  # Link Following: 0=disabled
+            fetch_depth: 1  # Link Following: 0=disabled
+            max_time_sec: 30  # Link Following: BFS wall-clock timeout (sec). fetch_depth>0일 때만 의미가 있습니다.
             link_selection:  # fetch_depth>0일 때만 사용
               max_links_per_doc: 2
               min_relevance_score: 0.7
@@ -92,7 +94,8 @@ metrics:
           retrieval:
             serp_top_k: 10
             fetch_top_k: 7
-            fetch_depth: 0  # Link Following: 0=disabled
+            fetch_depth: 1  # Link Following: 0=disabled
+            max_time_sec: 30  # Link Following: BFS wall-clock timeout (sec). fetch_depth>0일 때만 의미가 있습니다.
             link_selection:  # fetch_depth>0일 때만 사용
               max_links_per_doc: 2
               min_relevance_score: 0.7

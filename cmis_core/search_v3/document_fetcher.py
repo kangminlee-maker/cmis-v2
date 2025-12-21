@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 import ipaddress
 import re
 import socket
+import time
 from typing import Any, Callable, Deque, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlsplit
 
@@ -362,6 +363,7 @@ class DocumentFetcher:
         *,
         timeout_sec: int,
         max_depth: int,
+        max_time_sec: Optional[int] = None,
         link_extractor: Any,
         link_selector: Optional[Any] = None,
         event_sink: Optional[Callable[[str, Dict[str, Any]], None]] = None,
@@ -381,6 +383,7 @@ class DocumentFetcher:
             initial_urls: SERP 결과 URL 목록 (depth=0)
             timeout_sec: 각 fetch의 timeout
             max_depth: 최대 탐색 depth (0이면 initial_urls만 fetch)
+            max_time_sec: BFS 전체 wall-clock 시간 상한(초). 0 이하 또는 None이면 제한 없음.
             link_extractor: extract_links(doc, request, current_depth=..., domain_hint=..., max_candidates=...)를 제공하는 객체
             request: 링크 relevance scoring에 사용할 request (SearchRequest 등)
             domain_hint: 도메인/키워드 힌트(선택)
@@ -399,6 +402,16 @@ class DocumentFetcher:
         q: Deque[Tuple[str, int, Optional[str], List[str]]] = deque()
         out: List[DocumentSnapshot] = []
         selected_links_total = 0
+        timed_out = False
+
+        start_t = time.monotonic()
+        deadline: Optional[float] = None
+        try:
+            mt = int(max_time_sec) if max_time_sec is not None else 0
+        except Exception:
+            mt = 0
+        if mt > 0:
+            deadline = start_t + float(mt)
 
         for url in list(initial_urls or []):
             u = str(url or "").strip()
@@ -411,6 +424,9 @@ class DocumentFetcher:
             q.append((u, 0, None, []))
 
         while q and len(out) < budget:
+            if deadline is not None and time.monotonic() >= deadline:
+                timed_out = True
+                break
             url, depth, parent_doc_id, parent_path = q.popleft()
             if int(depth) > max_d:
                 continue
@@ -509,13 +525,24 @@ class DocumentFetcher:
                 q.append((next_url, int(depth) + 1, str(snap.doc_id), list(snap.link_path)))
 
         if event_sink is not None:
+            elapsed_sec = max(0.0, time.monotonic() - start_t)
+            if timed_out:
+                stop_reason = "timeout"
+            elif len(out) >= budget:
+                stop_reason = "max_fetches"
+            else:
+                stop_reason = "queue_empty"
             event_sink(
                 "DepthExplorationCompleted",
                 {
                     "max_depth": int(max_d),
+                    "max_time_sec": (int(mt) if mt > 0 else None),
+                    "elapsed_sec": float(elapsed_sec),
                     "documents_fetched": len(out),
                     "visited_count": len(visited),
                     "selected_links": int(selected_links_total),
+                    "timed_out": bool(timed_out),
+                    "stop_reason": str(stop_reason),
                 },
             )
         return out
