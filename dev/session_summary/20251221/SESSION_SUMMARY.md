@@ -196,7 +196,7 @@ ee5b8ba refactor: Search Strategy v2 → v3 완전 전환 및 정리
 - Brownfield: outbox 패턴 구현/커밋 완료, `cmis brownfield reconcile`로 outbox 재처리 가능
 
 ### 우선순위 작업 (다음)
-1. LLM Model Management Phase 2 구현 (LLM-07~12: 품질 게이트/에스컬레이션/프롬프트 프로파일 + 통합 테스트)
+1. LLM Model Management 다음 단계: 전체 TaskSpec 확장(LLM-10) + execution_profile/운영 정책 정교화(LLM-11) + Phase 3 벤치마크(LLM-13~18)
 2. Search v3 Link Following 운영 튜닝: metric/phase별 `fetch_depth`/`max_time_sec`/`max_links_per_doc` 조정 및 품질/비용/지연 관측 고정
 
 ---

@@ -316,20 +316,20 @@ cmis/
 
     **Phase 1 완료 후 → v1.1.0-alpha 태깅**
 
-[ ] Phase 2: 품질 게이트 + bounded escalation (6일)
-    ├─ [ ] LLM-07: QualityGate 실행기
+[ ] Phase 2: 품질 게이트 + bounded escalation (부분 완료)
+    ├─ [x] LLM-07: QualityGate 실행기
     │   - 파일: cmis_core/llm/quality_gate.py (신규)
     │   - 목표: TaskSpec quality_gates 검증
     │   - Gates: json_parseable, schema_valid, has_claims 등
     │   - 공수: 1.5일
     │
-    ├─ [ ] LLM-08: Escalation ladder 지원
+    ├─ [x] LLM-08: Escalation ladder 지원
     │   - 파일: cmis_core/llm/model_selector.py 확장
     │   - 목표: gate 실패 시 자동 에스컬레이션
     │   - 수용기준: failure_codes 기반 next model 선택
     │   - 공수: 1.5일
     │
-    ├─ [ ] LLM-09: Prompt profile 레지스트리
+    ├─ [x] LLM-09: Prompt profile 레지스트리
     │   - 파일: config/llm/prompt_profiles.yaml (신규)
     │   - 목표: 프롬프트 버전 관리 + pinning
     │   - 공수: 1일
@@ -343,7 +343,7 @@ cmis/
     │   - 목표: prod에서 mock 금지, dev/test만 허용
     │   - 공수: 0.5일
     │
-    └─ [ ] LLM-12: Phase 2 통합 테스트
+    └─ [x] LLM-12: Phase 2 통합 테스트
         - 에스컬레이션 시나리오 테스트
         - 공수: 0.5일
 
@@ -525,7 +525,8 @@ dev/docs/notebooklm_export/
 
 - **설계 문서 완성** (v1.1.0, 809줄, 커밋 완료)
 - **Phase 1 구현/테스트/커밋 완료**: ModelRegistry/TaskSpecRegistry/PolicyEngine effective_policy.llm/ModelSelector/run_store 기록 + LLMService 연동
-- **다음 단계**: Phase 2 (품질 게이트 + bounded escalation + prompt profile registry)
+- **Phase 2(부분) 구현 완료**: QualityGateEngine + escalation ladder + prompt profile registry + 통합 테스트
+- **다음 단계**: (1) 전체 TaskSpec 확장(10개 Task), (2) 실행 프로파일/운영 정책 정교화, (3) Phase 3 벤치마크 프레임워크
 
 ---
 

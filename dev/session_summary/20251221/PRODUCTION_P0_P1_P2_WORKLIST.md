@@ -141,8 +141,6 @@
 
 - **목표**: 모델 선택/에스컬레이션/비용/품질을 정책 기반으로 운영 가능하게 함
 - **미구현/미완성 포인트**
-  - 실패 유형 기반 escalation ladder (Phase 2)
-  - Prompt profile registry + pinning (Phase 2)
   - 전체 TaskSpec 확장(10개 Task) (Phase 2)
   - (최소) benchmark/회귀 감지의 기본 틀 (Phase 3)
 - **수용기준**
