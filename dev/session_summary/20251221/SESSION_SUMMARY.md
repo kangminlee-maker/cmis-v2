@@ -196,8 +196,7 @@ ee5b8ba refactor: Search Strategy v2 → v3 완전 전환 및 정리
 - Brownfield: outbox 패턴 구현/커밋 완료, `cmis brownfield reconcile`로 outbox 재처리 가능
 
 ### 우선순위 작업 (다음)
-1. (선택) LLM Bench 회귀 알림/대시보드 등 관측 고도화 (Phase 4)
-2. Search v3 Link Following 운영 튜닝: metric/phase별 `fetch_depth`/`max_time_sec`/`max_links_per_doc` 조정 및 품질/비용/지연 관측 고정
+1. Search v3 Link Following 운영 튜닝: metric/phase별 `fetch_depth`/`max_time_sec`/`max_links_per_doc` 조정 및 품질/비용/지연 관측 고정
 
 ---
 

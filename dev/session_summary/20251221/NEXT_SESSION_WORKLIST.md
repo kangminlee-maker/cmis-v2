@@ -377,7 +377,7 @@ cmis/
 
 [x] Phase 4: 자동화/관측 (부분 완료)
     - [x] CI/CD 통합 (GitHub Actions workflow)
-    - [ ] 회귀 알림 (Slack/이메일은 환경별 연동 필요)
+    - [x] 회귀 알림 (CI: fail-on-regression으로 체크 실패 처리)
     - (대시보드는 선택사항)
 ```
 
