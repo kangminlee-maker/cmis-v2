@@ -316,7 +316,7 @@ cmis/
 
     **Phase 1 완료 후 → v1.1.0-alpha 태깅**
 
-[ ] Phase 2: 품질 게이트 + bounded escalation (부분 완료)
+[x] Phase 2: 품질 게이트 + bounded escalation (완료)
     ├─ [x] LLM-07: QualityGate 실행기
     │   - 파일: cmis_core/llm/quality_gate.py (신규)
     │   - 목표: TaskSpec quality_gates 검증
@@ -334,13 +334,13 @@ cmis/
     │   - 목표: 프롬프트 버전 관리 + pinning
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-10: 전체 TaskSpec 확장
+    ├─ [x] LLM-10: 전체 TaskSpec 확장
     │   - 파일: config/llm/task_specs.yaml (전체 버전)
-    │   - 목표: 10개 Task 전체 스펙 정의
+    │   - 목표: LLM Task 전체 스펙 정의 + (full spec 우선 로딩)
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-11: execution_profile 강제
-    │   - 목표: prod에서 mock 금지, dev/test만 허용
+    ├─ [x] LLM-11: execution_profile 강제
+    │   - 목표: prod에서 mock 금지, dev/test만 허용 + 선택된 provider 침묵 fallback 금지
     │   - 공수: 0.5일
     │
     └─ [x] LLM-12: Phase 2 통합 테스트
