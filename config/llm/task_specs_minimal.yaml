@@ -1,0 +1,45 @@
+---
+# CMIS LLM Task Specs (Phase 1 minimal)
+#
+# 목적(비개발자 설명):
+# - "어떤 작업(Task)을 LLM에게 시킬 때" 필요한 최소 능력(예: JSON 출력 가능 여부)과
+#   기대 출력 형태(텍스트/구조화 텍스트/JSON)를 선언합니다.
+# - Phase 1에서는 핵심 3개 Task만 명시하고, 나머지는 _default로 처리합니다.
+#
+# 설계 문서:
+# - dev/docs/architecture/CMIS_LLM_Model_Management_Design_v1.1.0.md (Section 5.2.2)
+schema_version: 1
+registry_version: "1.1.0-alpha"
+
+tasks:
+  evidence_number_extraction:
+    required_capabilities:
+      supports_json_mode: true
+    output_contract:
+      format: "json"
+    quality_gates:
+      - gate_id: "json_parseable"
+
+  pattern_recognition:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_claims"
+
+  strategy_generation:
+    required_capabilities:
+      min_max_input_tokens: 16000
+    output_contract:
+      format: "structured_text"
+    quality_gates:
+      - gate_id: "has_strategies"
+
+  _default:
+    required_capabilities: {}
+    output_contract:
+      format: "text"
+    quality_gates: []
+
+

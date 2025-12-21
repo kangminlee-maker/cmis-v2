@@ -23,6 +23,10 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import yaml
 
+from cmis_core.digest import canonical_digest
+from cmis_core.llm.policy_types import EffectivePolicy as LLMEffectivePolicy
+from cmis_core.llm.policy_types import LLMRoutingPolicy, LLMTaskOverride
+
 
 # -----------------------------
 # Exceptions
@@ -34,6 +38,66 @@ class PolicyError(RuntimeError):
 
 class PolicyConfigError(PolicyError):
     pass
+
+
+def _normalize_policy_ref(policy_ref: str) -> str:
+    """policy_ref를 내부 policy_id로 정규화합니다.
+
+    허용하는 입력 예:
+    - "reporting_strict"
+    - "policy:reporting_strict@v3"
+
+    NOTE:
+    - 현재 코드베이스에서는 policy_id와 policy_ref가 동일하게 쓰이는 경우가 많아,
+      최소한의 정규화만 수행합니다.
+    """
+
+    s = str(policy_ref or "").strip()
+    if s.startswith("policy:"):
+        s = s.split("policy:", 1)[1].strip()
+    if "@" in s:
+        s = s.split("@", 1)[0].strip()
+    return s
+
+
+def _parse_llm_routing_policy(d: Dict[str, Any]) -> LLMRoutingPolicy:
+    """llm_routing.yaml의 policy별 llm 블록을 LLMRoutingPolicy로 파싱합니다."""
+
+    exec_profile = str(d.get("execution_profile", "prod") or "prod")
+    try:
+        max_cost = float(d.get("max_cost_per_call_usd", 0.01) or 0.01)
+    except Exception:
+        max_cost = 0.01
+
+    tier_pref_raw = d.get("default_tier_preference") or ["accurate", "balanced", "fast"]
+    tier_pref: List[str] = [str(x) for x in tier_pref_raw] if isinstance(tier_pref_raw, list) else ["accurate", "balanced", "fast"]
+
+    allow_models_raw = d.get("allow_models") or ["gpt-4o-mini"]
+    allow_models: List[str] = [str(x) for x in allow_models_raw] if isinstance(allow_models_raw, list) else ["gpt-4o-mini"]
+
+    forbidden_raw = d.get("forbidden_tasks") or []
+    forbidden_tasks: List[str] = [str(x) for x in forbidden_raw] if isinstance(forbidden_raw, list) else []
+
+    overrides_raw = d.get("task_overrides") or {}
+    overrides: Dict[str, LLMTaskOverride] = {}
+    if isinstance(overrides_raw, dict):
+        for task_type, ov in overrides_raw.items():
+            if not isinstance(task_type, str) or not task_type.strip():
+                continue
+            ov_d = ov if isinstance(ov, dict) else {}
+            pm_raw = ov_d.get("preferred_models") or []
+            preferred_models: List[str] = [str(x) for x in pm_raw] if isinstance(pm_raw, list) else []
+            prompt_profile = str(ov_d.get("prompt_profile", "default") or "default")
+            overrides[str(task_type)] = LLMTaskOverride(preferred_models=preferred_models, prompt_profile=prompt_profile)
+
+    return LLMRoutingPolicy(
+        execution_profile=exec_profile,
+        max_cost_per_call_usd=float(max_cost),
+        default_tier_preference=list(tier_pref),
+        allow_models=list(allow_models),
+        forbidden_tasks=list(forbidden_tasks),
+        task_overrides=overrides,
+    )
 
 
 # -----------------------------
@@ -329,6 +393,7 @@ class PolicyEngine:
         self,
         project_root: Optional[Path] = None,
         policies_path: Optional[Path] = None,
+        llm_routing_path: Optional[Path] = None,
     ) -> None:
         if project_root is None:
             project_root = Path(__file__).parent.parent
@@ -338,8 +403,13 @@ class PolicyEngine:
             policies_path = self.project_root / "config" / "policies.yaml"
         self.policies_path = Path(policies_path)
 
+        if llm_routing_path is None:
+            llm_routing_path = self.project_root / "config" / "policy_extensions" / "llm_routing.yaml"
+        self.llm_routing_path = Path(llm_routing_path)
+
         self._pack = self._load_policy_pack(self.policies_path)
         self._compiled_cache: Dict[str, CompiledPolicy] = {}
+        self._effective_policy_cache: Dict[str, LLMEffectivePolicy] = {}
 
         self.gates = GateRegistry()
         self._register_default_gates()
@@ -394,6 +464,43 @@ class PolicyEngine:
         if policy_id not in self._compiled_cache:
             self._compiled_cache[policy_id] = self._compile(policy_id)
         return self._compiled_cache[policy_id]
+
+    def resolve_effective_policy(self, policy_ref: str) -> LLMEffectivePolicy:
+        """policy_ref를 해석하여 effective_policy(특히 llm 라우팅 포함)를 반환합니다.
+
+        목적(비개발자 설명):
+        - 정책은 사람이 보는 "모드 이름"이고, 실행은 "해석된 정책 결과"로 수행합니다.
+        - 모델 선택은 이 결과(effective_policy.llm)에 의해 제한됩니다.
+
+        결정성:
+        - 동일 정책 + 동일 확장 설정이면 effective_policy_digest가 동일해야 합니다.
+        - 캐시는 (policy_ref@digest)로 pinning 합니다.
+        """
+
+        policy_id = _normalize_policy_ref(policy_ref)
+        base = self.get_policy(policy_id)
+
+        ext = self._load_llm_routing_extension(self.llm_routing_path)
+        policies = ext.get("policies", {}) if isinstance(ext, dict) else {}
+        per_policy = policies.get(policy_id, {}) if isinstance(policies, dict) else {}
+        llm_raw = per_policy.get("llm", {}) if isinstance(per_policy, dict) else {}
+        llm_raw_dict = llm_raw if isinstance(llm_raw, dict) else {}
+
+        llm = _parse_llm_routing_policy(llm_raw_dict)
+
+        digest_input = {
+            "policy_id": str(policy_id),
+            "compiled_policy": base.to_dict(),
+            "llm": llm.to_dict(),
+        }
+        eff_digest = canonical_digest(digest_input)
+        cache_key = f"{policy_ref}@{eff_digest}"
+        if cache_key in self._effective_policy_cache:
+            return self._effective_policy_cache[cache_key]
+
+        effective = LLMEffectivePolicy(policy_ref=str(policy_ref), effective_policy_digest=str(eff_digest), llm=llm)
+        self._effective_policy_cache[cache_key] = effective
+        return effective
 
     # Engine hint accessors
     def get_evidence_policy(self, policy_id: str) -> EvidencePolicy:
@@ -616,6 +723,33 @@ class PolicyEngine:
                 raise PolicyConfigError(f"policy_pack missing required key: {k}")
 
         return pack
+
+    @staticmethod
+    def _load_llm_routing_extension(path: Path) -> Dict[str, Any]:
+        """policy_extensions/llm_routing.yaml을 로드합니다(없으면 빈 확장으로 처리)."""
+
+        if not path.exists():
+            return {"schema_version": 1, "policies": {}}
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except Exception as e:
+            raise PolicyConfigError(f"Failed to load llm_routing.yaml: {e}")
+
+        if not isinstance(data, dict):
+            raise PolicyConfigError("llm_routing.yaml root must be a dict")
+
+        sv = int(data.get("schema_version", 0) or 0)
+        if sv != 1:
+            raise PolicyConfigError(f"Unsupported llm_routing.yaml schema_version: {sv} (expected 1)")
+
+        policies = data.get("policies", {}) or {}
+        if not isinstance(policies, dict):
+            raise PolicyConfigError("llm_routing.yaml.policies must be a dict")
+
+        return {"schema_version": 1, "policies": policies}
+
 
     def _compile(self, policy_id: str) -> CompiledPolicy:
         modes = self._pack["modes"]

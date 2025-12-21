@@ -1,0 +1,49 @@
+---
+# CMIS Policy Extension: LLM Routing (Phase 1)
+#
+# 중요(비개발자 설명):
+# - 이 파일은 "정책(policies.yaml)의 별도 정본"이 아닙니다.
+# - PolicyEngine이 기존 정책을 해석할 때, LLM 관련 라우팅 규칙을 "확장(merge)"하기 위한 보조 설정입니다.
+# - 런타임에서 ModelSelector는 이 파일을 직접 읽지 않고, PolicyEngine이 산출한 effective_policy.llm만 봅니다.
+#
+# 설계 문서:
+# - dev/docs/architecture/CMIS_LLM_Model_Management_Design_v1.1.0.md (Section 8.2)
+schema_version: 1
+last_updated: "2025-12-21"
+
+policies:
+  reporting_strict:
+    llm:
+      execution_profile: "prod"
+      max_cost_per_call_usd: 0.01
+      default_tier_preference: ["accurate", "balanced", "fast"]
+      allow_models: ["gpt-4", "gpt-4o-mini", "gpt-4.1-nano"]
+      forbidden_tasks: ["value_prior_estimation"]
+      task_overrides:
+        evidence_number_extraction:
+          preferred_models: ["gpt-4o-mini", "gpt-4"]
+          prompt_profile: "strict_json"
+
+  decision_balanced:
+    llm:
+      execution_profile: "prod"
+      max_cost_per_call_usd: 0.005
+      default_tier_preference: ["balanced", "accurate", "fast"]
+      allow_models: ["gpt-4o-mini", "gpt-4", "gpt-4.1-nano"]
+      task_overrides:
+        pattern_recognition:
+          preferred_models: ["gpt-4", "gpt-4o-mini"]
+          prompt_profile: "default"
+
+  exploration_friendly:
+    llm:
+      execution_profile: "prod"
+      max_cost_per_call_usd: 0.003
+      default_tier_preference: ["fast", "balanced", "accurate"]
+      allow_models: ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4"]
+      task_overrides:
+        strategy_generation:
+          preferred_models: ["gpt-4o-mini", "gpt-4.1-nano"]
+          prompt_profile: "default"
+
+

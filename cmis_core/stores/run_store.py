@@ -128,6 +128,28 @@ class RunStore:
         )
         self.conn.commit()
 
+    def append_llm_selection_decision(self, run_id: str, payload: Dict[str, Any]) -> None:
+        """LLM 모델 선택 결정을 run_decisions에 기록합니다.
+
+        목적(비개발자 설명):
+        - LLM 호출 자체는 비결정적일 수 있지만, "어떤 모델을 왜 골랐는지"는 항상 남아야 합니다.
+        - 이후 리플레이/감사에서 동일 effective_policy/registry 조건이면 동일 선택이었는지 확인할 수 있습니다.
+
+        저장 원칙:
+        - run_store에는 프롬프트/응답 원문을 넣지 않습니다(민감 정보 가능).
+        - 이 payload에는 digest, model_id, rationale_codes 같은 "참조/요약"만 포함해야 합니다.
+        """
+
+        safe_payload = dict(payload or {})
+        self.append_decision(
+            run_id,
+            {
+                "type": "llm_selection_decision",
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "payload": safe_payload,
+            },
+        )
+
     def finalize_run(self, run_id: str, status: str, summary: Dict[str, Any]) -> None:
         self.conn.execute(
             """

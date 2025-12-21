@@ -1,0 +1,106 @@
+---
+# CMIS LLM Model Registry (Phase 1)
+#
+# 목적(비개발자 설명):
+# - CMIS가 사용할 수 있는 "모델 목록"과 각 모델의 능력/비용/사용 가능 환경을 선언합니다.
+# - 코드에 모델명을 하드코딩하지 않고, 이 파일을 "정본(SSoT)"으로 삼아
+#   모델 선택이 정책/예산/품질 기준에 의해 결정되도록 합니다.
+#
+# 설계 문서:
+# - dev/docs/architecture/CMIS_LLM_Model_Management_Design_v1.1.0.md (Section 5.1)
+schema_version: 1
+last_updated: "2025-12-21"
+registry_version: "1.1.0-alpha"
+
+models:
+  gpt-4o-mini:
+    provider: "openai"
+    display_name: "GPT-4o mini"
+    version: "unknown"
+    capabilities:
+      max_input_tokens: 16384
+      max_output_tokens: 4096
+      supports_json_mode: true
+      supports_tool_calling: true
+      multimodal: false
+    cost_model:
+      currency: "USD"
+      input_per_1m_tokens: 0.15
+      output_per_1m_tokens: 0.60
+    performance_tier: "fast"  # fast|balanced|accurate|test
+    availability:
+      allowed_profiles: ["dev", "test", "prod"]
+
+  gpt-4:
+    provider: "openai"
+    display_name: "GPT-4"
+    version: "unknown"
+    capabilities:
+      max_input_tokens: 8192
+      max_output_tokens: 4096
+      supports_json_mode: true
+      supports_tool_calling: true
+      multimodal: false
+    cost_model:
+      currency: "USD"
+      input_per_1m_tokens: 30.0
+      output_per_1m_tokens: 60.0
+    performance_tier: "accurate"
+    availability:
+      allowed_profiles: ["dev", "test", "prod"]
+
+  gpt-4.1-nano:
+    provider: "openai"
+    display_name: "GPT-4.1 nano"
+    version: "unknown"
+    capabilities:
+      max_input_tokens: 16384
+      max_output_tokens: 4096
+      supports_json_mode: true
+      supports_tool_calling: true
+      multimodal: false
+    cost_model:
+      currency: "USD"
+      input_per_1m_tokens: 0.03
+      output_per_1m_tokens: 0.06
+    performance_tier: "fast"
+    availability:
+      allowed_profiles: ["dev", "test", "prod"]
+
+  native:
+    provider: "native"
+    display_name: "Native (Cursor/Local)"
+    version: "1.0.0"
+    capabilities:
+      max_input_tokens: 8192
+      max_output_tokens: 4096
+      supports_json_mode: false
+      supports_tool_calling: false
+      multimodal: false
+    cost_model:
+      currency: "USD"
+      input_per_1m_tokens: 0.0
+      output_per_1m_tokens: 0.0
+    performance_tier: "balanced"
+    availability:
+      allowed_profiles: ["dev", "test", "prod"]
+
+  mock:
+    provider: "mock"
+    display_name: "Mock (deterministic)"
+    version: "1.0.0"
+    capabilities:
+      max_input_tokens: 1024
+      max_output_tokens: 1024
+      supports_json_mode: true
+      supports_tool_calling: false
+      multimodal: false
+    cost_model:
+      currency: "USD"
+      input_per_1m_tokens: 0.0
+      output_per_1m_tokens: 0.0
+    performance_tier: "test"
+    availability:
+      allowed_profiles: ["dev", "test"]  # prod 금지(원칙)
+
+
