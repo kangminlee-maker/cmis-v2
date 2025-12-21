@@ -1,6 +1,6 @@
 # CMIS 설정 레퍼런스
 
-**생성일**: 2025-12-21 10:20:00
+**생성일**: 2025-12-21 11:28:56
 **목적**: 모든 YAML 설정 파일 상세
 
 ---
@@ -58,50 +58,6 @@ metrics:
     reporting_strict:
     decision_balanced:
     exploration_friendly:
-```
-
-### search_strategy_spec.yaml
-
-**경로**: `config/search_strategy_spec.yaml`
-
-```yaml
-strategies:
-  MET-TAM:
-    per_source:
-  MET-SAM:
-    per_source:
-  MET-Revenue:
-    per_source:
-  MET-GDP:
-    per_source:
-policy_defaults:
-  reporting_strict:
-    max_queries_per_metric: 3
-    use_llm: False
-    max_time: 10
-    prefer_official: True
-  decision_balanced:
-    max_queries_per_metric: 5
-    use_llm: True
-    max_time: 20
-    prefer_official: True
-  exploration_friendly:
-    max_queries_per_metric: 10
-    use_llm: True
-    max_time: 30
-    prefer_official: False
-language_strategy:
-  KR:
-    default_languages:
-    primary: ko
-  US:
-    default_languages:
-  JP:
-    default_languages:
-    primary: ja
-  CN:
-    default_languages:
-    primary: zh
 ```
 
 ### validation_guidelines.yaml

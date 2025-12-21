@@ -1,6 +1,6 @@
 # CMIS Stores 및 영속화
 
-**생성일**: 2025-12-21 10:20:00
+**생성일**: 2025-12-21 11:28:56
 **목적**: 데이터 저장 및 관리 시스템
 
 ---
@@ -49,6 +49,73 @@ bytes를 Artifact로 저장합니다.
 def put_json(self, data: Any) -> str
 ```
 JSON artifact 저장.
+
+---
+
+## doctor
+
+### 모듈 설명
+
+```
+Runtime storage doctor (local-first).
+
+목표:
+- 실제 인프라(Postgres/S3 등) 전환 전에도, 현재 런타임 스토리지(`.cmis/`)의
+  무결성과 참조 관계가 깨지지 않았는지 빠르게 점검할 수 있어야 합니다.
+
+주의:
+- 이 모듈은 기본적으로 "빠른 모드"만 제공합니다.
+  - SQLite는 `PRAGMA quick_check`로 최소 무결성 검사
+  - Artifact는 메타(DB) ↔ 파일 존재 여부/크기만 점검(sha256 재계산은 하지 않음)
+```
+
+### 주요 클래스
+
+#### `StorageDoctorResult`
+
+스토리지 점검 결과.
+
+---
+
+## factory
+
+### 모듈 설명
+
+```
+Stores factory (local backend).
+
+목표:
+- Store 생성/경로 결정을 한 곳으로 모아, 이후 인프라(Postgres/S3 등) 전환 시 변경 지점을 최소화합니다.
+- 현재는 local-first( SQLite + 파일 ) 구현만 제공합니다.
+```
+
+### 주요 클래스
+
+#### `StoreFactory`
+
+스토어 생성 팩토리.
+
+설계 의도:
+- project_root를 중심으로 StoragePaths를 고정하고,
+  그 경로 규칙 하에서 각 store 인스턴스를 생성합니다.
+
+NOTE:
+- 반환되는 store 인스턴스는 각각 SQLite 연결을 생성합니다.
+- 호출자가 close() 책임을 갖습니다.
+
+**Public 메서드**:
+
+```python
+def paths(self) -> StoragePaths
+```
+
+```python
+def run_store(self) -> RunStore
+```
+
+```python
+def ledger_store(self) -> LedgerStore
+```
 
 ---
 
@@ -218,9 +285,18 @@ SQLite store base utilities.
 
 #### `StoragePaths`
 
-스토리지 경로 집합
+스토리지 경로 집합.
+
+기본 규칙:
+- storage_root 아래에 `.cmis/`를 생성하고, 그 하위에 DB/아티팩트/캐시/런 뷰를 저장합니다.
+- 테스트/격리: 환경변수 `CMIS_STORAGE_ROOT`가 있으면 이를 storage_root로 사용합니다.
 
 **Public 메서드**:
+
+```python
+def evidence_cache_db_path(self) -> Path
+```
+legacy evidence_cache.db 위치.
 
 ```python
 def resolve(project_root: Optional[Path]) -> StoragePaths
