@@ -251,18 +251,134 @@ cmis/
 
 #### 5. LLM Model Management 구현
 
-**배경**: v1.1.0 설계 문서 작성 중 (809줄).
+**배경**: v1.1.0 설계 문서 완성 (809줄), Phase 1부터 구현 시작 준비 완료.
+
+**설계 요약**:
+- LLM-native 자율 컨트롤러 + 최소 커널 패턴
+- PolicyEngine 통합 (effective_policy 생성)
+- 결정적 선택 + bounded escalation
+- 3등급 벤치마크 (Unit/Scenario/Human)
+
+**구현 로드맵** (총 22.5일):
 
 ```
-[ ] LLM Model Management 설계 문서 완성
+[✅] v1.1.0 설계 문서 완성 (2025-12-21 완료)
     - 파일: dev/docs/architecture/CMIS_LLM_Model_Management_Design_v1.1.0.md
-    - 현재 상태: 788/809 라인
-    - 완성 후 구현 시작
+    - 상태: 커밋 완료 (83604f6)
+    - 보완사항 반영: Phase별 공수, 단계적 구현 경로, 최소 TaskSpec, 캐싱 전략
 
-[ ] LLM Provider 인터페이스 구현
-    - 파일: cmis_core/llm/providers.py, service.py
-    - Routing, Fallback, Cost tracking
+[ ] Phase 1: 정책 단일화 + 결정적 선택 커널 (7일)
+    ├─ [ ] LLM-01: ModelRegistry 구현
+    │   - 파일: config/llm/model_registry.yaml (YAML)
+    │   - 파일: cmis_core/llm/model_registry.py (로더)
+    │   - 목표: 모델 메타데이터 로드 + registry_digest 산출
+    │   - 수용기준: capabilities/cost/limits 검증, digest 안정성
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-02: TaskSpecRegistry 구현
+    │   - 파일: config/llm/task_specs_minimal.yaml (Phase 1용)
+    │   - 파일: cmis_core/llm/task_spec_registry.py
+    │   - 목표: 핵심 3개 Task 스펙 정의 (나머지는 _default)
+    │   - 수용기준: required_capabilities, quality_gates 검증
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-03: PolicyEngine 확장
+    │   - 파일: cmis_core/policy_engine.py
+    │   - 파일: config/policy_extensions/llm_routing.yaml (신규)
+    │   - 목표: effective_policy.llm 생성 + digest 캐싱
+    │   - 수용기준: policy_ref → effective_policy 결정적 변환
+    │   - 공수: 1.5일
+    │
+    ├─ [ ] LLM-04: ModelSelector 구현
+    │   - 파일: cmis_core/llm/model_selector.py (신규)
+    │   - 목표: SelectionRequest → SelectionDecision (결정적)
+    │   - 알고리즘: 정책 허용 → capability 체크 → 예산/지연 → 정렬
+    │   - 수용기준: 동일 입력 → 동일 선택, rationale_codes 기록
+    │   - 공수: 2일
+    │
+    ├─ [ ] LLM-05: run_store 통합
+    │   - 파일: cmis_core/stores/run_store.py 확장
+    │   - 목표: selection_decision trace 저장
+    │   - 저장 항목: policy_ref, effective_policy_digest, registry_digest,
+    │                model_id, rationale_codes, estimated_cost
+    │   - 공수: 0.5일
+    │
+    └─ [ ] LLM-06: Phase 1 단위 테스트
+        - 파일: dev/tests/unit/test_llm_model_selector.py
+        - 테스트: digest 안정성, 결정적 선택, fallback chain
+        - 공수: 1일
+
+    **Phase 1 완료 후 → v1.1.0-alpha 태깅**
+
+[ ] Phase 2: 품질 게이트 + bounded escalation (6일)
+    ├─ [ ] LLM-07: QualityGate 실행기
+    │   - 파일: cmis_core/llm/quality_gate.py (신규)
+    │   - 목표: TaskSpec quality_gates 검증
+    │   - Gates: json_parseable, schema_valid, has_claims 등
+    │   - 공수: 1.5일
+    │
+    ├─ [ ] LLM-08: Escalation ladder 지원
+    │   - 파일: cmis_core/llm/model_selector.py 확장
+    │   - 목표: gate 실패 시 자동 에스컬레이션
+    │   - 수용기준: failure_codes 기반 next model 선택
+    │   - 공수: 1.5일
+    │
+    ├─ [ ] LLM-09: Prompt profile 레지스트리
+    │   - 파일: config/llm/prompt_profiles.yaml (신규)
+    │   - 목표: 프롬프트 버전 관리 + pinning
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-10: 전체 TaskSpec 확장
+    │   - 파일: config/llm/task_specs.yaml (전체 버전)
+    │   - 목표: 10개 Task 전체 스펙 정의
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-11: execution_profile 강제
+    │   - 목표: prod에서 mock 금지, dev/test만 허용
+    │   - 공수: 0.5일
+    │
+    └─ [ ] LLM-12: Phase 2 통합 테스트
+        - 에스컬레이션 시나리오 테스트
+        - 공수: 0.5일
+
+    **Phase 2 완료 후 → v1.1.0-beta 태깅**
+
+[ ] Phase 3: 벤치마크 프레임워크 (7.5일)
+    ├─ [ ] LLM-13: BenchmarkRunner 구현
+    │   - 파일: cmis_core/llm/benchmark.py
+    │   - 공수: 2일
+    │
+    ├─ [ ] LLM-14: Unit bench 실행/저장
+    │   - 저장: .cmis/benchmarks/runs/
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-15: Scenario bench + judge pinning
+    │   - judge trace 저장
+    │   - 공수: 1.5일
+    │
+    ├─ [ ] LLM-16: BenchmarkStore 시계열 + 회귀 감지
+    │   - 공수: 1일
+    │
+    ├─ [ ] LLM-17: CLI 명령 추가
+    │   - cmis llm benchmark run/report
+    │   - 공수: 1일
+    │
+    └─ [ ] LLM-18: 초기 벤치마크 스위트
+        - evidence/pattern/value 스위트
+        - 공수: 1일
+
+    **Phase 3 완료 후 → v1.1.0-stable 태깅**
+
+[ ] Phase 4: 자동화/관측 (선택, 2일)
+    - CI/CD 통합
+    - 회귀 알림
+    - (대시보드는 선택사항)
 ```
+
+**설계 문서 참조**:
+- 전체: `dev/docs/architecture/CMIS_LLM_Model_Management_Design_v1.1.0.md`
+- Section 12: 구현 로드맵 (Phase별 상세)
+- Section 13: 단계적 구현 경로 (alpha/beta/stable)
 
 ### P2: Link Following 구현 (2~3주)
 
@@ -402,8 +518,9 @@ dev/docs/notebooklm_export/
 
 ### 3. LLM Model Management
 
-- **설계 문서 작성 중** (v1.1.0, 788/809 라인)
-- **구현 착수 전 문서 완성 필요**
+- **설계 문서 완성** (v1.1.0, 809줄, 커밋 완료)
+- **Phase 1 구현 준비 완료** (7일 예상)
+- **다음 단계**: ModelRegistry, TaskSpecRegistry 구현
 
 ---
 
@@ -415,7 +532,7 @@ dev/docs/notebooklm_export/
 2. `Search_Strategy_Design_v3.md` - Search v3 (최신)
 3. `CMIS_Orchestration_Kernel_Design.md` - Orchestration
 4. `Brownfield_Intake_and_Curation_Design_v3.6.0.md` - Brownfield
-5. `CMIS_LLM_Model_Management_Design_v1.1.0.md` - LLM (작업 중)
+5. `CMIS_LLM_Model_Management_Design_v1.1.0.md` - LLM (v1.1.0 완성, 2025-12-21)
 
 ### 마이그레이션 문서
 
