@@ -238,6 +238,28 @@ flowchart TB
 | outcome_store | Outcome(OUT) | 학습/회귀 방지 |
 | brownfield_store | Brownfield 메타(IMP/MAP/CUR/CUB 등) | 업로드→검증→커밋의 계약 보장 |
 
+#### 4.2.1 현재 구현체(실제 DB/파일) 요약: 무엇이 어디에 저장되는가
+
+비개발자 관점에서 중요한 포인트는 다음입니다.
+
+- CMIS는 기본적으로 **로컬 디렉토리 한 곳**(기본: 프로젝트 루트) 아래에 `.cmis/` 폴더를 만들고, 그 안에 DB/파일을 저장합니다.
+- 테스트/격리를 위해, 환경변수 `CMIS_STORAGE_ROOT`가 설정되면 `.cmis/`가 **해당 경로 아래**에 생성됩니다.
+  - 예: `CMIS_STORAGE_ROOT=/mnt/cmis_storage`이면 `/mnt/cmis_storage/.cmis/`가 저장 루트가 됩니다.
+
+| Store(논리 이름) | 구현체(코드) | 저장 방식 | 기본 경로(예시) | 상태(현재) | 비고 |
+|---|---|---|---|---|---|
+| run_store | `cmis_core/stores/run_store.py` | SQLite | `.cmis/db/runs.db` | 프로덕션 사용 가능(단일 노드) | 이벤트/결정 로그를 테이블로 append |
+| ledger_store | `cmis_core/stores/ledger_store.py` | SQLite | `.cmis/db/ledgers.db` | 프로덕션 사용 가능(단일 노드) | ledger snapshot 기반, Cursor UX export에 사용 |
+| artifact_store | `cmis_core/stores/artifact_store.py` | 파일 + SQLite 메타 | 파일: `.cmis/artifacts/`<br>메타: `.cmis/db/artifacts.db` | 프로덕션 사용 가능(단일 노드) | 대용량/원문은 파일(ART), 메타는 SQLite |
+| focal_actor_context_store | `cmis_core/stores/focal_actor_context_store.py` | SQLite | `.cmis/db/contexts.db` | 프로덕션 사용 가능(단일 노드) | PRJ 버전 관리(브라운필드 기준점) |
+| outcome_store | `cmis_core/stores/outcome_store.py` | SQLite | `.cmis/db/outcomes.db` | 프로덕션 사용 가능(단일 노드) | 학습/회귀 방지의 입력(OUT) |
+| brownfield_store | `cmis_core/brownfield/db.py` | SQLite | `.cmis/db/brownfield.db` | 프로덕션 사용 가능(단일 노드) | IMP/MAP/CUR/CUB/DOP/PRJ_VIEW/BPK 메타 |
+| evidence_store(cache) | `cmis_core/evidence_store.py` | 메모리(기본) / SQLite(옵션) | (옵션) `.cmis/evidence_cache.db` | 운영 옵션 필요 | 현재 기본 wiring은 메모리 캐시(재시작 시 소멸) |
+| reality_graph_store | `cmis_core/reality_graph_store.py` | 인메모리(기본) / 파일 백엔드(옵션) | (옵션) `~/.cmis/reality_graphs/` | 운영 고도화 필요 | 파일 백엔드는 pickle 기반이며, 저장 위치/백업/공유 전략이 필요 |
+
+> 요약: 지금 Substrate Plane은 “RAG 벡터 DB”가 아니라, **SQLite + 파일 저장(ART)** 중심입니다.
+> 벡터 인덱스(RAG)는 필요해지면 “정본(SSoT)이 아닌 재생성 가능한 파생 캐시”로 추가하는 것이 안전합니다.
+
 > **핵심 규칙**: 원문/대용량 데이터는 저장소에 넣고, 엔진 계산/설명에는 “참조(ref)”만 전달합니다.
 
 ### 4.3 ID 체계(사람이 보는 식별자)
@@ -408,6 +430,104 @@ Brownfield는 “사용자가 이미 가진 내부 데이터(스프레드시트 
 - Search v3 고도화(전략/전술/품질 게이트/trace replay 안정화)
 - Brownfield 운영 UX/승인 체계 고도화(pack CLI, pack→PRJ resolve, DOP 승인 정책 연동, PRJ_VIEW 자동 재생성)
 - Eval/회귀 방지 지표 확장 및 자동화
+
+### 10.3 프로덕션 운영 설계(권장): “어떤 형태로 운영하는 것이 최적인가”
+
+CMIS는 현재 **로컬 우선(local-first)** 구조로 구현되어 있습니다.
+즉, `.cmis/` 아래의 SQLite/파일이 실행의 정본(SSoT)이며, 테스트도 이 전제를 기반으로 고정되어 있습니다.
+
+프로덕션 운영에서 “최적”은 사용 규모/동시성/보안 요구에 따라 달라집니다.
+아래는 CMIS를 안정적으로 운영하기 위해 미리 결정해야 하는 핵심 질문과, 권장 운영 형태(프로파일)입니다.
+
+#### 10.3.1 프로덕션에서 반드시 정해야 하는 질문(비개발자 관점)
+
+- **동시 사용자/동시 실행**: 한 번에 몇 명이 동시에 실행(run)을 돌리나?
+- **데이터 보관/백업**: 실행 기록(RUN)과 산출물(ART)을 얼마나 오래 보관하고, 어떻게 복구하나?
+- **외부 접근 통제**: 웹검색/HTTP/API/LLM 호출을 어떤 정책으로 허용/차단하나?
+- **비용/예산**: LLM/API 호출 비용 상한은 어떻게 정하고, 초과 시 어떤 동작을 할까?
+- **보안/권한**: 프로젝트 단위로 누가 어떤 결과물(특히 업로드 원문)에 접근할 수 있나?
+
+#### 10.3.2 권장 운영 프로파일(3단계)
+
+| 프로파일 | 언제 적합한가 | 저장/DB 권장 | 운영 방식(요약) | 주의점 |
+|---|---|---|---|---|
+| A. 단일 노드(Local/Single Server) | 초기 프로덕션, 소수 사용자, 동시 실행이 낮음 | **SQLite + 로컬 디스크(ART)** | 단일 서버에서 Orchestrator/Worker를 운영하고, `.cmis/`를 영속 디스크에 둠 | 다중 프로세스/다중 서버가 동시에 같은 SQLite를 쓰면 충돌 위험 |
+| B. 팀 서버(멀티 워커) | 팀 단위 사용, 동시 실행 증가 | **PostgreSQL + Object Storage(S3/GCS 등)** | API 서버 + 워커 풀(큐 기반) + 중앙 DB/오브젝트 스토리지로 분리 | 스토어 마이그레이션/스키마 관리가 필요 |
+| C. SaaS/멀티테넌트 | 외부 고객/여러 조직, 강한 보안/감사 요구 | **Managed Postgres + Object Storage + Secret Manager** | 테넌트 격리(스키마/DB), egress 정책, 암호화/감사로그/retention | 운영 복잡도 증가, 정책/권한 모델을 계약으로 고정해야 함 |
+
+> 현재 코드베이스는 **A(단일 노드)**에 최적으로 맞춰져 있습니다.
+> B/C로 가려면 “SQLite 파일들”을 서버 DB로 옮길 수 있도록 store layer를 프로파일화(backend 분리)하는 설계가 필요합니다.
+
+#### 10.3.3 프로덕션 권장 설계도(저복잡도 + robust)
+
+아래는 “B. 팀 서버(멀티 워커)”를 목표로 할 때의 권장 구성입니다.
+핵심은 **정본은 Postgres+Object Storage**로 고정하고, 캐시는 재생성 가능한 계층으로 둔다는 점입니다.
+
+```mermaid
+flowchart TB
+  classDef impl fill:#E8F5E9,stroke:#2E7D32,color:#111;
+  classDef todo fill:#FAFAFA,stroke:#616161,stroke-dasharray: 5 5,color:#111;
+
+  subgraph UI["Interfaces"]
+    CLI["CLI"]
+    CURSOR["Cursor IDE"]
+    API["HTTP API (server)"]
+  end
+
+  subgraph APP["CMIS Runtime (server)"]
+    ORCH["OrchestrationKernel\n(run_mode, verifier, replanning)"]
+    WORKERS["Workers\n(Evidence/World/Value/Strategy/Learning)"]
+    LLMRT["LLM Runtime\n(provider/model/guardrails)"]
+    TOOLREG["Tool/Resource Registry\n(egress allowlist)"]
+  end
+
+  subgraph SSoT["SSoT (Production)"]
+    PG["PostgreSQL\n(run/ledger/context/outcome/brownfield)"]
+    OBJ["Object Storage\n(ART raw/docs/reports)"]
+  end
+
+  subgraph CACHE["Derived caches (rebuildable)"]
+    REDIS["Cache/Queue (선택)\n(Redis 등)"]
+    VEC["Vector index (선택)\n(RAG용, 파생 캐시)"]
+  end
+
+  subgraph EXT["External"]
+    WEB["web_search/http_fetch\n(공식 API/웹)"]
+    LLM["LLM Provider APIs"]
+  end
+
+  CLI --> API
+  CURSOR --> API
+  API --> ORCH
+  ORCH --> WORKERS
+  ORCH --> LLMRT
+  ORCH --> TOOLREG
+
+  WORKERS --> PG
+  WORKERS --> OBJ
+  LLMRT --> LLM
+  TOOLREG --> WEB
+
+  WORKERS -.-> REDIS
+  WORKERS -.-> VEC
+  VEC -.-> OBJ
+
+  class CLI,CURSOR,API,ORCH,WORKERS,LLMRT,TOOLREG,PG,OBJ impl;
+  class REDIS,VEC todo;
+```
+
+#### 10.3.4 (실행 가능한) 현실적인 권장 로드맵
+
+- **Step 1 (즉시 가능)**: 프로덕션도 일단 A로 시작
+  - `CMIS_STORAGE_ROOT`를 영속 디스크(마운트된 볼륨)로 지정
+  - 주기적 백업(예: `.cmis/db/*.db` + `.cmis/artifacts/` 스냅샷)
+  - 단일 노드에서 “한 번에 하나의 Orchestrator writer” 원칙을 유지
+- **Step 2 (팀 서버로 확장)**: B로 점진 전환
+  - Store 인터페이스를 유지한 채 backend를 Postgres로 교체 가능한 형태로 분리
+  - artifact_store를 S3/GCS 같은 object storage로 교체(메타는 DB, 바이트는 오브젝트 스토어)
+  - evidence_cache는 Redis/DB로 영속화(재시작 후에도 캐시 유지)
+- **Step 3 (고도화)**: C로 확장(필요 시)
+  - 테넌트/권한/retention/egress 정책을 “계약”으로 고정하고 자동 검증(Verifier/CI)과 결합
 
 ---
 
