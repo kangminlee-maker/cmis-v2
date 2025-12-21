@@ -349,35 +349,35 @@ cmis/
 
     **Phase 2 완료 후 → v1.1.0-beta 태깅**
 
-[ ] Phase 3: 벤치마크 프레임워크 (7.5일)
-    ├─ [ ] LLM-13: BenchmarkRunner 구현
+[x] Phase 3: 벤치마크 프레임워크 (완료)
+    ├─ [x] LLM-13: BenchmarkRunner 구현
     │   - 파일: cmis_core/llm/benchmark.py
     │   - 공수: 2일
     │
-    ├─ [ ] LLM-14: Unit bench 실행/저장
+    ├─ [x] LLM-14: Unit bench 실행/저장
     │   - 저장: .cmis/benchmarks/runs/
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-15: Scenario bench + judge pinning
+    ├─ [x] LLM-15: Scenario bench + judge pinning
     │   - judge trace 저장
     │   - 공수: 1.5일
     │
-    ├─ [ ] LLM-16: BenchmarkStore 시계열 + 회귀 감지
+    ├─ [x] LLM-16: BenchmarkStore 시계열 + 회귀 감지
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-17: CLI 명령 추가
+    ├─ [x] LLM-17: CLI 명령 추가
     │   - cmis llm benchmark run/report
     │   - 공수: 1일
     │
-    └─ [ ] LLM-18: 초기 벤치마크 스위트
+    └─ [x] LLM-18: 초기 벤치마크 스위트
         - evidence/pattern/value 스위트
         - 공수: 1일
 
     **Phase 3 완료 후 → v1.1.0-stable 태깅**
 
-[ ] Phase 4: 자동화/관측 (선택, 2일)
-    - CI/CD 통합
-    - 회귀 알림
+[x] Phase 4: 자동화/관측 (부분 완료)
+    - [x] CI/CD 통합 (GitHub Actions workflow)
+    - [ ] 회귀 알림 (Slack/이메일은 환경별 연동 필요)
     - (대시보드는 선택사항)
 ```
 
