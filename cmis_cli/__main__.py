@@ -32,6 +32,7 @@ from cmis_cli.commands import (
     cmd_brownfield_preview,
     cmd_brownfield_validate,
     cmd_brownfield_commit,
+    cmd_brownfield_reconcile,
     cmd_cursor_init,
     cmd_cursor_doctor,
     cmd_cursor_manifest,
@@ -176,6 +177,10 @@ def main():
     db_parser.add_argument('--project-root', dest='project_root', help='프로젝트 루트 (기본: cwd)')
     db_parser.add_argument('--migrate', action='store_true', help='project_context_id 등 legacy key 마이그레이션')
     db_parser.add_argument('--reset', action='store_true', help='.cmis 런타임 스토어 초기화(db/runs/artifacts/value_store/cache 등)')
+    db_parser.add_argument('--reconcile', action='store_true', help='brownfield outbox 처리(예: PRJ publish)')
+    db_parser.add_argument('--retry-failed', dest='retry_failed', action='store_true', help='reconcile 시 failed 항목도 재시도')
+    db_parser.add_argument('--limit', type=int, default=50, help='reconcile 처리 개수 제한')
+    db_parser.add_argument('--import-run-id', dest='import_run_id', help='reconcile 대상 ImportRun(IMP-...) (선택)')
     db_parser.add_argument('--no-backup', dest='no_backup', action='store_true', help='reset 시 백업하지 않음 (위험)')
     db_parser.add_argument('--keep-runs', dest='keep_runs', action='store_true', help='reset 시 .cmis/runs 유지')
     db_parser.add_argument('--skip-reexport', dest='skip_reexport', action='store_true', help='migrate 후 run export 생략')
@@ -334,6 +339,15 @@ def main():
     )
     bf_commit_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
 
+    bf_reconcile_parser = brownfield_subparsers.add_parser(
+        "reconcile",
+        help="Process Brownfield outbox (publish PRJ, etc.)",
+    )
+    bf_reconcile_parser.add_argument("--project-root", dest="project_root", help="프로젝트 루트 (기본: cwd)")
+    bf_reconcile_parser.add_argument("--import-run-id", dest="import_run_id", help="ImportRun ID (IMP-...) (optional)")
+    bf_reconcile_parser.add_argument("--retry-failed", dest="retry_failed", action="store_true", help="failed 항목도 재시도")
+    bf_reconcile_parser.add_argument("--limit", type=int, default=50, help="처리 개수 제한")
+
     # Parse
     args = parser.parse_args()
 
@@ -395,6 +409,8 @@ def main():
             cmd_brownfield_validate(args)
         elif args.brownfield_command == "commit":
             cmd_brownfield_commit(args)
+        elif args.brownfield_command == "reconcile":
+            cmd_brownfield_reconcile(args)
         else:
             brownfield_parser.print_help()
     else:

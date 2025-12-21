@@ -20,6 +20,7 @@ from cmis_core.brownfield.commit import commit_import_run
 from cmis_core.brownfield.csv_ingest import import_csv_file
 from cmis_core.brownfield.db import migrate_brownfield_db, open_brownfield_db
 from cmis_core.brownfield.import_run_store import ImportRunStore
+from cmis_core.brownfield.outbox import reconcile_brownfield_outbox
 from cmis_core.brownfield.validation import validate_import_run
 from cmis_core.brownfield.xlsx_ingest import import_xlsx_file
 from cmis_core.stores import StoreFactory
@@ -254,3 +255,25 @@ def cmd_brownfield_commit(args: Any) -> None:
             ctx_store.close()
         except Exception:
             pass
+
+
+def cmd_brownfield_reconcile(args: Any) -> None:
+    """`cmis brownfield reconcile` — outbox(외부 side-effect) 재처리."""
+
+    project_root = _resolve_project_root(args)
+    import_run_id = getattr(args, "import_run_id", None)
+    retry_failed = bool(getattr(args, "retry_failed", False))
+    limit = int(getattr(args, "limit", 50) or 50)
+
+    report = reconcile_brownfield_outbox(
+        project_root=project_root,
+        import_run_id=(str(import_run_id).strip() if import_run_id else None),
+        limit=limit,
+        retry_failed=retry_failed,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+    processed = report.get("processed") or []
+    if isinstance(processed, list):
+        if any((isinstance(it, dict) and it.get("status") == "failed") for it in processed):
+            raise SystemExit(1)

@@ -38,6 +38,9 @@ class ImportRunRecord:
     validation_report_artifact_id: Optional[str]
     validation_decision: Optional[str]
     committed_bundle_id: Optional[str]
+    focal_actor_context_base_id: Optional[str]
+    focal_actor_context_version: Optional[int]
+    published_focal_actor_context_id: Optional[str]
     notes: Optional[str]
 
 
@@ -148,6 +151,7 @@ class ImportRunStore:
                 preview_report_artifact_id,
                 validation_report_artifact_id, validation_decision,
                 committed_bundle_id,
+                focal_actor_context_base_id, focal_actor_context_version, published_focal_actor_context_id,
                 notes
             FROM import_runs
             WHERE import_run_id = ?
@@ -172,6 +176,9 @@ class ImportRunStore:
             validation_report_artifact_id,
             validation_decision,
             committed_bundle_id,
+            focal_actor_context_base_id,
+            focal_actor_context_version,
+            published_focal_actor_context_id,
             notes,
         ) = row
 
@@ -207,6 +214,9 @@ class ImportRunStore:
             validation_report_artifact_id=str(validation_report_artifact_id) if validation_report_artifact_id is not None else None,
             validation_decision=str(validation_decision) if validation_decision is not None else None,
             committed_bundle_id=str(committed_bundle_id) if committed_bundle_id is not None else None,
+            focal_actor_context_base_id=str(focal_actor_context_base_id) if focal_actor_context_base_id is not None else None,
+            focal_actor_context_version=int(focal_actor_context_version) if focal_actor_context_version is not None else None,
+            published_focal_actor_context_id=str(published_focal_actor_context_id) if published_focal_actor_context_id is not None else None,
             notes=str(notes) if notes is not None else None,
         )
 
@@ -259,4 +269,46 @@ class ImportRunStore:
         self.conn.execute(
             "UPDATE import_runs SET status = ?, committed_bundle_id = ? WHERE import_run_id = ?",
             ("committed", str(committed_bundle_id), str(import_run_id)),
+        )
+
+    def set_focal_actor_context_plan(self, import_run_id: str, *, base_id: str, version: int) -> str:
+        """ImportRun에 PRJ publish 계획(base_id, version)을 기록합니다.
+
+        Returns:
+            focal_actor_context_id (versioned) e.g., PRJ-xxx-v1
+        """
+
+        rid = str(import_run_id)
+        base = str(base_id).strip()
+        if not base:
+            raise ValueError("base_id is required")
+        ver = int(version)
+        if ver <= 0:
+            raise ValueError("version must be positive")
+
+        self.conn.execute(
+            """
+            UPDATE import_runs
+            SET focal_actor_context_base_id = ?, focal_actor_context_version = ?
+            WHERE import_run_id = ?
+            """,
+            (base, ver, rid),
+        )
+        return f"{base}-v{ver}"
+
+    def set_published_focal_actor_context_id(self, import_run_id: str, *, focal_actor_context_id: str) -> None:
+        """PRJ publish 결과(versioned id)를 ImportRun에 기록합니다."""
+
+        rid = str(import_run_id)
+        prj_id = str(focal_actor_context_id).strip()
+        if not prj_id:
+            raise ValueError("focal_actor_context_id is required")
+
+        self.conn.execute(
+            """
+            UPDATE import_runs
+            SET published_focal_actor_context_id = ?
+            WHERE import_run_id = ?
+            """,
+            (prj_id, rid),
         )

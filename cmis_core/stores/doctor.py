@@ -96,6 +96,16 @@ def run_storage_doctor(
         warnings.append(f"brownfield_ref_check_failed:{e}")
         summary["checked"]["brownfield_refs"] = {"checked": False, "error": str(e)}
 
+    # 4) Outbox pending/failed checks (best-effort)
+    try:
+        ob_issues, ob_warnings, ob_summary = _check_brownfield_outbox(paths)
+        issues.extend(ob_issues)
+        warnings.extend(ob_warnings)
+        summary["checked"]["brownfield_outbox"] = ob_summary
+    except Exception as e:
+        warnings.append(f"brownfield_outbox_check_failed:{e}")
+        summary["checked"]["brownfield_outbox"] = {"checked": False, "error": str(e)}
+
     return StorageDoctorResult(ok=(len(issues) == 0), issues=issues, warnings=warnings, summary=summary)
 
 
@@ -313,6 +323,61 @@ def _check_brownfield_artifact_refs(paths: StoragePaths, artifact_ids: set[str])
         summary["checked"] = True
     except Exception as e:
         warnings.append(f"brownfield_db_check_failed:{e}")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    return issues, warnings, summary
+
+
+def _check_brownfield_outbox(paths: StoragePaths) -> Tuple[List[str], List[str], Dict[str, Any]]:
+    """brownfield.db outbox의 pending/failed 상태를 점검합니다."""
+
+    issues: List[str] = []
+    warnings: List[str] = []
+    summary: Dict[str, Any] = {
+        "brownfield_db": str(paths.db_dir / "brownfield.db"),
+        "checked": False,
+        "counts": {},
+    }
+
+    bf_path = paths.db_dir / "brownfield.db"
+    if not bf_path.exists():
+        summary["checked"] = True
+        return issues, warnings, summary
+
+    conn: Optional[sqlite3.Connection] = None
+    try:
+        conn = sqlite3.connect(f"file:{bf_path}?mode=ro", uri=True, check_same_thread=False)
+        if not _sqlite_has_table(conn, "outbox"):
+            summary["checked"] = True
+            return issues, warnings, summary
+
+        cur = conn.execute("SELECT status, COUNT(*) FROM outbox GROUP BY status")
+        rows = cur.fetchall() or []
+        counts: Dict[str, int] = {}
+        for st, n in rows:
+            try:
+                counts[str(st)] = int(n or 0)
+            except Exception:
+                counts[str(st)] = 0
+
+        summary["counts"] = dict(counts)
+        summary["checked"] = True
+
+        failed = int(counts.get("failed", 0) or 0)
+        pending = int(counts.get("pending", 0) or 0)
+        processing = int(counts.get("processing", 0) or 0)
+
+        if failed > 0:
+            issues.append(f"brownfield_outbox_failed:{failed}")
+        if pending > 0 or processing > 0:
+            warnings.append(f"brownfield_outbox_pending:{pending} processing:{processing}")
+    except Exception as e:
+        warnings.append(f"brownfield_outbox_scan_failed:{e}")
     finally:
         if conn is not None:
             try:

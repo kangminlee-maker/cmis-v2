@@ -53,6 +53,7 @@ def migrate_brownfield_db(conn: sqlite3.Connection) -> int:
         current = 1
 
     _ensure_v1_columns(conn)
+    _ensure_outbox_table(conn)
     conn.commit()
     return int(current)
 
@@ -61,6 +62,34 @@ def _ensure_v1_columns(conn: sqlite3.Connection) -> None:
     """v1 스키마에서 누락되기 쉬운 컬럼을 best-effort로 보강합니다."""
 
     _ensure_column(conn, table="import_runs", col="validation_decision", typ="TEXT")
+    # Brownfield commit의 외부 publish(예: contexts.db) 멱등/복구를 위해 계획/결과를 기록합니다.
+    _ensure_column(conn, table="import_runs", col="focal_actor_context_base_id", typ="TEXT")
+    _ensure_column(conn, table="import_runs", col="focal_actor_context_version", typ="INTEGER")
+    _ensure_column(conn, table="import_runs", col="published_focal_actor_context_id", typ="TEXT")
+
+
+def _ensure_outbox_table(conn: sqlite3.Connection) -> None:
+    """외부(side-effect) 작업을 위한 outbox 테이블을 보장합니다."""
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS outbox (
+            outbox_id TEXT PRIMARY KEY,
+            kind TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            status TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            payload_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            processed_at TEXT
+        )
+        """
+    )
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_outbox_idempotency_unique ON outbox(idempotency_key)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox(status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON outbox(created_at)")
 
 
 def _ensure_column(conn: sqlite3.Connection, *, table: str, col: str, typ: str) -> None:
@@ -162,6 +191,9 @@ def _apply_v1(conn: sqlite3.Connection) -> None:
             validation_decision TEXT,
             preview_report_artifact_id TEXT,
             committed_bundle_id TEXT,
+            focal_actor_context_base_id TEXT,
+            focal_actor_context_version INTEGER,
+            published_focal_actor_context_id TEXT,
             notes TEXT
         )
         """

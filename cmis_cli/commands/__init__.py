@@ -32,6 +32,7 @@ from .brownfield import (
     cmd_brownfield_preview,
     cmd_brownfield_validate,
     cmd_brownfield_commit,
+    cmd_brownfield_reconcile,
 )
 
 __all__ = [
@@ -57,6 +58,7 @@ __all__ = [
     "cmd_brownfield_preview",
     "cmd_brownfield_validate",
     "cmd_brownfield_commit",
+    "cmd_brownfield_reconcile",
 ]
 
 
