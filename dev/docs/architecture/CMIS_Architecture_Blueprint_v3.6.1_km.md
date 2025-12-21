@@ -245,6 +245,7 @@ flowchart TB
 - CMIS는 기본적으로 **로컬 디렉토리 한 곳**(기본: 프로젝트 루트) 아래에 `.cmis/` 폴더를 만들고, 그 안에 DB/파일을 저장합니다.
 - 테스트/격리를 위해, 환경변수 `CMIS_STORAGE_ROOT`가 설정되면 `.cmis/`가 **해당 경로 아래**에 생성됩니다.
   - 예: `CMIS_STORAGE_ROOT=/mnt/cmis_storage`이면 `/mnt/cmis_storage/.cmis/`가 저장 루트가 됩니다.
+- 구현 관점에서는 “스토어 생성 규칙”을 한 곳(`StoreFactory`)로 모아, 추후 인프라(PostgreSQL/S3 등)로 전환할 때 변경 지점을 최소화하도록 준비되어 있습니다.
 
 | Store(논리 이름) | 구현체(코드) | 저장 방식 | 기본 경로(예시) | 상태(현재) | 비고 |
 |---|---|---|---|---|---|
@@ -255,7 +256,7 @@ flowchart TB
 | outcome_store | `cmis_core/stores/outcome_store.py` | SQLite | `.cmis/db/outcomes.db` | 프로덕션 사용 가능(단일 노드) | 학습/회귀 방지의 입력(OUT) |
 | brownfield_store | `cmis_core/brownfield/db.py` | SQLite | `.cmis/db/brownfield.db` | 프로덕션 사용 가능(단일 노드) | IMP/MAP/CUR/CUB/DOP/PRJ_VIEW/BPK 메타 |
 | evidence_store(cache) | `cmis_core/evidence_store.py` | 메모리(기본) / SQLite(옵션) | (옵션) `.cmis/evidence_cache.db` | 운영 옵션 필요 | 현재 기본 wiring은 메모리 캐시(재시작 시 소멸) |
-| reality_graph_store | `cmis_core/reality_graph_store.py` | 인메모리(기본) / 파일 백엔드(옵션) | (옵션) `~/.cmis/reality_graphs/` | 운영 고도화 필요 | 파일 백엔드는 pickle 기반이며, 저장 위치/백업/공유 전략이 필요 |
+| reality_graph_store | `cmis_core/reality_graph_store.py` | 인메모리(기본) / 파일 백엔드(옵션) | (옵션) `.cmis/reality_graphs/` | 운영 고도화 필요 | 파일 백엔드는 pickle 기반이며, 저장 위치/백업/공유 전략이 필요 |
 
 > 요약: 지금 Substrate Plane은 “RAG 벡터 DB”가 아니라, **SQLite + 파일 저장(ART)** 중심입니다.
 > 벡터 인덱스(RAG)는 필요해지면 “정본(SSoT)이 아닌 재생성 가능한 파생 캐시”로 추가하는 것이 안전합니다.

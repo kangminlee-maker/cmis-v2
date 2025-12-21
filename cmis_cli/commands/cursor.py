@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from cmis_core.orchestration import OrchestrationKernel, RunRequest
 from cmis_core.policy_engine import PolicyEngine
 from cmis_core.run_exporter import RunExporter
-from cmis_core.stores import LedgerStore, RunStore
+from cmis_core.stores import StoreFactory
 from cmis_core.stores.sqlite_base import StoragePaths
 
 
@@ -26,8 +26,9 @@ def cmd_cursor_init(args) -> None:
     """cmis cursor init"""
     project_root = Path(args.project_root) if getattr(args, "project_root", None) else Path.cwd()
     # StoragePaths.resolve()가 디렉토리 생성까지 수행하므로 store 초기화로 충분
-    run_store = RunStore(project_root=project_root)
-    ledger_store = LedgerStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    run_store = factory.run_store()
+    ledger_store = factory.ledger_store()
     run_store.close()
     ledger_store.close()
 
@@ -53,8 +54,9 @@ def _collect_doctor_issues(project_root: Path) -> list[str]:
 
     # 2) Store write checks
     try:
-        run_store = RunStore(project_root=project_root)
-        ledger_store = LedgerStore(project_root=project_root)
+        factory = StoreFactory(project_root=project_root)
+        run_store = factory.run_store()
+        ledger_store = factory.ledger_store()
         run_store.close()
         ledger_store.close()
     except Exception as e:
@@ -152,8 +154,9 @@ def cmd_cursor_bootstrap(args) -> None:
         print("- .env: skipped by --no-env")
 
     # 1) init
-    run_store = RunStore(project_root=project_root)
-    ledger_store = LedgerStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    run_store = factory.run_store()
+    ledger_store = factory.ledger_store()
     run_store.close()
     ledger_store.close()
     print(f"- stores: initialized at {paths.cmis_dir}")
@@ -181,8 +184,9 @@ def cmd_cursor_bootstrap(args) -> None:
     # 4) optional smoke run
     if args.smoke_run:
         policy_engine = PolicyEngine(project_root=project_root)
-        run_store = RunStore(project_root=project_root)
-        ledger_store = LedgerStore(project_root=project_root)
+        factory = StoreFactory(project_root=project_root)
+        run_store = factory.run_store()
+        ledger_store = factory.ledger_store()
 
         kernel = OrchestrationKernel(
             project_root=project_root,
@@ -245,8 +249,9 @@ def cmd_cursor_ask(args) -> None:
     }
 
     # stores + engines
-    run_store = RunStore(project_root=project_root)
-    ledger_store = LedgerStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    run_store = factory.run_store()
+    ledger_store = factory.ledger_store()
     policy_engine = PolicyEngine(project_root=project_root)
 
     kernel = OrchestrationKernel(

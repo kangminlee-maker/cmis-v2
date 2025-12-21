@@ -30,6 +30,7 @@ from cmis_core.evidence.fsc_financial_info_source import FSCCorpFinancialInfoSou
 from cmis_core.evidence.google_search_source import GoogleSearchSource
 from cmis_core.evidence.curated_internal_source import CuratedEvidenceSource
 from cmis_core.evidence.search_v3_source import SearchV3Source
+from cmis_core.stores.factory import StoreFactory
 
 from .task import Task, TaskType
 
@@ -135,7 +136,7 @@ class TaskExecutor:
 
         if evidence_engine is None:
             registry = build_default_source_registry(self.config, enable_stub_source=enable_stub_source)
-            evidence_store = create_evidence_store(backend_type="memory")
+            evidence_store = StoreFactory(project_root=self.project_root).evidence_cache_store(backend_type="memory")
             evidence_engine = EvidenceEngine(self.config, registry, evidence_store=evidence_store)
         self.evidence_engine = evidence_engine
 

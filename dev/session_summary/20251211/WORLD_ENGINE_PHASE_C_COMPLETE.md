@@ -37,7 +37,7 @@
 
 **저장 구조**:
 ```
-~/.cmis/reality_graphs/
+.cmis/reality_graphs/
 ├── indexes/
 │   └── indexes.json (domain, region, as_of 인덱스)
 ├── Adult_Language_Education_KR/

@@ -22,7 +22,7 @@ import yaml
 
 from cmis_core.orchestration import OrchestrationKernel, RunRequest, RunResult
 from cmis_core.policy_engine import PolicyEngine
-from cmis_core.stores import LedgerStore, RunStore
+from cmis_core.stores import StoreFactory
 
 
 @dataclass(frozen=True)
@@ -258,8 +258,9 @@ class EvalHarnessRunner:
         thresholds_default, run_defaults, tests_doc = _parse_suite(suite_doc)
 
         # Stores (authoritative)
-        run_store = RunStore(project_root=self.project_root)
-        ledger_store = LedgerStore(project_root=self.project_root)
+        factory = StoreFactory(project_root=self.project_root)
+        run_store = factory.run_store()
+        ledger_store = factory.ledger_store()
         policy_engine = PolicyEngine(project_root=self.project_root)
 
         kernel = OrchestrationKernel(

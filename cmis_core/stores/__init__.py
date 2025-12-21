@@ -11,6 +11,7 @@ from .focal_actor_context_store import FocalActorContextStore
 from .outcome_store import OutcomeStore
 from .artifact_store import ArtifactStore
 from .sqlite_base import StoragePaths
+from .factory import StoreFactory
 
 __all__ = [
     "RunStore",
@@ -19,5 +20,6 @@ __all__ = [
     "OutcomeStore",
     "ArtifactStore",
     "StoragePaths",
+    "StoreFactory",
 ]
 

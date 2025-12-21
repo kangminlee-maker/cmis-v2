@@ -24,6 +24,11 @@ def cmd_cache_manage(args):
     print("=" * 60)
     print()
 
+    from cmis_core.stores.sqlite_base import StoragePaths
+
+    project_root = Path(args.project_root) if getattr(args, "project_root", None) else None
+    paths = StoragePaths.resolve(project_root)
+
     if args.status:
         # 캐시 상태
         print("[캐시 상태]")
@@ -31,9 +36,9 @@ def cmd_cache_manage(args):
 
         # Evidence 캐시
         print("Evidence Cache:")
-        print("  위치: evidence_store (SQLite)")
-        print("  관리: EvidenceEngine")
-        print("  TTL: 24시간")
+        print("  유형: EvidenceStore (Memory 기본 / SQLite 선택)")
+        print(f"  SQLite 경로(legacy): {paths.evidence_cache_db_path}")
+        print("  TTL: 기본 24시간(요청별 TTL 설정 가능)")
         print()
 
         # Snapshot 캐시
@@ -44,7 +49,7 @@ def cmd_cache_manage(args):
 
         # Result 캐시
         print("Result Cache:")
-        print("  위치: ~/.cmis/cache/results/")
+        print(f"  위치: {paths.results_dir}")
         print("  TTL: 1시간")
         print()
 
@@ -57,17 +62,23 @@ def cmd_cache_manage(args):
 
         if cache_type in ["evidence", "all"]:
             print("Evidence 캐시 클리어...")
-            print("  → EvidenceEngine.cache.clear() 호출 필요")
-            print("  (Phase 2: 엔진 통합)")
+            try:
+                p = Path(paths.evidence_cache_db_path)
+                if p.exists():
+                    p.unlink()
+                    print(f"  [OK] 삭제됨: {p}")
+                else:
+                    print("  (캐시 파일 없음)")
+            except Exception as e:
+                print(f"  [WARN] 삭제 실패: {e}")
 
         if cache_type in ["snapshots", "all"]:
             print("Snapshot 캐시 클리어...")
-            print("  → WorldEngine.cache.clear() 호출 필요")
-            print("  (Phase 2: 엔진 통합)")
+            print("  (인메모리 캐시이므로, 실행 프로세스 재시작 또는 엔진 API 연동이 필요)")
 
         if cache_type in ["results", "all"]:
             print("Result 캐시 클리어...")
-            cache_dir = Path.home() / ".cmis" / "cache" / "results"
+            cache_dir = Path(paths.results_dir)
 
             if cache_dir.exists():
                 import shutil
@@ -83,13 +94,31 @@ def cmd_cache_manage(args):
         # 캐시 통계
         print("[캐시 통계]")
         print()
-        print("Phase 2: 엔진 연동 후 구현 예정")
+        try:
+            evidence_path = Path(paths.evidence_cache_db_path)
+            if evidence_path.exists():
+                size = evidence_path.stat().st_size
+                print(f"- evidence_cache_db: {evidence_path} size_bytes={size}")
+            else:
+                print("- evidence_cache_db: (none)")
+        except Exception as e:
+            print(f"- evidence_cache_db: [WARN] {e}")
+
+        try:
+            results_dir = Path(paths.results_dir)
+            if results_dir.exists():
+                files = [p for p in results_dir.glob("*") if p.is_file()]
+                print(f"- results_cache: {results_dir} files={len(files)}")
+            else:
+                print("- results_cache: (none)")
+        except Exception as e:
+            print(f"- results_cache: [WARN] {e}")
         print()
 
     else:
         print("사용법:")
-        print("  cmis cache-manage --status")
-        print("  cmis cache-manage --clear [--type evidence|snapshots|results|all]")
-        print("  cmis cache-manage --stats")
+        print("  cmis cache-manage --status [--project-root <path>]")
+        print("  cmis cache-manage --clear [--type evidence|snapshots|results|all] [--project-root <path>]")
+        print("  cmis cache-manage --stats [--project-root <path>]")
 
 

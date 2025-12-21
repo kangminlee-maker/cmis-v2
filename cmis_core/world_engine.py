@@ -81,7 +81,8 @@ class WorldEngine:
 
         # RealityGraphStore (Global)
         self.reality_store = RealityGraphStore(
-            use_backend=use_backend
+            use_backend=use_backend,
+            project_root=self.project_root,
         )
 
         # ProjectOverlayStore (Per-Project)

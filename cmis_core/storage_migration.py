@@ -24,7 +24,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 
 from cmis_core.run_exporter import RunExporter
 from cmis_core.policy_engine import PolicyEngine
-from cmis_core.stores import LedgerStore, RunStore
+from cmis_core.stores import StoreFactory
 from cmis_core.stores.sqlite_base import StoragePaths
 
 
@@ -434,10 +434,14 @@ def migrate_runtime_storage(
     # ---- Re-export runs (optional) ----
     if reexport_runs and runs_path.exists() and ledgers_path.exists():
         try:
-            run_store = RunStore(project_root=paths.storage_root)
-            ledger_store = LedgerStore(project_root=paths.storage_root)
-            policy_engine = PolicyEngine(project_root=paths.storage_root)
-            exporter = RunExporter(project_root=paths.storage_root)
+            factory = StoreFactory(project_root=paths.storage_root)
+            run_store = factory.run_store()
+            ledger_store = factory.ledger_store()
+            # Policy/Config는 storage_root가 아닌 "프로젝트 루트"를 기준으로 로드해야 합니다.
+            # (CMIS_STORAGE_ROOT로 런타임 스토리지를 분리하는 경우를 지원)
+            policy_root = Path(project_root) if project_root is not None else Path.cwd()
+            policy_engine = PolicyEngine(project_root=policy_root)
+            exporter = RunExporter(project_root=policy_root)
 
             cur = run_store.conn.execute("SELECT run_id FROM runs ORDER BY started_at ASC")
             run_ids = [str(r[0]) for r in cur.fetchall()]

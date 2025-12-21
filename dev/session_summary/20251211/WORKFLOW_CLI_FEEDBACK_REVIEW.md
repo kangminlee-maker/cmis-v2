@@ -184,7 +184,7 @@ cmis cache-manage --clear --type snapshots
 
 # Result 캐시 (CLI 레벨만)
 cmis cache-manage --clear --type results
-→ rm ~/.cmis/cache/results/*
+→ rm .cmis/cache/results/*
 ```
 
 **3) 설계 원칙**:

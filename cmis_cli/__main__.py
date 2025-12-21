@@ -161,6 +161,7 @@ def main():
         'cache-manage',
         help='캐시 관리'
     )
+    cache_parser.add_argument('--project-root', dest='project_root', help='프로젝트 루트 (기본: cwd)')
     cache_parser.add_argument('--status', action='store_true', help='캐시 상태')
     cache_parser.add_argument('--clear', action='store_true', help='캐시 클리어')
     cache_parser.add_argument('--stats', action='store_true', help='캐시 통계')

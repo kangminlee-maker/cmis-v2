@@ -22,8 +22,7 @@ from cmis_core.brownfield.db import migrate_brownfield_db, open_brownfield_db
 from cmis_core.brownfield.import_run_store import ImportRunStore
 from cmis_core.brownfield.validation import validate_import_run
 from cmis_core.brownfield.xlsx_ingest import import_xlsx_file
-from cmis_core.stores.artifact_store import ArtifactStore
-from cmis_core.stores.focal_actor_context_store import FocalActorContextStore
+from cmis_core.stores import StoreFactory
 
 
 def _resolve_project_root(args: Any) -> Path:
@@ -76,7 +75,8 @@ def cmd_brownfield_import(args: Any) -> None:
         extractor_version = "csv_decoder@0.1.0" if suffix == ".csv" else "xlsx_decoder@0.1.0"
 
     conn = open_brownfield_db(project_root=project_root)
-    art_store = ArtifactStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    art_store = factory.artifact_store()
     try:
         migrate_brownfield_db(conn)
 
@@ -128,7 +128,8 @@ def cmd_brownfield_preview(args: Any) -> None:
     import_run_id = str(getattr(args, "import_run_id", "")).strip()
 
     conn = open_brownfield_db(project_root=project_root)
-    art_store = ArtifactStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    art_store = factory.artifact_store()
     try:
         migrate_brownfield_db(conn)
 
@@ -173,7 +174,8 @@ def cmd_brownfield_validate(args: Any) -> None:
     policy_mode = str(getattr(args, "policy_mode", "reporting_strict"))
 
     conn = open_brownfield_db(project_root=project_root)
-    art_store = ArtifactStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    art_store = factory.artifact_store()
     try:
         migrate_brownfield_db(conn)
 
@@ -215,8 +217,9 @@ def cmd_brownfield_commit(args: Any) -> None:
     base_id = getattr(args, "focal_actor_context_base_id", None)
 
     conn = open_brownfield_db(project_root=project_root)
-    art_store = ArtifactStore(project_root=project_root)
-    ctx_store = FocalActorContextStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    art_store = factory.artifact_store()
+    ctx_store = factory.focal_actor_context_store()
     try:
         migrate_brownfield_db(conn)
 

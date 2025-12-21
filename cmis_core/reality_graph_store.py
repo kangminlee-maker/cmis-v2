@@ -31,12 +31,19 @@ class RealityGraphStore:
     Phase C: 파일 시스템 백엔드 + 인덱싱 + 캐싱
     """
 
-    def __init__(self, use_backend: bool = False, storage_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        use_backend: bool = False,
+        storage_dir: Optional[Path] = None,
+        *,
+        project_root: Optional[Path] = None,
+    ):
         """초기화
 
         Args:
             use_backend: 파일 시스템 백엔드 사용 여부
             storage_dir: 저장 디렉토리 (백엔드 사용 시)
+            project_root: 프로젝트 루트(선택). storage_dir 미지정 시 StoragePaths 기준 기본 경로를 사용합니다.
         """
         # domain_id → InMemoryGraph 매핑 (인메모리)
         self.graphs: Dict[str, InMemoryGraph] = {}
@@ -50,7 +57,7 @@ class RealityGraphStore:
 
         if use_backend:
             from .reality_graph_backend import RealityGraphBackend
-            self.backend = RealityGraphBackend(storage_dir)
+            self.backend = RealityGraphBackend(storage_dir=storage_dir, project_root=project_root)
 
     def ingest_seed(self, domain_id: str, seed_path: Path) -> None:
         """Reality seed YAML → RealityGraphStore

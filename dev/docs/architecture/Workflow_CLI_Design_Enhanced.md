@@ -524,7 +524,7 @@ cmis cache-manage --clear --type evidence
 
 # Result 캐시 (CLI 레벨, JSON 파일)
 cmis cache-manage --clear --type results
-→ rm -rf ~/.cmis/cache/results/*
+→ rm -rf .cmis/cache/results/*
 
 # All
 cmis cache-manage --clear --type all
@@ -877,7 +877,7 @@ Details: batch_summary.json
 ```
 
 **CLI Result Cache**:
-- 저장 위치: `~/.cmis/cache/results/`
+- 저장 위치: `.cmis/cache/results/`
 - 내용: workflow 결과 파일 경로 + 메타
 - TTL: 1시간
 
@@ -885,7 +885,7 @@ Details: batch_summary.json
 ```json
 {
   "cache_key": "structure_analysis|Adult_Language|KR|none|none",
-  "result_file": "~/.cmis/cache/results/SA-001.json",
+  "result_file": ".cmis/cache/results/SA-001.json",
   "cached_at": "2025-12-11T12:00:00Z",
   "ttl_expires_at": "2025-12-11T13:00:00Z",
   "completeness": "full"

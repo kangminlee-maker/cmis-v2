@@ -17,6 +17,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from .graph import InMemoryGraph, Node, Edge
+from cmis_core.stores.sqlite_base import StoragePaths
 
 
 class RealityGraphBackend:
@@ -31,13 +32,14 @@ class RealityGraphBackend:
     미래: SQLite, PostgreSQL 등
     """
 
-    def __init__(self, storage_dir: Optional[Path] = None):
+    def __init__(self, storage_dir: Optional[Path] = None, *, project_root: Optional[Path] = None):
         """
         Args:
             storage_dir: 저장 디렉토리 (None이면 기본 경로)
+            project_root: 프로젝트 루트(선택). storage_dir 미지정 시 StoragePaths 기준으로 기본 경로를 결정합니다.
         """
         if storage_dir is None:
-            storage_dir = Path.home() / ".cmis" / "reality_graphs"
+            storage_dir = StoragePaths.resolve(project_root).reality_graphs_dir
 
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)

@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union
 from dataclasses import asdict
 
+from cmis_core.stores.sqlite_base import StoragePaths, connect_sqlite
+
 from .types import (
     EvidenceRequest,
     EvidenceBundle,
@@ -106,15 +108,17 @@ class MemoryBackend(StorageBackend):
 class SQLiteBackend(StorageBackend):
     """SQLite 기반 백엔드 (프로덕션용)"""
     
-    def __init__(self, db_path: str = ".cmis/evidence_cache.db"):
+    def __init__(self, db_path: Optional[Union[str, Path]] = None, *, project_root: Optional[Path] = None):
         """
         Args:
             db_path: SQLite DB 경로
+            project_root: 프로젝트 루트(선택). db_path 미지정 시 StoragePaths 기준 기본 경로를 사용합니다.
         """
+        if db_path is None:
+            db_path = StoragePaths.resolve(project_root).evidence_cache_db_path
+
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+        self.conn = connect_sqlite(self.db_path)
         self._init_schema()
     
     def _init_schema(self):
@@ -589,6 +593,8 @@ class EvidenceStore:
 
 def create_evidence_store(
     backend_type: str = "memory",
+    *,
+    project_root: Optional[Path] = None,
     **kwargs
 ) -> EvidenceStore:
     """EvidenceStore 팩토리
@@ -604,8 +610,8 @@ def create_evidence_store(
         backend = MemoryBackend()
     
     elif backend_type == "sqlite":
-        db_path = kwargs.get("db_path", ".cmis/evidence_cache.db")
-        backend = SQLiteBackend(db_path)
+        db_path = kwargs.get("db_path")
+        backend = SQLiteBackend(db_path, project_root=project_root)
     
     else:
         raise ValueError(f"Unknown backend_type: {backend_type}")

@@ -14,7 +14,7 @@ from typing import Any, Dict
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from cmis_core.run_exporter import RunExporter
-from cmis_core.stores import LedgerStore, RunStore
+from cmis_core.stores import StoreFactory
 from cmis_core.policy_engine import PolicyEngine
 
 
@@ -23,7 +23,8 @@ def cmd_run_explain(args) -> None:
     project_root = Path(args.project_root) if getattr(args, "project_root", None) else Path.cwd()
     run_id = args.run_id
 
-    run_store = RunStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    run_store = factory.run_store()
     decisions = run_store.list_decisions(run_id)
     run = run_store.get_run(run_id) or {}
 
@@ -63,8 +64,9 @@ def cmd_run_open(args) -> None:
     project_root = Path(args.project_root) if getattr(args, "project_root", None) else Path.cwd()
     run_id = args.run_id
 
-    run_store = RunStore(project_root=project_root)
-    ledger_store = LedgerStore(project_root=project_root)
+    factory = StoreFactory(project_root=project_root)
+    run_store = factory.run_store()
+    ledger_store = factory.ledger_store()
     policy_engine = PolicyEngine(project_root=project_root)
 
     exporter = RunExporter(project_root=project_root)

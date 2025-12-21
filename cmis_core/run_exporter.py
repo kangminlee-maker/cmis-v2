@@ -24,7 +24,7 @@ import json
 import yaml
 
 from cmis_core.policy_engine import PolicyEngine
-from cmis_core.stores import LedgerStore, RunStore
+from cmis_core.stores import LedgerStore, RunStore, StoreFactory
 from cmis_core.stores.sqlite_base import StoragePaths
 
 
@@ -90,6 +90,33 @@ class RunExporter:
         (run_dir / "results.md").write_text(results_md, encoding="utf-8")
 
         return run_dir
+
+    @classmethod
+    def export_run_with_factory(cls, *, run_id: str, project_root: Optional[Path] = None) -> Path:
+        """편의 메서드: StoreFactory로 stores를 생성해 export를 수행합니다.
+
+        NOTE:
+        - 실제 구현체는 여전히 SQLite + 파일 기반입니다.
+        - 호출자는 close 책임이 있는 store를 여기서 생성/close 하지 않아도 되도록,
+          이 메서드가 내부에서 close까지 처리합니다.
+        """
+
+        factory = StoreFactory(project_root=project_root)
+        run_store = factory.run_store()
+        ledger_store = factory.ledger_store()
+        policy_engine = PolicyEngine(project_root=(Path(project_root) if project_root else Path.cwd()))
+        try:
+            exporter = cls(project_root=project_root)
+            return exporter.export_run(run_id=run_id, run_store=run_store, ledger_store=ledger_store, policy_engine=policy_engine)
+        finally:
+            try:
+                run_store.close()
+            except Exception:
+                pass
+            try:
+                ledger_store.close()
+            except Exception:
+                pass
 
     @staticmethod
     def _cleanup_legacy_files(run_dir: Path) -> None:
