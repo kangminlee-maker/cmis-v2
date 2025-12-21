@@ -193,6 +193,22 @@ class ModelSelector:
             preferred_models = list(override.preferred_models or [])
             prompt_profile = str(override.prompt_profile or "default")
 
+            # Phase 2: bounded escalation (failure_codes 기반)
+            failures = {str(x) for x in (request.failure_codes or []) if str(x).strip()}
+            ladder = list(getattr(override, "escalation_ladder", []) or [])
+            if failures and ladder:
+                for step in ladder:
+                    when = str(getattr(step, "when", "") or "").strip()
+                    if when and when in failures:
+                        next_model = str(getattr(step, "next_model", "") or "").strip()
+                        next_prompt = str(getattr(step, "next_prompt_profile", "") or "").strip() or "default"
+                        if next_model:
+                            # prepend next_model to preferred list (dedup)
+                            preferred_models = [next_model] + [m for m in preferred_models if str(m) != next_model]
+                        prompt_profile = next_prompt
+                        rationale.append("escalated_by_policy")
+                        break
+
         tier_pref = list(llm.default_tier_preference or [])
 
         ranked = sorted(

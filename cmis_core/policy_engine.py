@@ -25,7 +25,7 @@ import yaml
 
 from cmis_core.digest import canonical_digest
 from cmis_core.llm.policy_types import EffectivePolicy as LLMEffectivePolicy
-from cmis_core.llm.policy_types import LLMRoutingPolicy, LLMTaskOverride
+from cmis_core.llm.policy_types import EscalationStep, LLMRoutingPolicy, LLMTaskOverride
 
 
 # -----------------------------
@@ -88,7 +88,26 @@ def _parse_llm_routing_policy(d: Dict[str, Any]) -> LLMRoutingPolicy:
             pm_raw = ov_d.get("preferred_models") or []
             preferred_models: List[str] = [str(x) for x in pm_raw] if isinstance(pm_raw, list) else []
             prompt_profile = str(ov_d.get("prompt_profile", "default") or "default")
-            overrides[str(task_type)] = LLMTaskOverride(preferred_models=preferred_models, prompt_profile=prompt_profile)
+
+            ladder: List[EscalationStep] = []
+            ladder_raw = ov_d.get("escalation_ladder") or []
+            if isinstance(ladder_raw, list):
+                for step in ladder_raw:
+                    if not isinstance(step, dict):
+                        continue
+                    when = str(step.get("when") or "").strip()
+                    nxt = step.get("next") or {}
+                    nxt_d = nxt if isinstance(nxt, dict) else {}
+                    model = str(nxt_d.get("model") or "").strip()
+                    prompt_prof = str(nxt_d.get("prompt_profile") or "default").strip() or "default"
+                    if when and model:
+                        ladder.append(EscalationStep(when=when, next_model=model, next_prompt_profile=prompt_prof))
+
+            overrides[str(task_type)] = LLMTaskOverride(
+                preferred_models=preferred_models,
+                prompt_profile=prompt_profile,
+                escalation_ladder=ladder,
+            )
 
     return LLMRoutingPolicy(
         execution_profile=exec_profile,

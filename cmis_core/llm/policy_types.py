@@ -14,16 +14,40 @@ from typing import Any, Dict, List
 
 
 @dataclass(frozen=True)
+class EscalationStep:
+    """에스컬레이션 단계(Phase 2 최소).
+
+    when:
+      - 예: "gate_failed:json_parseable"
+    next:
+      - model: 다음 시도에서 사용할 model_id
+      - prompt_profile: 다음 시도에서 사용할 prompt profile
+    """
+
+    when: str
+    next_model: str
+    next_prompt_profile: str = "default"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "when": str(self.when),
+            "next": {"model": str(self.next_model), "prompt_profile": str(self.next_prompt_profile)},
+        }
+
+
+@dataclass(frozen=True)
 class LLMTaskOverride:
     """task별 모델 선호/프롬프트 프로파일(Phase 1 최소)."""
 
     preferred_models: List[str] = field(default_factory=list)
     prompt_profile: str = "default"
+    escalation_ladder: List[EscalationStep] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "preferred_models": [str(x) for x in (self.preferred_models or []) if str(x).strip()],
             "prompt_profile": str(self.prompt_profile),
+            "escalation_ladder": [s.to_dict() for s in (self.escalation_ladder or [])],
         }
 
 

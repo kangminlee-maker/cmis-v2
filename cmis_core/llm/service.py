@@ -20,7 +20,9 @@ from ..policy_engine import PolicyEngine
 from ..stores.run_store import RunStore
 from .model_registry import ModelRegistry
 from .model_selector import ModelSelector, SelectionDecision, SelectionRequest
+from .prompt_profile_registry import PromptProfileRegistry
 from .task_spec_registry import TaskSpecRegistry
+from .quality_gate import QualityGateEngine
 from .types import (
     CMISTaskType,
     TaskRoute,
@@ -300,6 +302,7 @@ class LLMService:
         model_registry: Optional[ModelRegistry] = None,
         task_specs: Optional[TaskSpecRegistry] = None,
         model_selector: Optional[ModelSelector] = None,
+        prompt_profiles: Optional[PromptProfileRegistry] = None,
     ) -> None:
         self.config = config
 
@@ -313,6 +316,7 @@ class LLMService:
         self.model_registry = model_registry
         self.task_specs = task_specs
         self.model_selector = model_selector
+        self.prompt_profiles = prompt_profiles
 
         # Optimization/Guardrails 설정 로드 (llm_runtime)
         llm_runtime = config.get_llm_runtime()
@@ -378,6 +382,24 @@ class LLMService:
         if self.model_selector is None:
             self.model_selector = ModelSelector(model_registry=self.model_registry, task_specs=self.task_specs)
 
+        # Prompt profiles (Phase 2): best-effort
+        if self.prompt_profiles is None:
+            pp_path = self.config.project_root / "config" / "llm" / "prompt_profiles.yaml"
+            if pp_path.exists():
+                try:
+                    self.prompt_profiles = PromptProfileRegistry(pp_path)
+                    self.prompt_profiles.compile()
+                except Exception:
+                    self.prompt_profiles = None
+        else:
+            try:
+                _ = self.prompt_profiles.get_ref()
+            except Exception:
+                try:
+                    self.prompt_profiles.compile()
+                except Exception:
+                    pass
+
     def _select_managed(
         self,
         *,
@@ -415,18 +437,30 @@ class LLMService:
         decision = self.model_selector.select(request=req, effective_policy=effective)
         return decision, effective
 
-    @staticmethod
-    def _apply_prompt_profile(prompt: str, *, prompt_profile: str) -> str:
-        """prompt_profile을 적용합니다(Phase 1: 최소 구현).
+    def _apply_prompt_profile(self, prompt: str, *, prompt_profile: str) -> str:
+        """prompt_profile을 적용합니다(Phase 2: registry 우선, 없으면 fallback).
 
         NOTE:
-        - Phase 1에서는 prompt_profile을 "강제 출력 규칙" 정도로만 반영합니다.
-        - 본격적인 프롬프트 버전 관리는 Phase 2 (Prompt profile registry)에서 수행합니다.
+        - registry가 있으면 해당 prefix를 적용합니다.
+        - registry가 없거나 로딩 실패 시, 최소 fallback(strict_json)만 제공합니다.
         """
 
         p = str(prompt or "")
-        prof = str(prompt_profile or "default").strip().lower()
-        if prof == "strict_json":
+        prof = str(prompt_profile or "default").strip()
+
+        # 1) Registry 우선
+        if self.prompt_profiles is not None:
+            try:
+                profile = self.prompt_profiles.get_profile(prof)
+                prefix = str(getattr(profile, "prefix", "") or "")
+                if prefix.strip():
+                    return prefix.rstrip() + "\n\n" + p
+                return p
+            except Exception:
+                pass
+
+        # 2) 최소 fallback
+        if prof.strip().lower() == "strict_json":
             return (
                 "중요: 반드시 JSON만 출력하세요. 설명/코드블록/여분 텍스트를 포함하지 마세요.\n"
                 "JSON 외의 문자가 섞이면 실패로 처리됩니다.\n\n"
@@ -645,6 +679,9 @@ class LLMService:
         max_latency_ms = kwargs.pop("max_latency_ms", None)
         attempt_index = int(kwargs.pop("attempt_index", 0) or 0)
         failure_codes = kwargs.pop("failure_codes", None)
+        max_attempts = int(kwargs.pop("max_attempts", 2) or 2)
+        enable_quality_gates = bool(kwargs.pop("enable_quality_gates", True))
+        enable_escalation = bool(kwargs.pop("enable_escalation", True))
 
         decision: Optional[SelectionDecision] = None
         effective_policy: Optional[Any] = None
@@ -666,84 +703,181 @@ class LLMService:
                 effective_policy = None
 
         # Route 조회 (fallback)
-        route = self.router.get_route(task_type)
-
-        if not route:
+        base_route = self.router.get_route(task_type)
+        if not base_route:
             raise ValueError(f"No route for {task_type}")
 
-        if decision is not None:
+        # 비관리 모드: 기존 경로 그대로 1회 호출
+        if decision is None:
+            provider = self.registry.get_provider(base_route.provider_id) or self.registry.get_provider("__default__")
+            if not provider:
+                raise ProviderNotAvailableError("No provider available")
+
+            cost = provider.get_cost_estimate(prompt)
+            response = provider.call_structured(prompt, schema, context, model=base_route.model_name, **kwargs)
+
+            self.daily_cost += cost
+            self.total_cost += cost
+            self.call_count += 1
+
+            info = provider.get_info()
+            used_provider_id = str(info.get("provider_id") or base_route.provider_id)
+            used_model_name = str(base_route.model_name or info.get("model") or "unknown")
+
+            self.traces.append(
+                LLMTrace(
+                    task_type=task_type.value,
+                    provider_id=used_provider_id,
+                    model_name=used_model_name,
+                    prompt_preview=prompt[:100],
+                    response_preview=str(response)[:100],
+                    cost_usd=cost,
+                    tokens_used=provider.estimate_token_count(prompt + str(response)),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+            )
+            return response
+
+        # 관리 모드: quality gate + (옵션) escalation
+        gate_engine = QualityGateEngine()
+        current_failure_codes: List[str] = list(failure_codes or []) if isinstance(failure_codes, list) else []
+        attempts = max(1, int(max_attempts))
+        last_response: Dict[str, Any] = {}
+
+        for i in range(int(attempt_index), int(attempt_index) + int(attempts)):
+            # attempt별 결정 (첫 attempt는 이미 선택됨)
+            if i == int(attempt_index):
+                cur_decision = decision
+            else:
+                try:
+                    cur_decision, _ = self._select_managed(
+                        task_type=task_type,
+                        policy_ref=str(policy_ref),
+                        call_intent=call_intent,
+                        quality_target=quality_target,
+                        confidentiality=confidentiality,
+                        budget_remaining_usd=budget_remaining_usd,
+                        max_latency_ms=(None if max_latency_ms is None else int(max_latency_ms)),
+                        attempt_index=i,
+                        failure_codes=list(current_failure_codes),
+                    )
+                except Exception:
+                    break
+
             route = TaskRoute(
                 task_type=task_type,
-                provider_id=str(decision.provider),
-                model_name=str(decision.model_id),
-                temperature=float(route.temperature),
-                max_tokens=int(route.max_tokens),
-                mode=str(route.mode),
-                enable_cache=bool(route.enable_cache),
+                provider_id=str(cur_decision.provider),
+                model_name=str(cur_decision.model_id),
+                temperature=float(base_route.temperature),
+                max_tokens=int(base_route.max_tokens),
+                mode=str(base_route.mode),
+                enable_cache=bool(base_route.enable_cache),
             )
 
-        # Provider 조회
-        provider = self.registry.get_provider(route.provider_id)
+            provider = self.registry.get_provider(route.provider_id) or self.registry.get_provider("__default__")
+            if not provider:
+                raise ProviderNotAvailableError("No provider available")
 
-        if not provider:
-            provider = self.registry.get_provider("__default__")
+            cost = float(cur_decision.estimated_cost_usd) if (cur_decision.estimated_cost_usd is not None) else provider.get_cost_estimate(prompt)
 
-        if not provider:
-            raise ProviderNotAvailableError("No provider available")
+            prompt_to_send = self._apply_prompt_profile(prompt, prompt_profile=str(cur_decision.prompt_profile))
+            response = provider.call_structured(prompt_to_send, schema, context, model=route.model_name, **kwargs)
 
-        # 비용 추정
-        cost = float(decision.estimated_cost_usd) if (decision is not None and decision.estimated_cost_usd is not None) else provider.get_cost_estimate(prompt)
+            # 비용/통계
+            self.daily_cost += cost
+            self.total_cost += cost
+            self.call_count += 1
 
-        # 구조화 호출
-        prompt_to_send = self._apply_prompt_profile(prompt, prompt_profile=(decision.prompt_profile if decision is not None else "default"))
-        response = provider.call_structured(prompt_to_send, schema, context, model=route.model_name, **kwargs)
+            info = provider.get_info()
+            used_provider_id = str(info.get("provider_id") or route.provider_id)
+            used_model_name = str(route.model_name or info.get("model") or "unknown")
 
-        # 비용 기록
-        self.daily_cost += cost
-        self.total_cost += cost
-        self.call_count += 1
+            # (옵션) run_store selection decision 기록
+            if run_id and (self.run_store is not None):
+                try:
+                    self.run_store.append_llm_selection_decision(
+                        str(run_id),
+                        {
+                            "task_type": str(task_type.value),
+                            "policy_ref": str(policy_ref),
+                            "effective_policy_digest": str(cur_decision.effective_policy_digest),
+                            "model_registry_digest": str(cur_decision.registry_digest),
+                            "task_spec_digest": str(cur_decision.task_spec_digest),
+                            "decision": cur_decision.to_dict(),
+                            "call_intent": str(call_intent),
+                            "quality_target": str(quality_target),
+                            "confidentiality": str(confidentiality),
+                            "attempt_index": int(i),
+                        },
+                    )
+                except Exception:
+                    pass
 
-        # Trace 기록 (실제 사용 provider 기준)
-        provider_info = provider.get_info()
-        used_provider_id = str(provider_info.get("provider_id") or route.provider_id)
-        used_model_name = str(route.model_name or provider_info.get("model") or "unknown")
-        if used_provider_id != str(route.provider_id):
-            used_model_name = str(provider_info.get("model") or used_model_name)
-
-        # (옵션) run_store selection decision 기록
-        if decision is not None and run_id and (self.run_store is not None):
-            try:
-                self.run_store.append_llm_selection_decision(
-                    str(run_id),
-                    {
-                        "task_type": str(task_type.value),
-                        "policy_ref": str(policy_ref),
-                        "effective_policy_digest": str(decision.effective_policy_digest),
-                        "model_registry_digest": str(decision.registry_digest),
-                        "task_spec_digest": str(decision.task_spec_digest),
-                        "decision": decision.to_dict(),
-                        "call_intent": str(call_intent),
-                        "quality_target": str(quality_target),
-                        "confidentiality": str(confidentiality),
-                    },
+            # trace(시도별)
+            self.traces.append(
+                LLMTrace(
+                    task_type=task_type.value,
+                    provider_id=used_provider_id,
+                    model_name=used_model_name,
+                    prompt_preview=prompt[:100],
+                    response_preview=str(response)[:100],
+                    cost_usd=cost,
+                    tokens_used=provider.estimate_token_count(prompt + str(response)),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                 )
-            except Exception:
-                pass
+            )
 
-        trace = LLMTrace(
-            task_type=task_type.value,
-            provider_id=used_provider_id,
-            model_name=used_model_name,
-            prompt_preview=prompt[:100],
-            response_preview=str(response)[:100],
-            cost_usd=cost,
-            tokens_used=provider.estimate_token_count(prompt + str(response)),
-            timestamp=datetime.now(timezone.utc).isoformat(),
-        )
+            last_response = response if isinstance(response, dict) else {"raw": str(response)}
 
-        self.traces.append(trace)
+            # quality gate 평가
+            if enable_quality_gates and (self.task_specs is not None):
+                try:
+                    # task_specs는 compile/로드 상태를 보장합니다(외부 주입 방어)
+                    self._ensure_model_management()
+                    task_spec = self.task_specs.get_task_spec(str(task_type.value))
+                    report = gate_engine.evaluate(task_spec=task_spec, output=response)
+                except Exception:
+                    report = None
 
-        return response
+                if report is not None and run_id and (self.run_store is not None):
+                    try:
+                        self.run_store.append_decision(
+                            str(run_id),
+                            {
+                                "type": "llm_quality_gate_result",
+                                "ts": datetime.now(timezone.utc).isoformat(),
+                                "payload": {
+                                    "task_type": str(task_type.value),
+                                    "attempt_index": int(i),
+                                    "decision_id": str(cur_decision.decision_id),
+                                    "passed": bool(report.passed),
+                                    "failure_codes": list(report.failure_codes or []),
+                                    "report": report.to_dict(),
+                                },
+                            },
+                        )
+                    except Exception:
+                        pass
+
+                # 성공이면 종료
+                if report is None or report.passed:
+                    return last_response
+
+                # 실패 → escalation
+                current_failure_codes = list(report.failure_codes or [])
+                if not enable_escalation:
+                    break
+
+                # 마지막 시도면 종료
+                if i >= (int(attempt_index) + int(attempts) - 1):
+                    break
+
+                continue
+
+            # quality gate 미사용이면 즉시 반환
+            return last_response
+
+        return last_response
 
     def _build_cache_key(
         self,
