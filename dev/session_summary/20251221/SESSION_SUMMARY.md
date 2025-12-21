@@ -70,7 +70,7 @@ dev/docs/architecture/Search_Strategy_Design_v3.md
 5. **안전장치**: Budget 보호, SSRF 방어, 링크 폭발 방지
 6. **Phase별 전략**:
    - authoritative: fetch_depth=1~2, same_domain_only
-   - generic_web: fetch_depth=0 (보수적)
+   - generic_web: fetch_depth=1 + max_time_sec timeout (기본)
 
 **TODO 추가** (Section 6.4):
 ```
@@ -191,12 +191,13 @@ ee5b8ba refactor: Search Strategy v2 → v3 완전 전환 및 정리
 ### 상태 재점검(2025-12-21 기준)
 - `cursor doctor`: OK
 - `git status`: 로컬 미커밋 변경 없음
-- Search v3: 기본 파이프라인 + Link Following(SSV3-13~16) 구현 완료, 기본 설정은 fetch_depth=0으로 비활성
+- Search v3: 기본 파이프라인 + Link Following(SSV3-13~16) 구현 완료, 기본 설정은 `fetch_depth=1`로 활성 + `max_time_sec` timeout으로 지체 시 자동 중단/로그(trace) 기록
+- (참고) Orchestration에서 Search v3 소스는 `CMIS_ENABLE_SEARCH_V3=1`일 때만 등록되는 옵트인 구조
 - Brownfield: outbox 패턴 구현/커밋 완료, `cmis brownfield reconcile`로 outbox 재처리 가능
 
 ### 우선순위 작업 (다음)
-1. LLM Model Management Phase 1 구현 (LLM-01~06)
-2. (선택) Search v3 Link Following을 필요한 metric/phase에서 fetch_depth=1~2로 점진 활성화 및 운영 점검
+1. LLM Model Management Phase 2 구현 (LLM-07~12: 품질 게이트/에스컬레이션/프롬프트 프로파일 + 통합 테스트)
+2. Search v3 Link Following 운영 튜닝: metric/phase별 `fetch_depth`/`max_time_sec`/`max_links_per_doc` 조정 및 품질/비용/지연 관측 고정
 
 ---
 

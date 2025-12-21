@@ -89,11 +89,10 @@
    - 10개 마크다운 문서 (3,720줄)
    - 스크립트: `dev/tools/generate_notebooklm_docs.py`
 
-2. ✅ **Search Strategy v3 Link Following 설계 추가**
+2. ✅ **Search Strategy v3 Link Following 구현 완료**
    - HTML hyperlink를 따라가는 depth-based exploration
-   - Section 7 전체 추가 (483줄)
-   - LinkExtractor, LinkSelectionPolicy, BFS 알고리즘
-   - 구현 완료: SSV3-13~16 (기본 설정은 fetch_depth=0으로 비활성)
+   - LinkExtractor, LinkSelectionPolicy, BFS 알고리즘 (SSV3-13~16)
+   - 기본 설정: `fetch_depth=1`, `max_time_sec=30` (지체 시 자동 중단 + trace 기록)
 
 3. ✅ **Search Strategy v2 → v3 완전 전환**
    - v2 관련 파일 모두 deprecated로 이동
@@ -151,7 +150,7 @@ cmis/
 
 #### 1. Search Strategy v3 기반 인프라 구현
 
-**배경**: Search v3의 기본 파이프라인(검색 → 문서 fetch → 추출/합성 → 게이트 → trace)과 Link Following(SSV3-13~16)까지 구현되어 있고, 단위 테스트로 결정성/안전성 기준이 고정되어 있습니다. 단, 기본 설정은 `fetch_depth=0`으로 Link Following이 비활성입니다. 다음 세션의 우선 과제는 (1) 필요한 metric/phase에서 `fetch_depth`를 점진적으로 활성화하고 운영 보호장치(budget/egress/SSRF) 점검, (2) LLM Model Management Phase 1 구현입니다.
+**배경**: Search v3의 기본 파이프라인(검색 → 문서 fetch → 추출/합성 → 게이트 → trace)과 Link Following(SSV3-13~16)까지 구현되어 있고, 단위 테스트로 결정성/안전성 기준이 고정되어 있습니다. 현재 기본 설정은 `fetch_depth=1`로 Link Following이 활성화되어 있으며, 링크 탐색은 `max_time_sec`(기본 30초)로 **지체되는 경우 자동 중단**하고 trace에 `stop_reason/elapsed_sec`를 남기도록 구성되어 있습니다. 단, Orchestration에서 Search v3 소스는 여전히 `CMIS_ENABLE_SEARCH_V3=1`일 때만 등록되는 **옵트인** 구조이므로, 실제 외부 호출은 환경/정책 조건을 만족할 때만 발생합니다. 다음 우선 과제는 (1) 운영 안전 파라미터(예: `max_time_sec`, `max_links_per_doc`) 튜닝/관측, (2) LLM Model Management Phase 2(품질 게이트/에스컬레이션/프롬프트 프로파일) 구현입니다.
 
 ```
 [x] SSV3-01: StrategyRegistry v3 구현
@@ -247,13 +246,14 @@ cmis/
     - 검증: trace envelope, ART refs, plan_digest_chain
     - Verifier: 재현 불가능 상태 탐지
 
-[ ] SSV3-12: QueryLearner v1 (선택)
-    - 온라인 변경 금지, 오프라인 제안만
+[x] SSV3-12: QueryLearner v1 (선택)
+    - 온라인 변경 금지, 오프라인 제안만 (best-effort 기록)
+    - 파일: cmis_core/search_v3/query_learner.py (구현/테스트 완료)
 ```
 
 #### 5. LLM Model Management 구현
 
-**배경**: v1.1.0 설계 문서 완성 (809줄), Phase 1부터 구현 시작 준비 완료.
+**배경**: v1.1.0 설계 문서 완성(809줄) 이후, Phase 1(정책 단일화 + 결정적 선택 커널)까지 구현/테스트/커밋 완료 상태입니다.
 
 **설계 요약**:
 - LLM-native 자율 컨트롤러 + 최소 커널 패턴
@@ -269,46 +269,50 @@ cmis/
     - 상태: 커밋 완료 (83604f6)
     - 보완사항 반영: Phase별 공수, 단계적 구현 경로, 최소 TaskSpec, 캐싱 전략
 
-[ ] Phase 1: 정책 단일화 + 결정적 선택 커널 (7일)
-    ├─ [ ] LLM-01: ModelRegistry 구현
+[x] Phase 1: 정책 단일화 + 결정적 선택 커널 (완료)
+    ├─ [x] LLM-01: ModelRegistry 구현
     │   - 파일: config/llm/model_registry.yaml (YAML)
     │   - 파일: cmis_core/llm/model_registry.py (로더)
     │   - 목표: 모델 메타데이터 로드 + registry_digest 산출
     │   - 수용기준: capabilities/cost/limits 검증, digest 안정성
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-02: TaskSpecRegistry 구현
+    ├─ [x] LLM-02: TaskSpecRegistry 구현
     │   - 파일: config/llm/task_specs_minimal.yaml (Phase 1용)
     │   - 파일: cmis_core/llm/task_spec_registry.py
     │   - 목표: 핵심 3개 Task 스펙 정의 (나머지는 _default)
     │   - 수용기준: required_capabilities, quality_gates 검증
     │   - 공수: 1일
     │
-    ├─ [ ] LLM-03: PolicyEngine 확장
+    ├─ [x] LLM-03: PolicyEngine 확장
     │   - 파일: cmis_core/policy_engine.py
     │   - 파일: config/policy_extensions/llm_routing.yaml (신규)
     │   - 목표: effective_policy.llm 생성 + digest 캐싱
     │   - 수용기준: policy_ref → effective_policy 결정적 변환
     │   - 공수: 1.5일
     │
-    ├─ [ ] LLM-04: ModelSelector 구현
+    ├─ [x] LLM-04: ModelSelector 구현
     │   - 파일: cmis_core/llm/model_selector.py (신규)
     │   - 목표: SelectionRequest → SelectionDecision (결정적)
     │   - 알고리즘: 정책 허용 → capability 체크 → 예산/지연 → 정렬
     │   - 수용기준: 동일 입력 → 동일 선택, rationale_codes 기록
     │   - 공수: 2일
     │
-    ├─ [ ] LLM-05: run_store 통합
+    ├─ [x] LLM-05: run_store 통합
     │   - 파일: cmis_core/stores/run_store.py 확장
     │   - 목표: selection_decision trace 저장
     │   - 저장 항목: policy_ref, effective_policy_digest, registry_digest,
     │                model_id, rationale_codes, estimated_cost
     │   - 공수: 0.5일
     │
-    └─ [ ] LLM-06: Phase 1 단위 테스트
+    └─ [x] LLM-06: Phase 1 단위 테스트
         - 파일: dev/tests/unit/test_llm_model_selector.py
         - 테스트: digest 안정성, 결정적 선택, fallback chain
         - 공수: 1일
+
+    (추가) LLMService 통합:
+      - policy_ref 제공 시: PolicyEngine → ModelSelector 선택 → (옵션) run_store에 selection decision 기록
+      - 테스트: dev/tests/unit/test_llm_service_model_management.py
 
     **Phase 1 완료 후 → v1.1.0-alpha 태깅**
 
@@ -403,7 +407,7 @@ cmis/
 
 [x] SSV3-16: Link events/trace
     - 이벤트: LinkExtracted, LinkFollowed, DepthExplorationCompleted
-    - Config: config/search_strategy_registry_v3.yaml에 link_selection 설정 반영(기본 fetch_depth=0 유지)
+    - Config: config/search_strategy_registry_v3.yaml에 link_selection 설정 반영(기본 fetch_depth=1, max_time_sec=30)
 ```
 
 ### P3: 중장기 (1~2개월)
@@ -508,8 +512,8 @@ dev/docs/notebooklm_export/
 ### 1. Search Strategy v3
 
 - **현재 상태**: 기본 파이프라인 구현 및 단위 테스트 통과로 기준선이 고정됨
-- **Link Following**: 구현 완료(SSV3-13~16), 기본 설정은 `fetch_depth=0`으로 비활성
-- **fetch_depth**: 0이면 비활성, 1~2로 점진 활성화 권장. `link_selection`은 fetch_depth>0일 때만 적용됨
+- **Link Following**: 구현 완료(SSV3-13~16), 기본 설정은 `fetch_depth=1`로 활성 (BFS 전체 `max_time_sec` timeout 포함)
+- **fetch_depth**: 0이면 비활성, 1~2로 조절 가능. `link_selection`은 fetch_depth>0일 때만 적용됨
 - **실행 조건(옵트인)**: Orchestration에서 `CMIS_ENABLE_SEARCH_V3=1`일 때만 SearchV3 소스가 등록되며, 외부 호출은 `GOOGLE_API_KEY`/`GOOGLE_SEARCH_ENGINE_ID` 등 환경변수 설정이 필요함
 
 ### 2. Brownfield
@@ -520,8 +524,8 @@ dev/docs/notebooklm_export/
 ### 3. LLM Model Management
 
 - **설계 문서 완성** (v1.1.0, 809줄, 커밋 완료)
-- **Phase 1 구현 준비 완료** (7일 예상)
-- **다음 단계**: ModelRegistry, TaskSpecRegistry 구현
+- **Phase 1 구현/테스트/커밋 완료**: ModelRegistry/TaskSpecRegistry/PolicyEngine effective_policy.llm/ModelSelector/run_store 기록 + LLMService 연동
+- **다음 단계**: Phase 2 (품질 게이트 + bounded escalation + prompt profile registry)
 
 ---
 

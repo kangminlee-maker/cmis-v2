@@ -118,14 +118,13 @@
 - **수용기준**
   - 사용자가 UI에서 최소 한 번 end-to-end를 수행 가능
 
-### P1-03 Search v3 Link Following 구현(설계/구현 완료, 기본 비활성)
+### P1-03 Search v3 Link Following 구현(설계/구현 완료, 기본 활성)
 
 - **목표**: SERP 결과의 “요약 페이지”를 넘어 IR/PDF/리포트 등 실질 근거로 도달
-- **현재 구현 상태(2025-12-21 기준)**: Search v3 기본 파이프라인과 Link Following(SSV3-13~16)까지 구현되어 있습니다. 단, 기본 설정은 `fetch_depth=0`으로 비활성입니다.
+- **현재 구현 상태(2025-12-21 기준)**: Search v3 기본 파이프라인과 Link Following(SSV3-13~16)까지 구현되어 있으며, 기본 설정은 `fetch_depth=1`로 활성입니다. 또한 링크 탐색은 `max_time_sec`(기본 30초)로 지체 시 자동 중단하고 trace에 stop_reason/elapsed를 남깁니다.
 - **미구현/미완성 포인트**
-  - authoritative phase에서 `fetch_depth=1~2`를 점진 활성화하고, 운영 관점(budget/egress/SSRF/redirect/MIME)에서 안전하게 굳히기
-  - LinkExtracted/LinkFollowed 계보 이벤트 기록
-  - budget/egress/SSRF 보호를 depth 탐색에도 동일 적용
+  - metric/phase별 `fetch_depth`/`max_time_sec`/`max_links_per_doc` 튜닝(운영 관점: 비용/지연/품질 균형)
+  - 실제 운영 run에서 “깊이 1 문서”가 evidence 품질(출처 신뢰도/독립성/인용 가능성)을 유의미하게 개선하는지 점검/리포트 고정
 - **수용기준**
   - authoritative phase에서 `fetch_depth=1`로 PDF/IR 링크를 따라가 evidence 품질이 실제로 개선됨
 
@@ -142,9 +141,10 @@
 
 - **목표**: 모델 선택/에스컬레이션/비용/품질을 정책 기반으로 운영 가능하게 함
 - **미구현/미완성 포인트**
-  - ModelRegistry/TaskSpecRegistry/결정적 ModelSelector
-  - 실패 유형 기반 escalation ladder
-  - (최소) benchmark/회귀 감지의 기본 틀
+  - 실패 유형 기반 escalation ladder (Phase 2)
+  - Prompt profile registry + pinning (Phase 2)
+  - 전체 TaskSpec 확장(10개 Task) (Phase 2)
+  - (최소) benchmark/회귀 감지의 기본 틀 (Phase 3)
 - **수용기준**
   - 동일 effective_policy + 동일 입력이면 모델 선택이 결정적
   - 비용/사용량이 run 단위로 추적됨
