@@ -72,7 +72,7 @@ class CMISTools:
         return self._safe_call(
             "collect_evidence",
             collect_evidence,
-            {"query": query, "domain_id": domain_id, "region": region, "metric_ids": metric_ids, "sources": sources},
+            {"query": query, "domain_id": domain_id, "region": region, "metric_ids": metric_ids, "sources": sources, "project_id": self.project_id or ""},
         )
 
     def add_record(
@@ -97,6 +97,7 @@ class CMISTools:
                 "content": content,
                 "confidence": confidence,
                 "metric_ids_covered": metric_ids_covered,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -104,7 +105,7 @@ class CMISTools:
         """Retrieve an evidence collection by ID."""
         from cmis_v2.engines.evidence import get_evidence
 
-        return self._safe_call("get_evidence", get_evidence, {"evidence_id": evidence_id})
+        return self._safe_call("get_evidence", get_evidence, {"evidence_id": evidence_id, "project_id": self.project_id or ""})
 
     # ------------------------------------------------------------------
     # World engine wrappers
@@ -128,6 +129,7 @@ class CMISTools:
                 "region": region,
                 "evidence_id": evidence_id,
                 "focal_actor_context_id": focal_actor_context_id,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -143,7 +145,7 @@ class CMISTools:
         return self._safe_call(
             "add_node",
             add_node,
-            {"snapshot_id": snapshot_id, "node_type": node_type, "data": data},
+            {"snapshot_id": snapshot_id, "node_type": node_type, "data": data, "project_id": self.project_id or ""},
         )
 
     def add_edge(
@@ -160,14 +162,14 @@ class CMISTools:
         return self._safe_call(
             "add_edge",
             add_edge,
-            {"snapshot_id": snapshot_id, "edge_type": edge_type, "source": source, "target": target, "data": data},
+            {"snapshot_id": snapshot_id, "edge_type": edge_type, "source": source, "target": target, "data": data, "project_id": self.project_id or ""},
         )
 
     def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
         """Retrieve a snapshot by ID."""
         from cmis_v2.engines.world import get_snapshot
 
-        return self._safe_call("get_snapshot", get_snapshot, {"snapshot_id": snapshot_id})
+        return self._safe_call("get_snapshot", get_snapshot, {"snapshot_id": snapshot_id, "project_id": self.project_id or ""})
 
     # ------------------------------------------------------------------
     # Pattern engine wrappers
@@ -217,6 +219,7 @@ class CMISTools:
                 "snapshot_id": snapshot_id,
                 "evidence_id": evidence_id,
                 "policy_ref": policy_ref,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -240,6 +243,7 @@ class CMISTools:
                 "confidence": confidence,
                 "method": method,
                 "evidence_summary": evidence_summary,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -247,7 +251,7 @@ class CMISTools:
         """Retrieve a metric value record by metric ID."""
         from cmis_v2.engines.value import get_metric_value
 
-        return self._safe_call("get_metric_value", get_metric_value, {"metric_id": metric_id})
+        return self._safe_call("get_metric_value", get_metric_value, {"metric_id": metric_id, "project_id": self.project_id or ""})
 
     # ------------------------------------------------------------------
     # Strategy engine wrappers
@@ -271,6 +275,7 @@ class CMISTools:
                 "snapshot_id": snapshot_id,
                 "pattern_matches": pattern_matches,
                 "constraints": constraints,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -290,6 +295,7 @@ class CMISTools:
                 "strategy_ids": strategy_ids,
                 "value_records": value_records,
                 "policy_ref": policy_ref,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -512,6 +518,7 @@ class CMISTools:
                 "confidence": confidence,
                 "source": source,
                 "distribution": distribution,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -519,7 +526,7 @@ class CMISTools:
         """Get the current prior belief for a metric."""
         from cmis_v2.engines.belief import get_prior
 
-        return self._safe_call("get_prior", get_prior, {"metric_id": metric_id})
+        return self._safe_call("get_prior", get_prior, {"metric_id": metric_id, "project_id": self.project_id or ""})
 
     def update_belief(
         self,
@@ -537,6 +544,7 @@ class CMISTools:
                 "metric_id": metric_id,
                 "new_evidence_value": new_evidence_value,
                 "evidence_confidence": evidence_confidence,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -612,8 +620,8 @@ class CMISTools:
                     "domain_id (str) - domain identifier e.g. 'EV_Charging_KR'; "
                     "region (str, default 'KR'); "
                     "metric_ids (list[str] | None) - specific metric IDs to collect for e.g. ['MET-TAM', 'MET-Revenue']; "
-                    "sources (list[str] | None) - data sources to query e.g. ['duckduckgo', 'kosis', 'dart']. "
-                    "None means auto-select (defaults to duckduckgo). "
+                    "sources (list[str] | None) - data sources to query e.g. ['web_search', 'kosis', 'dart']. "
+                    "None means auto-select (defaults to web_search). "
                     "Returns: dict with evidence_id, query, records, sufficiency, lineage. "
                     "Use at the start of data_collection to create an evidence container."
                 ),

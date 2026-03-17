@@ -206,6 +206,7 @@ def collect_evidence(
     region: str = "KR",
     metric_ids: list[str] | None = None,
     sources: list[str] | None = None,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Collect evidence for the given query and domain context.
 
@@ -287,6 +288,9 @@ def collect_evidence(
     }
 
     _EVIDENCE_STORE[evidence_id] = result
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "evidence", evidence_id, result)
     return result
 
 
@@ -297,6 +301,7 @@ def add_record(
     content: str,
     confidence: float = 0.5,
     metric_ids_covered: list[str] | None = None,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Add an evidence record to an existing evidence collection.
 
@@ -348,18 +353,29 @@ def add_record(
             if mid in sufficiency["metric_coverage"]:
                 sufficiency["metric_coverage"][mid] = True
 
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "evidence", evidence_id, evd)
+
     return record
 
 
-def get_evidence(evidence_id: str) -> dict[str, Any]:
+def get_evidence(evidence_id: str, project_id: str = "") -> dict[str, Any]:
     """Retrieve an evidence collection by ID.
 
     Args:
         evidence_id: The evidence collection ID.
+        project_id: Optional project ID for file-based lookup.
 
     Returns:
         The evidence dict, or an error dict.
     """
-    if evidence_id not in _EVIDENCE_STORE:
-        return {"error": f"Evidence collection not found: {evidence_id}"}
-    return _EVIDENCE_STORE[evidence_id]
+    if evidence_id in _EVIDENCE_STORE:
+        return _EVIDENCE_STORE[evidence_id]
+    if project_id:
+        from cmis_v2.engine_store import load_engine_data
+        data = load_engine_data(project_id, "evidence", evidence_id)
+        if data is not None:
+            _EVIDENCE_STORE[evidence_id] = data
+            return data
+    return {"error": f"Evidence collection not found: {evidence_id}"}

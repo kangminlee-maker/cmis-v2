@@ -39,6 +39,7 @@ def evaluate_metrics(
     snapshot_id: str = "",
     evidence_id: str = "",
     policy_ref: str = "decision_balanced",
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Evaluate metrics using available evidence and snapshot data.
 
@@ -91,6 +92,9 @@ def evaluate_metrics(
         }
 
         _VALUE_STORE[mid] = record
+        if project_id:
+            from cmis_v2.engine_store import save_engine_data
+            save_engine_data(project_id, "value", mid, record)
         value_records.append(record)
 
     return {
@@ -111,6 +115,7 @@ def set_metric_value(
     confidence: float = 0.5,
     method: str = "unknown",
     evidence_summary: str = "",
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Manually set a metric value (used by LM after analysis).
 
@@ -166,18 +171,29 @@ def set_metric_value(
     record["quality"]["status"] = "ok" if confidence >= 0.3 else "unverified"
     record["lineage"]["method_details"] = evidence_summary
 
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "value", metric_id, record)
+
     return record
 
 
-def get_metric_value(metric_id: str) -> dict[str, Any]:
+def get_metric_value(metric_id: str, project_id: str = "") -> dict[str, Any]:
     """Retrieve a metric value record by ID.
 
     Args:
         metric_id: The metric ID.
+        project_id: Optional project ID for file-based lookup.
 
     Returns:
         The value record dict, or an error dict.
     """
-    if metric_id not in _VALUE_STORE:
-        return {"error": f"Metric value not found: {metric_id}"}
-    return _VALUE_STORE[metric_id]
+    if metric_id in _VALUE_STORE:
+        return _VALUE_STORE[metric_id]
+    if project_id:
+        from cmis_v2.engine_store import load_engine_data
+        data = load_engine_data(project_id, "value", metric_id)
+        if data is not None:
+            _VALUE_STORE[metric_id] = data
+            return data
+    return {"error": f"Metric value not found: {metric_id}"}

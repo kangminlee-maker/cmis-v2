@@ -34,6 +34,28 @@ from cmis_v2.system_prompt import build_prompt, build_system_prompt
 from cmis_v2.tools import CMISTools
 
 # ---------------------------------------------------------------------------
+# Auto-advance helper
+# ---------------------------------------------------------------------------
+
+
+def _auto_advance(project_id: str) -> str:
+    """Automatically advance through states that have 'auto' trigger."""
+    from cmis_v2.state_machine import can_transition, is_terminal, is_user_gate
+    from cmis_v2.project import get_current_state, transition as do_transition
+
+    current = get_current_state(project_id)
+    while not is_terminal(current) and not is_user_gate(current):  # type: ignore[arg-type]
+        if can_transition(current, "auto"):  # type: ignore[arg-type]
+            result = do_transition(project_id, "auto", "system")
+            if "error" in result:
+                break
+            current = result.get("current_state", current)
+        else:
+            break
+    return current
+
+
+# ---------------------------------------------------------------------------
 # State -> prompt strategy mapping
 # ---------------------------------------------------------------------------
 
@@ -252,6 +274,9 @@ def run_new(
     # 2. Transition to discovery
     transition(project_id, "project_created", "system")
 
+    # 2b. Auto-advance through any auto-trigger states
+    _auto_advance(project_id)
+
     # 3. Build prompt
     prompt = build_prompt(target, execution_mode=execution_mode, policy_mode=policy_mode)
 
@@ -327,7 +352,9 @@ def resume(
     if "error" in manifest:
         return manifest
 
-    new_state: str = manifest["current_state"]
+    # 2b. Auto-advance through any auto-trigger states
+    _auto_advance(project_id)
+    new_state = get_current_state(project_id)
 
     # 3. If terminal or gate, stop
     if is_terminal(new_state) or is_user_gate(new_state):  # type: ignore[arg-type]

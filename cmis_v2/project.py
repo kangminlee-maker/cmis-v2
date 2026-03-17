@@ -33,6 +33,7 @@ _TRIGGER_EVENT_MAP: dict[str, ev.EventType] = {
     "project_created": "project.created",
     "discovery_completed": "discovery.completed",
     "scope_approved": "scope.approved",
+    "auto": "data.collection_started",
     "scope_revised": "scope.revised",
     "scope_rejected": "scope.rejected",
     "data_quality_passed": "data.quality_passed",

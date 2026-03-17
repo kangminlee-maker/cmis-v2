@@ -118,6 +118,7 @@ def search_strategies(
     snapshot_id: str = "",
     pattern_matches: list[dict[str, Any]] | None = None,
     constraints: dict[str, Any] | None = None,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Search for strategy candidates based on market analysis results.
 
@@ -145,6 +146,9 @@ def search_strategies(
     # Store each candidate
     for c in candidates:
         _STRATEGY_STORE[c["strategy_id"]] = c
+        if project_id:
+            from cmis_v2.engine_store import save_engine_data
+            save_engine_data(project_id, "strategy", c["strategy_id"], c)
 
     result: dict[str, Any] = {
         "strategy_search_id": search_id,
@@ -166,6 +170,7 @@ def evaluate_portfolio(
     strategy_ids: list[str],
     value_records: list[dict[str, Any]] | None = None,
     policy_ref: str = "decision_balanced",
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Evaluate and rank a portfolio of strategy candidates.
 

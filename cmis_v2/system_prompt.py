@@ -94,6 +94,44 @@ def _build_tool_section() -> str:
 # ---------------------------------------------------------------------------
 
 
+def _build_ontology_reference() -> str:
+    """Build ontology reference section with node/edge types from ontology.yaml."""
+    onto = _load_ontology()
+    ontology = onto.get("ontology", {})
+
+    node_types = list(ontology.get("node_types", {}).keys())
+    edge_types = list(ontology.get("edge_types", {}).keys())
+
+    lines: list[str] = [
+        "## State Transitions (Complete Trigger Reference)",
+        "",
+        "Each state transition requires calling `transition(project_id, trigger, actor)`.",
+        "Available triggers per state:",
+        '- requested: "project_created" -> discovery',
+        '- discovery: "discovery_completed" -> scope_review',
+        '- scope_review: "scope_approved" -> scope_locked, "scope_revised" -> discovery, "scope_rejected" -> rejected',
+        '- scope_locked: "auto" -> data_collection',
+        '- data_collection: "data_quality_passed" -> structure_analysis',
+        '- structure_analysis: "analysis_completed" -> finding_review',
+        '- finding_review: "finding_approved" -> finding_locked, "finding_deepened" -> structure_analysis, "finding_completed_early" -> synthesis',
+        '- finding_locked: "opportunity_included" -> opportunity_discovery, "opportunity_not_included" -> synthesis',
+        '- opportunity_discovery: "opportunity_completed" -> opportunity_review',
+        '- opportunity_review: "opportunity_selected" -> strategy_design, "opportunity_deepened" -> opportunity_discovery, "opportunity_completed_early" -> synthesis',
+        '- strategy_design: "strategy_completed" -> decision_review',
+        '- decision_review: "decision_approved" -> synthesis, "decision_revised" -> strategy_design',
+        '- synthesis: "deliverable_saved" -> completed',
+        "",
+        "## Ontology Reference",
+        "",
+        f"Valid node types: {', '.join(node_types)}",
+        f"Valid edge types: {', '.join(edge_types)}",
+        "Valid source tiers (for add_record): official, curated, commercial",
+        "Valid data sources (for collect_evidence): web_search, kosis, dart",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def build_system_prompt() -> str:
     """Build the system prompt dynamically from ontology-generated types.
 
@@ -103,6 +141,7 @@ def build_system_prompt() -> str:
     metric_section = _build_metric_section()
     workflow_section = _build_workflow_section()
     tool_section = _build_tool_section()
+    ontology_reference = _build_ontology_reference()
 
     prompt = f"""\
 # CMIS v2 Analysis Agent
@@ -138,6 +177,8 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 {metric_section}
 
 {workflow_section}
+
+{ontology_reference}
 
 ## Execution Rules
 
@@ -192,7 +233,7 @@ def build_prompt(
 
 ## Instructions
 
-Begin by creating a project for "{target}", then transition to discovery.
+The project has already been created and is in the discovery state.
 Perform a thorough market analysis following the state transition flow.
 When you reach a user gate (scope_review, finding_review, opportunity_review,
 decision_review), produce a summary report as FINAL_VAR() and stop.

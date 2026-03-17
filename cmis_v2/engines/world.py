@@ -43,6 +43,7 @@ def build_snapshot(
     region: str = "KR",
     evidence_id: str = "",
     focal_actor_context_id: str = "",
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Build a Reality Snapshot (R-Graph) for the given domain.
 
@@ -82,6 +83,9 @@ def build_snapshot(
     }
 
     _SNAPSHOTS[snapshot_id] = snapshot
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "world", snapshot_id, snapshot)
     return snapshot
 
 
@@ -89,6 +93,7 @@ def add_node(
     snapshot_id: str,
     node_type: str,
     data: dict[str, Any],
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Add a node to an existing snapshot.
 
@@ -138,6 +143,10 @@ def add_node(
     if count_key in snap["summary"]:
         snap["summary"][count_key] += 1
 
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "world", snapshot_id, snap)
+
     return node
 
 
@@ -147,6 +156,7 @@ def add_edge(
     source: str,
     target: str,
     data: dict[str, Any] | None = None,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Add an edge to an existing snapshot.
 
@@ -189,18 +199,29 @@ def add_edge(
     snap["edges"].append(edge)
     snap["summary"]["edge_count"] += 1
 
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "world", snapshot_id, snap)
+
     return edge
 
 
-def get_snapshot(snapshot_id: str) -> dict[str, Any]:
+def get_snapshot(snapshot_id: str, project_id: str = "") -> dict[str, Any]:
     """Retrieve a snapshot by ID.
 
     Args:
         snapshot_id: The snapshot ID.
+        project_id: Optional project ID for file-based lookup.
 
     Returns:
         The snapshot dict, or an error dict.
     """
-    if snapshot_id not in _SNAPSHOTS:
-        return {"error": f"Snapshot not found: {snapshot_id}"}
-    return _SNAPSHOTS[snapshot_id]
+    if snapshot_id in _SNAPSHOTS:
+        return _SNAPSHOTS[snapshot_id]
+    if project_id:
+        from cmis_v2.engine_store import load_engine_data
+        data = load_engine_data(project_id, "world", snapshot_id)
+        if data is not None:
+            _SNAPSHOTS[snapshot_id] = data
+            return data
+    return {"error": f"Snapshot not found: {snapshot_id}"}

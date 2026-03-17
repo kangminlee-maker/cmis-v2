@@ -34,6 +34,7 @@ def set_prior(
     confidence: float = 0.3,
     source: str = "expert_guess",
     distribution: dict | None = None,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Set a prior belief for a metric.
 
@@ -73,10 +74,13 @@ def set_prior(
     }
 
     _BELIEF_STORE[metric_id] = belief
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "belief", metric_id, belief)
     return belief
 
 
-def get_prior(metric_id: str) -> dict[str, Any]:
+def get_prior(metric_id: str, project_id: str = "") -> dict[str, Any]:
     """Get the current prior belief for a metric.
 
     Args:
@@ -85,15 +89,22 @@ def get_prior(metric_id: str) -> dict[str, Any]:
     Returns:
         The belief dict, or an error dict.
     """
-    if metric_id not in _BELIEF_STORE:
-        return {"error": f"No prior belief for metric: {metric_id}"}
-    return _BELIEF_STORE[metric_id]
+    if metric_id in _BELIEF_STORE:
+        return _BELIEF_STORE[metric_id]
+    if project_id:
+        from cmis_v2.engine_store import load_engine_data
+        data = load_engine_data(project_id, "belief", metric_id)
+        if data is not None:
+            _BELIEF_STORE[metric_id] = data
+            return data
+    return {"error": f"No prior belief for metric: {metric_id}"}
 
 
 def update_belief(
     metric_id: str,
     new_evidence_value: float,
     evidence_confidence: float = 0.5,
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Update belief using simple weighted average (pseudo-Bayesian).
 
@@ -136,10 +147,14 @@ def update_belief(
     belief["version"] = belief["version"] + 1
     belief["updated_at"] = now
 
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "belief", metric_id, belief)
+
     return belief
 
 
-def list_beliefs() -> dict[str, Any]:
+def list_beliefs(project_id: str = "") -> dict[str, Any]:
     """List all current beliefs.
 
     Returns:
