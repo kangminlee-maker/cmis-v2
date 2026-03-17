@@ -16,8 +16,8 @@ asteval>=0.9.31
 scipy>=1.11.0
 numpy>=1.24.0
 
-# Evidence sources
-duckduckgo-search>=6.0.0
+# Evidence sources (OpenAI web search — uses openai SDK already in rlms)
+# openai is a transitive dependency of rlms, no separate install needed
 
 # Testing
 pytest>=7.4.0

@@ -1,6 +1,6 @@
 """CMIS v2 Evidence Engine — Evidence collection and management.
 
-Phase 2: Integrates real data sources (DuckDuckGo search) alongside
+Phase 2: Integrates real data sources (OpenAI web search) alongside
 placeholder stubs for KOSIS and DART.
 
 This module is designed to be called by RLM's LM as a custom_tool.
@@ -25,38 +25,63 @@ _EVIDENCE_STORE: dict[str, dict[str, Any]] = {}
 # Available sources
 # ---------------------------------------------------------------------------
 
-_AVAILABLE_SOURCES = frozenset({"duckduckgo", "kosis", "dart"})
-_DEFAULT_SOURCES = ["duckduckgo"]
+_AVAILABLE_SOURCES = frozenset({"web_search", "kosis", "dart"})
+_DEFAULT_SOURCES = ["web_search"]
 
 # ---------------------------------------------------------------------------
 # Data source adapters
 # ---------------------------------------------------------------------------
 
 
-def _search_duckduckgo(query: str, max_results: int = 5) -> list[dict[str, Any]]:
-    """Search DuckDuckGo and return evidence records.
+def _search_via_openai(query: str, max_results: int = 5) -> list[dict[str, Any]]:
+    """Search the web using OpenAI Responses API with web_search_preview tool.
 
-    Uses the duckduckgo-search library. Returns empty list on failure
-    (graceful degradation).
+    Uses the OPENAI_API_KEY environment variable. Returns empty list on
+    failure (graceful degradation).
     """
     try:
-        from duckduckgo_search import DDGS
+        import os
 
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
+        from openai import OpenAI
 
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return []
+
+        client = OpenAI(api_key=api_key)
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            tools=[{"type": "web_search_preview"}],
+            input=(
+                f"Search for market data and statistics about: {query}\n"
+                f"Return up to {max_results} key findings with source URLs."
+            ),
+        )
+
+        # Extract text content from response
         records: list[dict[str, Any]] = []
-        for r in results:
-            records.append({
-                "record_id": f"REC-{uuid4().hex[:6]}",
-                "source_tier": "commercial",
-                "source_name": "duckduckgo",
-                "title": r.get("title", ""),
-                "content": r.get("body", ""),
-                "url": r.get("href", ""),
-                "confidence": 0.4,  # web search = lower confidence
-                "collected_at": datetime.now().isoformat(),
-            })
+        for item in response.output:
+            if item.type == "message":
+                for content in item.content:
+                    if content.type == "output_text":
+                        # Parse annotations for URLs
+                        urls: list[str] = []
+                        if hasattr(content, "annotations") and content.annotations:
+                            for ann in content.annotations:
+                                if hasattr(ann, "url"):
+                                    urls.append(ann.url)
+
+                        records.append({
+                            "record_id": f"REC-{uuid4().hex[:6]}",
+                            "source_tier": "commercial",
+                            "source_name": "openai_web_search",
+                            "title": query,
+                            "content": content.text[:2000],
+                            "urls": urls[:max_results],
+                            "confidence": 0.5,
+                            "collected_at": datetime.now().isoformat(),
+                        })
+
         return records
     except Exception:
         return []  # graceful degradation
@@ -93,7 +118,7 @@ def _search_dart(query: str, max_results: int = 5) -> list[dict[str, Any]]:
 
 
 _SOURCE_ADAPTERS: dict[str, Any] = {
-    "duckduckgo": _search_duckduckgo,
+    "web_search": _search_via_openai,
     "kosis": _search_kosis,
     "dart": _search_dart,
 }
@@ -120,8 +145,8 @@ def collect_evidence(
         domain_id: Domain identifier (e.g., "Adult_Language_Education_KR")
         region: Region code (default "KR")
         metric_ids: Optional list of specific metric IDs to collect evidence for
-        sources: Data sources to query. Options: "duckduckgo", "kosis", "dart".
-                 None means auto-select (defaults to duckduckgo).
+        sources: Data sources to query. Options: "web_search", "kosis", "dart".
+                 None means auto-select (defaults to web_search via OpenAI).
 
     Returns:
         dict with evidence_id, query, records, sufficiency, lineage.
