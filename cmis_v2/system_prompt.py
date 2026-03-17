@@ -182,7 +182,7 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 
 ## Execution Rules
 
-1. Always create a project first, then transition to discovery.
+1. If running standalone, create a project first. In runner mode, the project is already created — check current state with get_current_state().
 2. Collect evidence before building R-Graph snapshots.
 3. Build R-Graph (add nodes and edges) before running pattern matching.
 4. Evaluate metrics after evidence collection — use set_metric_value to fill in estimates.

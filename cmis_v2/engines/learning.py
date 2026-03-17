@@ -26,13 +26,13 @@ _OUTCOME_STORE: dict[str, dict] = {}
 # ---------------------------------------------------------------------------
 
 
-def _get_predicted_value(metric_id: str) -> float | None:
+def _get_predicted_value(metric_id: str, project_id: str = "") -> float | None:
     """Try to get a predicted value from value engine or belief engine."""
     # Try value engine first
     try:
         from cmis_v2.engines.value import get_metric_value
 
-        val_record = get_metric_value(metric_id)
+        val_record = get_metric_value(metric_id, project_id=project_id)
         if "error" not in val_record and val_record.get("point_estimate") is not None:
             return val_record["point_estimate"]
     except Exception:
@@ -42,7 +42,7 @@ def _get_predicted_value(metric_id: str) -> float | None:
     try:
         from cmis_v2.engines.belief import get_prior
 
-        belief = get_prior(metric_id)
+        belief = get_prior(metric_id, project_id=project_id)
         if "error" not in belief and belief.get("point_estimate") is not None:
             return belief["point_estimate"]
     except Exception:
@@ -72,6 +72,7 @@ def record_outcome(
     actual_value: float,
     measured_at: str = "",
     source: str = "",
+    project_id: str = "",
 ) -> dict[str, Any]:
     """Record an actual outcome for a metric.
 
@@ -83,6 +84,7 @@ def record_outcome(
         actual_value: The actual observed value.
         measured_at: ISO timestamp of measurement (defaults to now).
         source: Where this outcome was observed.
+        project_id: Optional project ID for file-based persistence.
 
     Returns:
         Dict with outcome_id, metric_id, actual_value, measured_at, source,
@@ -98,7 +100,7 @@ def record_outcome(
     outcome_id = f"OUT-{uuid4().hex[:6]}"
 
     # Build comparison
-    predicted = _get_predicted_value(metric_id)
+    predicted = _get_predicted_value(metric_id, project_id=project_id)
     comparison: dict[str, Any]
     if predicted is not None:
         error = actual_value - predicted
@@ -132,16 +134,33 @@ def record_outcome(
 
     # Store keyed by outcome_id; also track by metric_id for lookups
     _OUTCOME_STORE[outcome_id] = outcome
+    if project_id:
+        from cmis_v2.engine_store import save_engine_data
+        save_engine_data(project_id, "learning", outcome_id, outcome)
     return outcome
 
 
-def get_learning_summary() -> dict[str, Any]:
+def get_learning_summary(project_id: str = "") -> dict[str, Any]:
     """Get summary of all recorded outcomes and prediction accuracy.
+
+    Args:
+        project_id: Optional project ID. If provided, loads persisted
+                     outcomes from disk when in-memory store is empty.
 
     Returns:
         Dict with total_outcomes, accuracy breakdown, metrics_tracked, and
         suggestions for improving predictions.
     """
+    # If project_id given, load persisted outcomes into memory
+    if project_id:
+        from cmis_v2.engine_store import list_engine_keys, load_engine_data
+        keys = list_engine_keys(project_id, "learning")
+        for key in keys:
+            if key not in _OUTCOME_STORE:
+                data = load_engine_data(project_id, "learning", key)
+                if data is not None:
+                    _OUTCOME_STORE[key] = data
+
     outcomes = list(_OUTCOME_STORE.values())
     total = len(outcomes)
 
@@ -178,7 +197,7 @@ def get_learning_summary() -> dict[str, Any]:
     }
 
 
-def apply_learnings(metric_id: str) -> dict[str, Any]:
+def apply_learnings(metric_id: str, project_id: str = "") -> dict[str, Any]:
     """Apply accumulated learnings to update belief for a metric.
 
     If outcomes exist for this metric, updates the belief using the
@@ -186,6 +205,7 @@ def apply_learnings(metric_id: str) -> dict[str, Any]:
 
     Args:
         metric_id: The metric ID to apply learnings for.
+        project_id: Optional project ID for persistence.
 
     Returns:
         Updated belief dict, or info message if no outcomes exist.
@@ -207,7 +227,7 @@ def apply_learnings(metric_id: str) -> dict[str, Any]:
     # Update belief with the average actual value as new evidence
     from cmis_v2.engines.belief import get_prior, update_belief
 
-    prior = get_prior(metric_id)
+    prior = get_prior(metric_id, project_id=project_id)
     if "error" in prior:
         # No prior exists; cannot update
         return {"info": f"No prior belief for {metric_id}. Set a prior first."}
@@ -216,6 +236,7 @@ def apply_learnings(metric_id: str) -> dict[str, Any]:
         metric_id=metric_id,
         new_evidence_value=avg_actual,
         evidence_confidence=0.7,  # outcomes are high-confidence evidence
+        project_id=project_id,
     )
 
     return {

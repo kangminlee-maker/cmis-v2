@@ -110,7 +110,13 @@ def add_node(
         The new node dict, or an error dict.
     """
     if snapshot_id not in _SNAPSHOTS:
-        return {"error": f"Snapshot not found: {snapshot_id}"}
+        if project_id:
+            from cmis_v2.engine_store import load_engine_data
+            loaded = load_engine_data(project_id, "world", snapshot_id)
+            if loaded is not None:
+                _SNAPSHOTS[snapshot_id] = loaded
+        if snapshot_id not in _SNAPSHOTS:
+            return {"error": f"Snapshot not found: {snapshot_id}"}
 
     # Extract traits from data for validation
     traits = data.get("traits", {})
@@ -173,7 +179,13 @@ def add_edge(
         The new edge dict, or an error dict.
     """
     if snapshot_id not in _SNAPSHOTS:
-        return {"error": f"Snapshot not found: {snapshot_id}"}
+        if project_id:
+            from cmis_v2.engine_store import load_engine_data
+            loaded = load_engine_data(project_id, "world", snapshot_id)
+            if loaded is not None:
+                _SNAPSHOTS[snapshot_id] = loaded
+        if snapshot_id not in _SNAPSHOTS:
+            return {"error": f"Snapshot not found: {snapshot_id}"}
 
     edge_id = f"EDG-{uuid4().hex[:6]}"
 

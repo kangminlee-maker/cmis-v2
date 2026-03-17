@@ -319,7 +319,13 @@ def add_record(
         The new record dict, or an error dict.
     """
     if evidence_id not in _EVIDENCE_STORE:
-        return {"error": f"Evidence collection not found: {evidence_id}"}
+        if project_id:
+            from cmis_v2.engine_store import load_engine_data
+            loaded = load_engine_data(project_id, "evidence", evidence_id)
+            if loaded is not None:
+                _EVIDENCE_STORE[evidence_id] = loaded
+        if evidence_id not in _EVIDENCE_STORE:
+            return {"error": f"Evidence collection not found: {evidence_id}"}
 
     if source_tier not in ("official", "curated", "commercial"):
         return {"error": f"Invalid source_tier: {source_tier!r}. Must be one of: official, curated, commercial"}

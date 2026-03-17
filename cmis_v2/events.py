@@ -54,10 +54,10 @@ EventType = Literal[
 ]
 
 # ---------------------------------------------------------------------------
-# Projects root (same convention as project.py)
+# Projects root (single source from config)
 # ---------------------------------------------------------------------------
 
-PROJECTS_DIR: Path = Path(__file__).parent.parent / "projects"
+from cmis_v2.config import PROJECTS_DIR
 
 # ---------------------------------------------------------------------------
 # Internal helpers

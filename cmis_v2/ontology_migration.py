@@ -9,6 +9,7 @@ All inputs/outputs are plain dicts (JSON-serializable).
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -222,6 +223,11 @@ def migrate_project(
     # Update manifest ontology_version
     manifest["ontology_version"] = current_version
     changes_applied.append(f"Updated ontology_version from {project_version} to {current_version}")
+
+    # Persist updated manifest to disk
+    from cmis_v2.config import PROJECTS_DIR
+    manifest_path = PROJECTS_DIR / project_id / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
 
     # Note: Full event/data migration would require iterating over project
     # events and updating metric references. This is a simplified version.

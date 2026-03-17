@@ -18,12 +18,7 @@ from uuid import uuid4
 
 from cmis_v2 import events as ev
 from cmis_v2 import state_machine as sm
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-PROJECTS_DIR: Path = Path(__file__).parent.parent / "projects"
+from cmis_v2.config import PROJECTS_DIR
 
 # ---------------------------------------------------------------------------
 # Trigger → supplementary event type mapping
@@ -56,6 +51,18 @@ _TRIGGER_EVENT_MAP: dict[str, ev.EventType] = {
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+
+def _get_ontology_version() -> str:
+    """Get current ontology version dynamically, with fallback to '1.0.0'."""
+    try:
+        from cmis_v2.ontology_migration import get_current_ontology_version
+        version = get_current_ontology_version()
+        if version.startswith("error:"):
+            return "1.0.0"
+        return version
+    except Exception:
+        return "1.0.0"
 
 
 def _now_iso() -> str:
@@ -114,7 +121,7 @@ def create_project(
         "execution_mode": "autopilot",
         "policy_mode": "decision_balanced",
         "runs": [],
-        "ontology_version": "1.0.0",
+        "ontology_version": _get_ontology_version(),
         "created_at": now,
         "updated_at": now,
     }

@@ -576,6 +576,7 @@ class CMISTools:
                 "actual_value": actual_value,
                 "measured_at": measured_at,
                 "source": source,
+                "project_id": self.project_id or "",
             },
         )
 
@@ -583,13 +584,13 @@ class CMISTools:
         """Get summary of all recorded outcomes and prediction accuracy."""
         from cmis_v2.engines.learning import get_learning_summary
 
-        return self._safe_call("get_learning_summary", get_learning_summary, {})
+        return self._safe_call("get_learning_summary", get_learning_summary, {"project_id": self.project_id or ""})
 
     def apply_learnings(self, metric_id: str) -> dict[str, Any]:
         """Apply accumulated learnings to update belief for a metric."""
         from cmis_v2.engines.learning import apply_learnings
 
-        return self._safe_call("apply_learnings", apply_learnings, {"metric_id": metric_id})
+        return self._safe_call("apply_learnings", apply_learnings, {"metric_id": metric_id, "project_id": self.project_id or ""})
 
     # ------------------------------------------------------------------
     # Ontology migration wrappers
@@ -600,6 +601,37 @@ class CMISTools:
         from cmis_v2.ontology_migration import check_compatibility
 
         return self._safe_call("check_compatibility", check_compatibility, {"project_id": project_id})
+
+    def create_migration_map(
+        self,
+        from_version: str,
+        to_version: str,
+        renames: dict[str, str] | None = None,
+        removals: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Create a migration map for ontology version changes."""
+        from cmis_v2.ontology_migration import create_migration_map
+
+        return self._safe_call(
+            "create_migration_map",
+            create_migration_map,
+            {
+                "from_version": from_version,
+                "to_version": to_version,
+                "renames": renames,
+                "removals": removals,
+            },
+        )
+
+    def migrate_project(self, project_id: str, migration_map_path: str = "") -> dict[str, Any]:
+        """Apply migration to a project's data."""
+        from cmis_v2.ontology_migration import migrate_project
+
+        return self._safe_call(
+            "migrate_project",
+            migrate_project,
+            {"project_id": project_id, "migration_map_path": migration_map_path},
+        )
 
     # ------------------------------------------------------------------
     # RLM export
@@ -899,6 +931,28 @@ class CMISTools:
                     "Args: project_id (str, required). "
                     "Returns: dict with compatible (bool), project_version, current_version, breaking_changes. "
                     "Use to verify project data is compatible before analysis."
+                ),
+            },
+            "create_migration_map": {
+                "tool": self.create_migration_map,
+                "description": (
+                    "Create a migration map for ontology version changes. "
+                    "Args: from_version (str, required) - e.g. '1.0.0'; "
+                    "to_version (str, required) - e.g. '1.1.0'; "
+                    "renames (dict | None) - mapping of old IDs to new IDs; "
+                    "removals (list | None) - list of removed IDs. "
+                    "Returns: dict with path, from_version, to_version, renames, removals. "
+                    "Use when ontology has breaking changes that need a migration path."
+                ),
+            },
+            "migrate_project": {
+                "tool": self.migrate_project,
+                "description": (
+                    "Apply migration to a project's data. "
+                    "Args: project_id (str, required); "
+                    "migration_map_path (str) - path to migration YAML (auto-detect if empty). "
+                    "Returns: dict with migration result details including changes_applied. "
+                    "Use to update a project to the current ontology version."
                 ),
             },
             # --- Project management ---

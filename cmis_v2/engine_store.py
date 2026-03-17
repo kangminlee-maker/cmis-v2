@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-PROJECTS_DIR = Path(__file__).parent.parent / "projects"
+from cmis_v2.config import PROJECTS_DIR
 
 
 def save_engine_data(project_id: str, engine: str, key: str, data: dict) -> None:
