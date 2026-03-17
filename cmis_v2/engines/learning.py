@@ -213,6 +213,16 @@ def apply_learnings(metric_id: str, project_id: str = "") -> dict[str, Any]:
     if not validate_metric_id(metric_id):
         return {"error": f"Invalid metric ID: {metric_id}"}
 
+    # Load from disk if needed (same pattern as get_learning_summary)
+    if project_id and not _OUTCOME_STORE:
+        from cmis_v2.engine_store import list_engine_keys, load_engine_data
+
+        for key in list_engine_keys(project_id, "learning"):
+            if key not in _OUTCOME_STORE:
+                loaded = load_engine_data(project_id, "learning", key)
+                if loaded is not None:
+                    _OUTCOME_STORE[key] = loaded
+
     # Gather outcomes for this metric
     metric_outcomes = [
         o for o in _OUTCOME_STORE.values() if o["metric_id"] == metric_id

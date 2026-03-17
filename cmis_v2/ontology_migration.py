@@ -85,8 +85,9 @@ def check_compatibility(project_id: str) -> dict[str, Any]:
             try:
                 with open(migration_file, encoding="utf-8") as f:
                     migration = yaml.safe_load(f)
-                renames = migration.get("renames", {})
-                removals = migration.get("removals", [])
+                migration_info = migration.get("migration", migration)
+                renames = migration_info.get("renames", {})
+                removals = migration_info.get("removals", [])
                 for old_id, new_id in renames.items():
                     breaking_changes.append(f"{old_id} renamed to {new_id}")
                 for removed_id in removals:
