@@ -1,0 +1,23 @@
+# CMIS v2 - Market Intelligence OS
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cmis-v2"
+version = "0.1.0"
+description = "CMIS v2 Market Intelligence OS built on RLM + KBD"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "rlms>=0.1.1",
+]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true

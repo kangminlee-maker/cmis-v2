@@ -1,28 +1,498 @@
----
-schema_version: 1
-description: "CMIS ontology schema (traits/capabilities/node types). Placeholder v1."
+# CMIS v2 Ontology - Single Source of Truth
+# Schema defined by ARCHITECTURE_DECISION.md, Decision 9
+# All code in cmis_v2/generated/ is auto-generated from this file.
 
 ontology:
+  version: "1.0.0"
+
+  # ---------------------------------------------------------------------------
+  # Node Types
+  # ---------------------------------------------------------------------------
   node_types:
     actor:
-      description: "Economic actor (company, consumer, government, etc.)"
-      trait_namespace: "actor.traits"
-    money_flow:
-      description: "Money flow between actors"
-      trait_namespace: "money_flow.traits"
-    state:
-      description: "Market/environment state"
-      trait_namespace: "state.properties"
+      description: "시장 참여자 (기업, 기관, 개인 등)"
+      required_traits:
+        - kind
+      optional_traits:
+        - institution_type
+        - market_position
+        - value_chain_position
+        - scale_tier
+        - switching_cost
+        - inventory_risk
+        - marginal_cost_profile
+        - outsourcing_ratio
+        - market_focus
+        - specialization_level
+        - specialization_focus
 
-  capability_taxonomy: {}
-
-  trait_keys:
-    actor:
-      required: []
-      optional: []
     money_flow:
-      required: []
-      optional: []
+      description: "참여자 간 금전 흐름 (수익 모델, 결제 구조)"
+      required_traits:
+        - revenue_model
+      optional_traits:
+        - pricing_model
+        - payment_recurs
+        - recurrence
+
     state:
-      required: []
-      optional: []
+      description: "시장/참여자의 관측 가능 상태 (시점별 스냅샷)"
+      required_traits: []
+      optional_traits:
+        - observation_date
+        - confidence_level
+
+  # ---------------------------------------------------------------------------
+  # Edge Types
+  # ---------------------------------------------------------------------------
+  edge_types:
+    actor_pays_actor:
+      description: "참여자 간 결제 관계"
+      source: actor
+      target: actor
+      via: money_flow
+
+    actor_competes_with:
+      description: "참여자 간 경쟁 관계"
+      source: actor
+      target: actor
+
+    actor_serves_actor:
+      description: "참여자 간 공급-수요 관계 (서비스 제공)"
+      source: actor
+      target: actor
+
+    actor_supplies_actor:
+      description: "참여자 간 공급망 관계 (원재료/부품)"
+      source: actor
+      target: actor
+
+    actor_regulates_actor:
+      description: "규제 기관과 피규제 참여자 간 관계"
+      source: actor
+      target: actor
+
+    money_flow_connects:
+      description: "금전 흐름이 연결하는 참여자 쌍"
+      source: money_flow
+      target: actor
+
+  # ---------------------------------------------------------------------------
+  # Trait Definitions
+  # ---------------------------------------------------------------------------
+  trait_definitions:
+    kind:
+      type: enum
+      description: "참여자/자원의 유형 분류"
+      values:
+        - company
+        - individual
+        - government
+        - ngo
+        - digital_service
+        - physical_product
+      used_by:
+        - actor
+
+    institution_type:
+      type: enum
+      description: "기관 유형 (온라인 플랫폼, 마켓플레이스 등)"
+      values:
+        - online_platform
+        - marketplace
+        - brick_and_mortar
+        - hybrid
+        - financial_institution
+        - educational_institution
+        - government_agency
+      used_by:
+        - actor
+
+    market_position:
+      type: enum
+      description: "시장 내 경쟁 포지션"
+      values:
+        - leader
+        - challenger
+        - follower
+        - niche
+      used_by:
+        - actor
+
+    value_chain_position:
+      type: enum
+      description: "가치사슬 내 위치"
+      values:
+        - upstream
+        - midstream
+        - downstream
+      used_by:
+        - actor
+
+    scale_tier:
+      type: enum
+      description: "사업 규모 단계"
+      values:
+        - startup
+        - growth_stage
+        - enterprise
+        - hyperscale
+      used_by:
+        - actor
+
+    switching_cost:
+      type: enum
+      description: "고객 전환 비용 수준"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - actor
+
+    inventory_risk:
+      type: enum
+      description: "재고 보유 리스크 수준"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - actor
+
+    marginal_cost_profile:
+      type: enum
+      description: "한계 비용 구조"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - actor
+
+    outsourcing_ratio:
+      type: enum
+      description: "외주 비율 수준"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - actor
+
+    market_focus:
+      type: enum
+      description: "시장 집중 전략"
+      values:
+        - broad
+        - niche
+      used_by:
+        - actor
+
+    specialization_level:
+      type: enum
+      description: "전문화 수준"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - actor
+
+    specialization_focus:
+      type: enum
+      description: "전문화 방향"
+      values:
+        - horizontal
+        - vertical
+      used_by:
+        - actor
+
+    revenue_model:
+      type: enum
+      description: "수익 모델 유형"
+      values:
+        - subscription
+        - one_off
+        - usage_based
+        - commission
+        - advertising
+        - licensing
+        - freemium
+      used_by:
+        - money_flow
+
+    pricing_model:
+      type: enum
+      description: "가격 책정 모델"
+      values:
+        - flat_rate
+        - tiered
+        - usage_based
+        - freemium
+        - free_trial
+        - dynamic
+        - auction
+      used_by:
+        - money_flow
+
+    payment_recurs:
+      type: boolean
+      description: "결제 반복 여부"
+      used_by:
+        - money_flow
+
+    recurrence:
+      type: enum
+      description: "결제 반복 주기"
+      values:
+        - monthly
+        - quarterly
+        - yearly
+      used_by:
+        - money_flow
+
+    observation_date:
+      type: string
+      description: "관측 일자 (ISO 8601)"
+      used_by:
+        - state
+
+    confidence_level:
+      type: number
+      description: "관측 신뢰도 (0.0 ~ 1.0)"
+      used_by:
+        - state
+      bounds:
+        min: 0.0
+        max: 1.0
+
+  # ---------------------------------------------------------------------------
+  # Metrics
+  # ---------------------------------------------------------------------------
+  metrics:
+    MET-N_customers:
+      description: "목표 고객 수"
+      unit: count
+      aggregation: sum
+      required_evidence_tier:
+        - official_statistics
+        - industry_reports
+        - company_filings
+
+    MET-Revenue:
+      description: "연간 매출"
+      unit: currency
+      aggregation: sum
+      required_evidence_tier:
+        - company_filings
+        - official_statistics
+        - industry_reports
+
+    MET-Avg_price_per_unit:
+      description: "평균 단가 (매출 / 고객 수)"
+      unit: currency
+      aggregation: weighted_average
+
+    MET-TAM:
+      description: "총 시장 규모 (Total Addressable Market)"
+      unit: currency
+      aggregation: latest
+
+    MET-SAM:
+      description: "유효 시장 규모 (Serviceable Available Market)"
+      unit: currency
+      aggregation: latest
+
+    MET-SOM:
+      description: "수익 가능 시장 규모 (Serviceable Obtainable Market)"
+      unit: currency
+      aggregation: latest
+
+    MET-Churn_rate:
+      description: "고객 이탈률"
+      unit: ratio
+      aggregation: weighted_average
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-Gross_margin:
+      description: "매출 총이익률"
+      unit: ratio
+      aggregation: weighted_average
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-LTV:
+      description: "고객 생애 가치 (Lifetime Value)"
+      unit: currency
+      aggregation: weighted_average
+
+    MET-CAC:
+      description: "고객 획득 비용 (Customer Acquisition Cost)"
+      unit: currency
+      aggregation: weighted_average
+
+    MET-Payback_period:
+      description: "CAC 회수 기간 (개월)"
+      unit: count
+      aggregation: weighted_average
+
+    MET-ARPU:
+      description: "사용자당 평균 매출 (Average Revenue Per User)"
+      unit: currency
+      aggregation: weighted_average
+
+    MET-HHI_revenue:
+      description: "허핀달-허쉬만 지수 (매출 기준 시장 집중도)"
+      unit: index
+      aggregation: latest
+      bounds:
+        min: 0
+        max: 10000
+
+    MET-Top3_revenue_share:
+      description: "상위 3개 기업 매출 점유율 합계"
+      unit: ratio
+      aggregation: latest
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-Top5_revenue_share:
+      description: "상위 5개 기업 매출 점유율 합계"
+      unit: ratio
+      aggregation: latest
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-Platform_commission_fees:
+      description: "플랫폼 수수료 수익"
+      unit: currency
+      aggregation: sum
+
+    MET-CapEx:
+      description: "자본 지출 (Capital Expenditure)"
+      unit: currency
+      aggregation: sum
+
+    MET-Operating_margin:
+      description: "영업이익률"
+      unit: ratio
+      aggregation: weighted_average
+      bounds:
+        min: -1.0
+        max: 1.0
+
+    MET-COGS:
+      description: "매출원가 (Cost of Goods Sold)"
+      unit: currency
+      aggregation: sum
+
+    MET-OPEX:
+      description: "운영비 (Operating Expenditure)"
+      unit: currency
+      aggregation: sum
+
+    MET-Royalty_expenses:
+      description: "로열티 비용"
+      unit: currency
+      aggregation: sum
+
+    MET-Market_growth_rate:
+      description: "시장 성장률 (연간)"
+      unit: percentage
+      aggregation: latest
+      bounds:
+        min: -1.0
+        max: 10.0
+
+    MET-Market_penetration_rate:
+      description: "시장 침투율"
+      unit: ratio
+      aggregation: latest
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-Customer_concentration:
+      description: "고객 집중도 (상위 고객 매출 비중)"
+      unit: ratio
+      aggregation: latest
+      bounds:
+        min: 0.0
+        max: 1.0
+
+    MET-Net_revenue_retention:
+      description: "순 매출 유지율 (기존 고객 기반)"
+      unit: ratio
+      aggregation: latest
+
+  # ---------------------------------------------------------------------------
+  # Policy Schema
+  # ---------------------------------------------------------------------------
+  policy_schema:
+    modes:
+      - reporting_strict
+      - decision_balanced
+      - exploration_friendly
+
+    profile_types:
+      - evidence
+      - value
+      - prior
+      - convergence
+      - orchestration
+
+  # ---------------------------------------------------------------------------
+  # Workflow Schema
+  # ---------------------------------------------------------------------------
+  workflow_schema:
+    canonical_workflows:
+      - structure_analysis
+      - opportunity_discovery
+      - strategy_design
+      - reality_monitoring
+
+    structure_analysis:
+      description: "시장 구조/규모/경쟁 분석"
+      keywords:
+        - market_structure
+        - competition
+        - market_size
+        - industry_analysis
+        - competitive_landscape
+      default_policy: reporting_strict
+
+    opportunity_discovery:
+      description: "패턴 기반 기회 발굴"
+      keywords:
+        - opportunity
+        - gap_analysis
+        - market_entry
+        - white_space
+        - unmet_needs
+      default_policy: exploration_friendly
+
+    strategy_design:
+      description: "전략 후보 탐색 및 평가"
+      keywords:
+        - strategy
+        - business_model
+        - portfolio
+        - go_to_market
+        - investment
+      default_policy: decision_balanced
+
+    reality_monitoring:
+      description: "실적 모니터링 및 학습"
+      keywords:
+        - monitoring
+        - performance
+        - tracking
+        - learning
+        - outcome
+      default_policy: reporting_strict
