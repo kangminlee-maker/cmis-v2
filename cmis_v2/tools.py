@@ -489,6 +489,111 @@ class CMISTools:
             return err
 
     # ------------------------------------------------------------------
+    # Belief engine wrappers
+    # ------------------------------------------------------------------
+
+    def set_prior(
+        self,
+        metric_id: str,
+        point_estimate: float,
+        confidence: float = 0.3,
+        source: str = "expert_guess",
+        distribution: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Set a prior belief for a metric."""
+        from cmis_v2.engines.belief import set_prior
+
+        return self._safe_call(
+            "set_prior",
+            set_prior,
+            {
+                "metric_id": metric_id,
+                "point_estimate": point_estimate,
+                "confidence": confidence,
+                "source": source,
+                "distribution": distribution,
+            },
+        )
+
+    def get_prior(self, metric_id: str) -> dict[str, Any]:
+        """Get the current prior belief for a metric."""
+        from cmis_v2.engines.belief import get_prior
+
+        return self._safe_call("get_prior", get_prior, {"metric_id": metric_id})
+
+    def update_belief(
+        self,
+        metric_id: str,
+        new_evidence_value: float,
+        evidence_confidence: float = 0.5,
+    ) -> dict[str, Any]:
+        """Update belief using simple weighted average (pseudo-Bayesian)."""
+        from cmis_v2.engines.belief import update_belief
+
+        return self._safe_call(
+            "update_belief",
+            update_belief,
+            {
+                "metric_id": metric_id,
+                "new_evidence_value": new_evidence_value,
+                "evidence_confidence": evidence_confidence,
+            },
+        )
+
+    def list_beliefs(self) -> dict[str, Any]:
+        """List all current beliefs."""
+        from cmis_v2.engines.belief import list_beliefs
+
+        return self._safe_call("list_beliefs", list_beliefs, {})
+
+    # ------------------------------------------------------------------
+    # Learning engine wrappers
+    # ------------------------------------------------------------------
+
+    def record_outcome(
+        self,
+        metric_id: str,
+        actual_value: float,
+        measured_at: str = "",
+        source: str = "",
+    ) -> dict[str, Any]:
+        """Record an actual outcome for a metric."""
+        from cmis_v2.engines.learning import record_outcome
+
+        return self._safe_call(
+            "record_outcome",
+            record_outcome,
+            {
+                "metric_id": metric_id,
+                "actual_value": actual_value,
+                "measured_at": measured_at,
+                "source": source,
+            },
+        )
+
+    def get_learning_summary(self) -> dict[str, Any]:
+        """Get summary of all recorded outcomes and prediction accuracy."""
+        from cmis_v2.engines.learning import get_learning_summary
+
+        return self._safe_call("get_learning_summary", get_learning_summary, {})
+
+    def apply_learnings(self, metric_id: str) -> dict[str, Any]:
+        """Apply accumulated learnings to update belief for a metric."""
+        from cmis_v2.engines.learning import apply_learnings
+
+        return self._safe_call("apply_learnings", apply_learnings, {"metric_id": metric_id})
+
+    # ------------------------------------------------------------------
+    # Ontology migration wrappers
+    # ------------------------------------------------------------------
+
+    def check_compatibility(self, project_id: str) -> dict[str, Any]:
+        """Check if a project's ontology version is compatible with current."""
+        from cmis_v2.ontology_migration import check_compatibility
+
+        return self._safe_call("check_compatibility", check_compatibility, {"project_id": project_id})
+
+    # ------------------------------------------------------------------
     # RLM export
     # ------------------------------------------------------------------
 
@@ -704,6 +809,88 @@ class CMISTools:
                     "policy_id (str, default 'decision_balanced'). "
                     "Returns: dict with overall_passed, evidence_gate, value_gate, summary, suggested_actions. "
                     "Use as a comprehensive quality check before delivering results."
+                ),
+            },
+            # --- Belief engine ---
+            "set_prior": {
+                "tool": self.set_prior,
+                "description": (
+                    "Set a prior belief for a metric. "
+                    "Args: metric_id (str, required) - e.g. 'MET-TAM'; "
+                    "point_estimate (float, required) - initial estimate; "
+                    "confidence (float, default 0.3) - 0.0 to 1.0; "
+                    "source (str, default 'expert_guess') - one of 'expert_guess', 'historical', 'benchmark'; "
+                    "distribution (dict | None) - optional {'min': ..., 'max': ...} range. "
+                    "Returns: belief dict with belief_id, metric_id, point_estimate, confidence, version. "
+                    "Use to establish initial estimates before evidence collection."
+                ),
+            },
+            "get_prior": {
+                "tool": self.get_prior,
+                "description": (
+                    "Get the current prior belief for a metric. "
+                    "Args: metric_id (str, required). "
+                    "Returns: belief dict or error."
+                ),
+            },
+            "update_belief": {
+                "tool": self.update_belief,
+                "description": (
+                    "Update belief using new evidence (pseudo-Bayesian weighted average). "
+                    "Args: metric_id (str, required); "
+                    "new_evidence_value (float, required) - observed/estimated value; "
+                    "evidence_confidence (float, default 0.5) - 0.0 to 1.0. "
+                    "Returns: updated belief dict with incremented version. "
+                    "Use after collecting evidence to refine estimates."
+                ),
+            },
+            "list_beliefs": {
+                "tool": self.list_beliefs,
+                "description": (
+                    "List all current beliefs. "
+                    "No args required. "
+                    "Returns: dict with total count and list of belief records."
+                ),
+            },
+            # --- Learning engine ---
+            "record_outcome": {
+                "tool": self.record_outcome,
+                "description": (
+                    "Record an actual outcome for a metric and compare against prediction. "
+                    "Args: metric_id (str, required); "
+                    "actual_value (float, required) - the actual observed value; "
+                    "measured_at (str) - ISO timestamp; "
+                    "source (str) - where outcome was observed. "
+                    "Returns: outcome dict with comparison (predicted_value, error, accuracy_rating). "
+                    "Use during reality_monitoring to track prediction accuracy."
+                ),
+            },
+            "get_learning_summary": {
+                "tool": self.get_learning_summary,
+                "description": (
+                    "Get summary of all recorded outcomes and prediction accuracy. "
+                    "No args required. "
+                    "Returns: dict with total_outcomes, accuracy breakdown, metrics_tracked, suggestions. "
+                    "Use to understand system prediction quality."
+                ),
+            },
+            "apply_learnings": {
+                "tool": self.apply_learnings,
+                "description": (
+                    "Apply accumulated learnings to update belief for a metric. "
+                    "Args: metric_id (str, required). "
+                    "Returns: updated belief or info message if no outcomes exist. "
+                    "Use to improve future predictions based on past performance."
+                ),
+            },
+            # --- Ontology migration ---
+            "check_compatibility": {
+                "tool": self.check_compatibility,
+                "description": (
+                    "Check if a project's ontology version is compatible with current. "
+                    "Args: project_id (str, required). "
+                    "Returns: dict with compatible (bool), project_version, current_version, breaking_changes. "
+                    "Use to verify project data is compatible before analysis."
                 ),
             },
             # --- Project management ---

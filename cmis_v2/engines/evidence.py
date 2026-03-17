@@ -90,31 +90,103 @@ def _search_via_openai(query: str, max_results: int = 5) -> list[dict[str, Any]]
 def _search_kosis(query: str, max_results: int = 5) -> list[dict[str, Any]]:
     """Search KOSIS (Korea Statistical Information Service).
 
-    Stub: Returns empty list. Full implementation requires KOSIS API key
-    set via environment variable KOSIS_API_KEY.
+    Requires KOSIS_API_KEY environment variable.
+    Returns official statistical data as evidence records.
+    source_tier: "official", confidence: 0.8
     """
-    # TODO: Implement KOSIS API integration
-    # import os
-    # api_key = os.environ.get("KOSIS_API_KEY")
-    # if not api_key:
-    #     return []
-    # ... call KOSIS API ...
-    return []
+    import os
+
+    api_key = os.environ.get("KOSIS_API_KEY")
+    if not api_key:
+        return []  # graceful: no key = no results
+
+    try:
+        import json
+        import urllib.parse
+        import urllib.request
+
+        params = urllib.parse.urlencode({
+            "method": "getList",
+            "apiKey": api_key,
+            "format": "json",
+            "jsonSite": "Y",
+            "searchNm": query,
+            "numOfRows": str(max_results),
+        })
+        url = f"https://kosis.kr/openapi/statisticsData.do?{params}"
+
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        records: list[dict[str, Any]] = []
+        items = data if isinstance(data, list) else data.get("items", data.get("row", []))
+        if not isinstance(items, list):
+            items = []
+
+        for item in items[:max_results]:
+            records.append({
+                "record_id": f"REC-{uuid4().hex[:6]}",
+                "source_tier": "official",
+                "source_name": "kosis",
+                "title": item.get("TBL_NM", item.get("statNm", str(item)[:100])),
+                "content": str(item),
+                "confidence": 0.8,
+                "collected_at": datetime.now().isoformat(),
+            })
+        return records
+    except Exception:
+        return []
 
 
 def _search_dart(query: str, max_results: int = 5) -> list[dict[str, Any]]:
-    """Search DART (Korea Financial Supervisory Service).
+    """Search DART (Korea Financial Supervisory Service disclosures).
 
-    Stub: Returns empty list. Full implementation requires DART API key
-    set via environment variable DART_API_KEY.
+    Requires DART_API_KEY environment variable.
+    Returns corporate disclosure data as evidence records.
+    source_tier: "official", confidence: 0.85
     """
-    # TODO: Implement DART API integration
-    # import os
-    # api_key = os.environ.get("DART_API_KEY")
-    # if not api_key:
-    #     return []
-    # ... call DART API ...
-    return []
+    import os
+
+    api_key = os.environ.get("DART_API_KEY")
+    if not api_key:
+        return []
+
+    try:
+        import json
+        import urllib.parse
+        import urllib.request
+
+        params = urllib.parse.urlencode({
+            "crtfc_key": api_key,
+            "corp_name": query,
+            "page_count": str(max_results),
+        })
+        url = f"https://opendart.fss.or.kr/api/list.json?{params}"
+
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        records: list[dict[str, Any]] = []
+        items = data.get("list", [])
+        for item in items[:max_results]:
+            records.append({
+                "record_id": f"REC-{uuid4().hex[:6]}",
+                "source_tier": "official",
+                "source_name": "dart",
+                "title": item.get("report_nm", ""),
+                "content": (
+                    f"{item.get('corp_name', '')} - "
+                    f"{item.get('report_nm', '')} "
+                    f"({item.get('rcept_dt', '')})"
+                ),
+                "confidence": 0.85,
+                "collected_at": datetime.now().isoformat(),
+            })
+        return records
+    except Exception:
+        return []
 
 
 _SOURCE_ADAPTERS: dict[str, Any] = {

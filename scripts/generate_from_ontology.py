@@ -54,6 +54,11 @@ def _generate_types(ont: dict[str, Any]) -> str:
     lines.append("from pydantic import BaseModel, field_validator\n")
     lines.append("")
 
+    # -- ONTOLOGY_VERSION --
+    version = ont.get("version", "0.0.0")
+    lines.append(f'ONTOLOGY_VERSION: str = "{version}"')
+    lines.append("")
+
     # -- NodeType Literal --
     node_names = list(ont["node_types"].keys())
     node_literal = ", ".join(f'"{n}"' for n in node_names)

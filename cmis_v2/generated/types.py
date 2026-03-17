@@ -9,6 +9,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, field_validator
 
 
+ONTOLOGY_VERSION: str = "1.0.0"
+
 NodeType = Literal["actor", "money_flow", "state"]
 
 EdgeType = Literal["actor_pays_actor", "actor_competes_with", "actor_serves_actor", "actor_supplies_actor", "actor_regulates_actor", "money_flow_connects"]

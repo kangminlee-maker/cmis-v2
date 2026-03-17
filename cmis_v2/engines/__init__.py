@@ -10,13 +10,24 @@ Phase 1 MVP engines:
 Phase 2 engines:
 - strategy: Strategy search and portfolio evaluation
 - policy: Policy-driven quality gates
+
+Phase 3 engines:
+- belief: Prior/belief distribution management
+- learning: Outcome recording and prediction accuracy tracking
 """
 
 from __future__ import annotations
 
+from cmis_v2.engines.belief import get_prior as get_prior
+from cmis_v2.engines.belief import list_beliefs as list_beliefs
+from cmis_v2.engines.belief import set_prior as set_prior
+from cmis_v2.engines.belief import update_belief as update_belief
 from cmis_v2.engines.evidence import add_record as add_record
 from cmis_v2.engines.evidence import collect_evidence as collect_evidence
 from cmis_v2.engines.evidence import get_evidence as get_evidence
+from cmis_v2.engines.learning import apply_learnings as apply_learnings
+from cmis_v2.engines.learning import get_learning_summary as get_learning_summary
+from cmis_v2.engines.learning import record_outcome as record_outcome
 from cmis_v2.engines.pattern import discover_gaps as discover_gaps
 from cmis_v2.engines.pattern import match_patterns as match_patterns
 from cmis_v2.engines.policy import check_all_gates as check_all_gates
@@ -58,4 +69,13 @@ __all__ = [
     "check_evidence_gate",
     "check_value_gate",
     "check_all_gates",
+    # belief
+    "set_prior",
+    "get_prior",
+    "update_belief",
+    "list_beliefs",
+    # learning
+    "record_outcome",
+    "get_learning_summary",
+    "apply_learnings",
 ]
