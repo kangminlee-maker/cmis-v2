@@ -1,8 +1,7 @@
 """CMIS v2 Evidence Engine — Evidence collection and management.
 
-MVP scope: Structures evidence requests and returns placeholder results.
-Actual data source integration (KOSIS, DART, Google Search, etc.) is deferred
-to subsequent phases.
+Phase 2: Integrates real data sources (DuckDuckGo search) alongside
+placeholder stubs for KOSIS and DART.
 
 This module is designed to be called by RLM's LM as a custom_tool.
 All inputs/outputs are plain dicts (JSON-serializable).
@@ -23,6 +22,83 @@ from cmis_v2.generated.validators import validate_metric_id
 _EVIDENCE_STORE: dict[str, dict[str, Any]] = {}
 
 # ---------------------------------------------------------------------------
+# Available sources
+# ---------------------------------------------------------------------------
+
+_AVAILABLE_SOURCES = frozenset({"duckduckgo", "kosis", "dart"})
+_DEFAULT_SOURCES = ["duckduckgo"]
+
+# ---------------------------------------------------------------------------
+# Data source adapters
+# ---------------------------------------------------------------------------
+
+
+def _search_duckduckgo(query: str, max_results: int = 5) -> list[dict[str, Any]]:
+    """Search DuckDuckGo and return evidence records.
+
+    Uses the duckduckgo-search library. Returns empty list on failure
+    (graceful degradation).
+    """
+    try:
+        from duckduckgo_search import DDGS
+
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+
+        records: list[dict[str, Any]] = []
+        for r in results:
+            records.append({
+                "record_id": f"REC-{uuid4().hex[:6]}",
+                "source_tier": "commercial",
+                "source_name": "duckduckgo",
+                "title": r.get("title", ""),
+                "content": r.get("body", ""),
+                "url": r.get("href", ""),
+                "confidence": 0.4,  # web search = lower confidence
+                "collected_at": datetime.now().isoformat(),
+            })
+        return records
+    except Exception:
+        return []  # graceful degradation
+
+
+def _search_kosis(query: str, max_results: int = 5) -> list[dict[str, Any]]:
+    """Search KOSIS (Korea Statistical Information Service).
+
+    Stub: Returns empty list. Full implementation requires KOSIS API key
+    set via environment variable KOSIS_API_KEY.
+    """
+    # TODO: Implement KOSIS API integration
+    # import os
+    # api_key = os.environ.get("KOSIS_API_KEY")
+    # if not api_key:
+    #     return []
+    # ... call KOSIS API ...
+    return []
+
+
+def _search_dart(query: str, max_results: int = 5) -> list[dict[str, Any]]:
+    """Search DART (Korea Financial Supervisory Service).
+
+    Stub: Returns empty list. Full implementation requires DART API key
+    set via environment variable DART_API_KEY.
+    """
+    # TODO: Implement DART API integration
+    # import os
+    # api_key = os.environ.get("DART_API_KEY")
+    # if not api_key:
+    #     return []
+    # ... call DART API ...
+    return []
+
+
+_SOURCE_ADAPTERS: dict[str, Any] = {
+    "duckduckgo": _search_duckduckgo,
+    "kosis": _search_kosis,
+    "dart": _search_dart,
+}
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -32,17 +108,20 @@ def collect_evidence(
     domain_id: str = "",
     region: str = "KR",
     metric_ids: list[str] | None = None,
+    sources: list[str] | None = None,
 ) -> dict[str, Any]:
     """Collect evidence for the given query and domain context.
 
-    MVP: Returns structured evidence request and placeholder results.
-    Future: Will call actual data sources (KOSIS, DART, Google Search, etc.)
+    Searches configured data sources and aggregates results into
+    evidence records.
 
     Args:
         query: What to search for (e.g., "한국 성인 영어 교육 시장 규모")
         domain_id: Domain identifier (e.g., "Adult_Language_Education_KR")
         region: Region code (default "KR")
         metric_ids: Optional list of specific metric IDs to collect evidence for
+        sources: Data sources to query. Options: "duckduckgo", "kosis", "dart".
+                 None means auto-select (defaults to duckduckgo).
 
     Returns:
         dict with evidence_id, query, records, sufficiency, lineage.
@@ -53,6 +132,12 @@ def collect_evidence(
         if invalid:
             return {"error": f"Invalid metric IDs: {invalid}"}
 
+    # Resolve sources
+    source_list = sources if sources is not None else _DEFAULT_SOURCES
+    invalid_sources = [s for s in source_list if s not in _AVAILABLE_SOURCES]
+    if invalid_sources:
+        return {"error": f"Unknown sources: {invalid_sources}. Available: {sorted(_AVAILABLE_SOURCES)}"}
+
     evidence_id = f"EVD-{uuid4().hex[:6]}"
     now = datetime.now().isoformat()
 
@@ -62,20 +147,44 @@ def collect_evidence(
         for mid in metric_ids:
             metric_coverage[mid] = False
 
+    # Collect from each source
+    all_records: list[dict[str, Any]] = []
+    source_errors: dict[str, str] = {}
+
+    for src in source_list:
+        adapter = _SOURCE_ADAPTERS.get(src)
+        if adapter is None:
+            continue
+        try:
+            records = adapter(query)
+            all_records.extend(records)
+        except Exception as e:
+            source_errors[src] = str(e)
+            # Graceful degradation: continue with other sources
+
+    # Compute sufficiency
+    by_tier: dict[str, int] = {"official": 0, "curated": 0, "commercial": 0}
+    for rec in all_records:
+        tier = rec.get("source_tier", "")
+        if tier in by_tier:
+            by_tier[tier] += 1
+
     result: dict[str, Any] = {
         "evidence_id": evidence_id,
         "query": query,
         "domain_id": domain_id,
         "region": region,
-        "records": [],
+        "records": all_records,
         "sufficiency": {
-            "total_records": 0,
-            "by_tier": {"official": 0, "curated": 0, "commercial": 0},
+            "total_records": len(all_records),
+            "by_tier": by_tier,
             "metric_coverage": metric_coverage,
         },
         "lineage": {
             "engine": "evidence",
             "query": query,
+            "sources_queried": source_list,
+            "source_errors": source_errors if source_errors else None,
             "timestamp": now,
         },
     }

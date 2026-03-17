@@ -64,6 +64,7 @@ class CMISTools:
         domain_id: str = "",
         region: str = "KR",
         metric_ids: list[str] | None = None,
+        sources: list[str] | None = None,
     ) -> dict[str, Any]:
         """Collect evidence for a query. Returns evidence_id, records, sufficiency."""
         from cmis_v2.engines.evidence import collect_evidence
@@ -71,7 +72,7 @@ class CMISTools:
         return self._safe_call(
             "collect_evidence",
             collect_evidence,
-            {"query": query, "domain_id": domain_id, "region": region, "metric_ids": metric_ids},
+            {"query": query, "domain_id": domain_id, "region": region, "metric_ids": metric_ids, "sources": sources},
         )
 
     def add_record(
@@ -249,6 +250,107 @@ class CMISTools:
         return self._safe_call("get_metric_value", get_metric_value, {"metric_id": metric_id})
 
     # ------------------------------------------------------------------
+    # Strategy engine wrappers
+    # ------------------------------------------------------------------
+
+    def search_strategies(
+        self,
+        goal_description: str,
+        snapshot_id: str = "",
+        pattern_matches: list[dict[str, Any]] | None = None,
+        constraints: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Search for strategy candidates based on market analysis results."""
+        from cmis_v2.engines.strategy import search_strategies
+
+        return self._safe_call(
+            "search_strategies",
+            search_strategies,
+            {
+                "goal_description": goal_description,
+                "snapshot_id": snapshot_id,
+                "pattern_matches": pattern_matches,
+                "constraints": constraints,
+            },
+        )
+
+    def evaluate_portfolio(
+        self,
+        strategy_ids: list[str],
+        value_records: list[dict[str, Any]] | None = None,
+        policy_ref: str = "decision_balanced",
+    ) -> dict[str, Any]:
+        """Evaluate and rank a portfolio of strategy candidates."""
+        from cmis_v2.engines.strategy import evaluate_portfolio
+
+        return self._safe_call(
+            "evaluate_portfolio",
+            evaluate_portfolio,
+            {
+                "strategy_ids": strategy_ids,
+                "value_records": value_records,
+                "policy_ref": policy_ref,
+            },
+        )
+
+    # ------------------------------------------------------------------
+    # Policy engine wrappers
+    # ------------------------------------------------------------------
+
+    def load_policy(self, policy_id: str = "decision_balanced") -> dict[str, Any]:
+        """Load compiled policy configuration."""
+        from cmis_v2.engines.policy import load_policy
+
+        return self._safe_call("load_policy", load_policy, {"policy_id": policy_id})
+
+    def check_evidence_gate(
+        self,
+        evidence_result: dict[str, Any],
+        policy_id: str = "decision_balanced",
+    ) -> dict[str, Any]:
+        """Check if evidence meets policy requirements."""
+        from cmis_v2.engines.policy import check_evidence_gate
+
+        return self._safe_call(
+            "check_evidence_gate",
+            check_evidence_gate,
+            {"evidence_result": evidence_result, "policy_id": policy_id},
+        )
+
+    def check_value_gate(
+        self,
+        value_records: list[dict[str, Any]],
+        policy_id: str = "decision_balanced",
+    ) -> dict[str, Any]:
+        """Check if metric values meet policy quality requirements."""
+        from cmis_v2.engines.policy import check_value_gate
+
+        return self._safe_call(
+            "check_value_gate",
+            check_value_gate,
+            {"value_records": value_records, "policy_id": policy_id},
+        )
+
+    def check_all_gates(
+        self,
+        evidence_result: dict[str, Any] | None = None,
+        value_records: list[dict[str, Any]] | None = None,
+        policy_id: str = "decision_balanced",
+    ) -> dict[str, Any]:
+        """Run all applicable policy gates and return aggregate result."""
+        from cmis_v2.engines.policy import check_all_gates
+
+        return self._safe_call(
+            "check_all_gates",
+            check_all_gates,
+            {
+                "evidence_result": evidence_result,
+                "value_records": value_records,
+                "policy_id": policy_id,
+            },
+        )
+
+    # ------------------------------------------------------------------
     # Project management wrappers
     # ------------------------------------------------------------------
 
@@ -404,7 +506,9 @@ class CMISTools:
                     "Args: query (str, required) - search query e.g. '한국 전기차 충전 인프라 시장 규모'; "
                     "domain_id (str) - domain identifier e.g. 'EV_Charging_KR'; "
                     "region (str, default 'KR'); "
-                    "metric_ids (list[str] | None) - specific metric IDs to collect for e.g. ['MET-TAM', 'MET-Revenue']. "
+                    "metric_ids (list[str] | None) - specific metric IDs to collect for e.g. ['MET-TAM', 'MET-Revenue']; "
+                    "sources (list[str] | None) - data sources to query e.g. ['duckduckgo', 'kosis', 'dart']. "
+                    "None means auto-select (defaults to duckduckgo). "
                     "Returns: dict with evidence_id, query, records, sufficiency, lineage. "
                     "Use at the start of data_collection to create an evidence container."
                 ),
@@ -534,6 +638,72 @@ class CMISTools:
                     "Args: metric_id (str, required) - e.g. 'MET-TAM'. "
                     "Returns: the value record with point_estimate, confidence, method, quality. "
                     "Use to check current metric values."
+                ),
+            },
+            # --- Strategy engine ---
+            "search_strategies": {
+                "tool": self.search_strategies,
+                "description": (
+                    "Search for strategy candidates based on market analysis results. "
+                    "Args: goal_description (str, required) - what the strategy should achieve; "
+                    "snapshot_id (str) - reality snapshot reference; "
+                    "pattern_matches (list[dict] | None) - results from match_patterns(); "
+                    "constraints (dict | None) - business constraints e.g. {'budget': 'limited', 'timeline': 'short'}. "
+                    "Returns: dict with strategy_search_id, goal, candidates (strategy_id, name, feasibility_score, risk_factors). "
+                    "Use after pattern matching to generate strategy options."
+                ),
+            },
+            "evaluate_portfolio": {
+                "tool": self.evaluate_portfolio,
+                "description": (
+                    "Evaluate and rank a portfolio of strategy candidates. "
+                    "Args: strategy_ids (list[str], required) - strategy IDs from search_strategies; "
+                    "value_records (list[dict] | None) - metric values for context; "
+                    "policy_ref (str, default 'decision_balanced'). "
+                    "Returns: dict with portfolio_id, ranked_strategies (overall_score, recommendation), trade_offs. "
+                    "Use after search_strategies to compare and rank options."
+                ),
+            },
+            # --- Policy engine ---
+            "load_policy": {
+                "tool": self.load_policy,
+                "description": (
+                    "Load compiled policy configuration. "
+                    "Args: policy_id (str, default 'decision_balanced') - one of "
+                    "'reporting_strict', 'decision_balanced', 'exploration_friendly'. "
+                    "Returns: dict with policy_id, profiles (evidence, value, prior, convergence, orchestration), gates. "
+                    "Use to inspect policy settings before or during analysis."
+                ),
+            },
+            "check_evidence_gate": {
+                "tool": self.check_evidence_gate,
+                "description": (
+                    "Check if evidence meets policy requirements. "
+                    "Args: evidence_result (dict, required) - output from collect_evidence(); "
+                    "policy_id (str, default 'decision_balanced'). "
+                    "Returns: dict with passed (bool), gates_checked, gates_passed, violations. "
+                    "Use to validate evidence quality before proceeding to analysis."
+                ),
+            },
+            "check_value_gate": {
+                "tool": self.check_value_gate,
+                "description": (
+                    "Check if metric values meet policy quality requirements. "
+                    "Args: value_records (list[dict], required) - from evaluate_metrics(); "
+                    "policy_id (str, default 'decision_balanced'). "
+                    "Returns: dict with passed (bool), gates_checked, gates_passed, violations. "
+                    "Use to validate metric quality before synthesis."
+                ),
+            },
+            "check_all_gates": {
+                "tool": self.check_all_gates,
+                "description": (
+                    "Run all applicable policy gates and return aggregate result. "
+                    "Args: evidence_result (dict | None) - from collect_evidence(); "
+                    "value_records (list[dict] | None) - from evaluate_metrics(); "
+                    "policy_id (str, default 'decision_balanced'). "
+                    "Returns: dict with overall_passed, evidence_gate, value_gate, summary, suggested_actions. "
+                    "Use as a comprehensive quality check before delivering results."
                 ),
             },
             # --- Project management ---

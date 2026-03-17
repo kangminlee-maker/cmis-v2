@@ -1,4 +1,4 @@
-# UMIS v9 v1 Dependencies
+# CMIS v2 Dependencies
 
 # Core
 pyyaml>=6.0
@@ -8,17 +8,21 @@ pydantic-settings>=2.0.0
 openpyxl>=3.1.5
 pypdf>=6.4.2
 
+# RLM
+rlms>=0.1.1
+
 # BeliefEngine (v3.5.0)
 asteval>=0.9.31
 scipy>=1.11.0
 numpy>=1.24.0
 
+# Evidence sources
+duckduckgo-search>=6.0.0
+
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
 
-# Future (v1+v7 통합 시)
+# Future (KOSIS/DART API integration)
 # requests>=2.31.0  # DART API
-# tavily-python>=0.3.0  # 웹 검색
-# jinja2>=3.1.0  # Report 템플릿
-
+# jinja2>=3.1.0  # Report templates

@@ -6,6 +6,10 @@ Phase 1 MVP engines:
 - world: Reality Snapshot (R-Graph) construction
 - pattern: Business pattern matching
 - value: Metric evaluation (4-Method Fusion)
+
+Phase 2 engines:
+- strategy: Strategy search and portfolio evaluation
+- policy: Policy-driven quality gates
 """
 
 from __future__ import annotations
@@ -15,6 +19,12 @@ from cmis_v2.engines.evidence import collect_evidence as collect_evidence
 from cmis_v2.engines.evidence import get_evidence as get_evidence
 from cmis_v2.engines.pattern import discover_gaps as discover_gaps
 from cmis_v2.engines.pattern import match_patterns as match_patterns
+from cmis_v2.engines.policy import check_all_gates as check_all_gates
+from cmis_v2.engines.policy import check_evidence_gate as check_evidence_gate
+from cmis_v2.engines.policy import check_value_gate as check_value_gate
+from cmis_v2.engines.policy import load_policy as load_policy
+from cmis_v2.engines.strategy import evaluate_portfolio as evaluate_portfolio
+from cmis_v2.engines.strategy import search_strategies as search_strategies
 from cmis_v2.engines.value import evaluate_metrics as evaluate_metrics
 from cmis_v2.engines.value import get_metric_value as get_metric_value
 from cmis_v2.engines.value import set_metric_value as set_metric_value
@@ -40,4 +50,12 @@ __all__ = [
     "evaluate_metrics",
     "set_metric_value",
     "get_metric_value",
+    # strategy
+    "search_strategies",
+    "evaluate_portfolio",
+    # policy
+    "load_policy",
+    "check_evidence_gate",
+    "check_value_gate",
+    "check_all_gates",
 ]
