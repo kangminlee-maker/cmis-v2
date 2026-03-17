@@ -1,0 +1,636 @@
+"""CMIS v2 RLM tool registry.
+
+Wraps every engine function (evidence, world, pattern, value) and project
+management function into RLM ``custom_tools`` format so that the language
+model can invoke them during an analysis session.  Each call is automatically
+logged as an ``engine.called`` event when a *project_id* is active.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Callable
+
+
+class CMISTools:
+    """Wraps all CMIS v2 engines and project management as RLM custom_tools."""
+
+    def __init__(self, project_id: str | None = None) -> None:
+        self.project_id = project_id
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _log(self, tool_name: str, args: dict[str, Any], result: dict[str, Any]) -> None:
+        """Log an ``engine.called`` event when *project_id* is set."""
+        if self.project_id:
+            from cmis_v2.events import emit_event
+
+            emit_event(
+                project_id=self.project_id,
+                event_type="engine.called",
+                actor="rlm",
+                payload={
+                    "tool": tool_name,
+                    "args": args,
+                    "has_error": "error" in result,
+                },
+            )
+
+    def _safe_call(
+        self, tool_name: str, fn: Callable[..., Any], args: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Call *fn* with *args*, log, and return the result or an error dict."""
+        try:
+            result = fn(**args)
+            # Normalise to dict for logging (some functions return list/str)
+            if isinstance(result, dict):
+                self._log(tool_name, args, result)
+            else:
+                self._log(tool_name, args, {})
+            return result
+        except Exception as exc:
+            err: dict[str, Any] = {"error": str(exc)}
+            self._log(tool_name, args, err)
+            return err
+
+    # ------------------------------------------------------------------
+    # Evidence engine wrappers
+    # ------------------------------------------------------------------
+
+    def collect_evidence(
+        self,
+        query: str,
+        domain_id: str = "",
+        region: str = "KR",
+        metric_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Collect evidence for a query. Returns evidence_id, records, sufficiency."""
+        from cmis_v2.engines.evidence import collect_evidence
+
+        return self._safe_call(
+            "collect_evidence",
+            collect_evidence,
+            {"query": query, "domain_id": domain_id, "region": region, "metric_ids": metric_ids},
+        )
+
+    def add_record(
+        self,
+        evidence_id: str,
+        source_tier: str,
+        source_name: str,
+        content: str,
+        confidence: float = 0.5,
+        metric_ids_covered: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Add an evidence record to an existing evidence collection."""
+        from cmis_v2.engines.evidence import add_record
+
+        return self._safe_call(
+            "add_record",
+            add_record,
+            {
+                "evidence_id": evidence_id,
+                "source_tier": source_tier,
+                "source_name": source_name,
+                "content": content,
+                "confidence": confidence,
+                "metric_ids_covered": metric_ids_covered,
+            },
+        )
+
+    def get_evidence(self, evidence_id: str) -> dict[str, Any]:
+        """Retrieve an evidence collection by ID."""
+        from cmis_v2.engines.evidence import get_evidence
+
+        return self._safe_call("get_evidence", get_evidence, {"evidence_id": evidence_id})
+
+    # ------------------------------------------------------------------
+    # World engine wrappers
+    # ------------------------------------------------------------------
+
+    def build_snapshot(
+        self,
+        domain_id: str,
+        region: str = "KR",
+        evidence_id: str = "",
+        focal_actor_context_id: str = "",
+    ) -> dict[str, Any]:
+        """Build a Reality Snapshot (R-Graph) for a domain. Returns snapshot_id, nodes, edges."""
+        from cmis_v2.engines.world import build_snapshot
+
+        return self._safe_call(
+            "build_snapshot",
+            build_snapshot,
+            {
+                "domain_id": domain_id,
+                "region": region,
+                "evidence_id": evidence_id,
+                "focal_actor_context_id": focal_actor_context_id,
+            },
+        )
+
+    def add_node(
+        self,
+        snapshot_id: str,
+        node_type: str,
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Add a node (actor/money_flow/state) to a snapshot. data must include traits dict."""
+        from cmis_v2.engines.world import add_node
+
+        return self._safe_call(
+            "add_node",
+            add_node,
+            {"snapshot_id": snapshot_id, "node_type": node_type, "data": data},
+        )
+
+    def add_edge(
+        self,
+        snapshot_id: str,
+        edge_type: str,
+        source: str,
+        target: str,
+        data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Add an edge between two nodes in a snapshot."""
+        from cmis_v2.engines.world import add_edge
+
+        return self._safe_call(
+            "add_edge",
+            add_edge,
+            {"snapshot_id": snapshot_id, "edge_type": edge_type, "source": source, "target": target, "data": data},
+        )
+
+    def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
+        """Retrieve a snapshot by ID."""
+        from cmis_v2.engines.world import get_snapshot
+
+        return self._safe_call("get_snapshot", get_snapshot, {"snapshot_id": snapshot_id})
+
+    # ------------------------------------------------------------------
+    # Pattern engine wrappers
+    # ------------------------------------------------------------------
+
+    def match_patterns(
+        self,
+        snapshot_id: str,
+        top_n: int = 5,
+    ) -> dict[str, Any]:
+        """Match business patterns against a Reality Snapshot. Use after building an R-Graph."""
+        from cmis_v2.engines.pattern import match_patterns
+
+        return self._safe_call(
+            "match_patterns",
+            match_patterns,
+            {"snapshot_id": snapshot_id, "top_n": top_n},
+        )
+
+    def discover_gaps(self, snapshot_id: str) -> dict[str, Any]:
+        """Find partially matching patterns as potential opportunities."""
+        from cmis_v2.engines.pattern import discover_gaps
+
+        return self._safe_call("discover_gaps", discover_gaps, {"snapshot_id": snapshot_id})
+
+    # ------------------------------------------------------------------
+    # Value engine wrappers
+    # ------------------------------------------------------------------
+
+    def evaluate_metrics(
+        self,
+        metric_ids: list[str],
+        context: dict[str, Any] | None = None,
+        snapshot_id: str = "",
+        evidence_id: str = "",
+        policy_ref: str = "decision_balanced",
+    ) -> dict[str, Any]:
+        """Create metric evaluation structures. LM fills values via set_metric_value()."""
+        from cmis_v2.engines.value import evaluate_metrics
+
+        return self._safe_call(
+            "evaluate_metrics",
+            evaluate_metrics,
+            {
+                "metric_ids": metric_ids,
+                "context": context,
+                "snapshot_id": snapshot_id,
+                "evidence_id": evidence_id,
+                "policy_ref": policy_ref,
+            },
+        )
+
+    def set_metric_value(
+        self,
+        metric_id: str,
+        point_estimate: float,
+        confidence: float = 0.5,
+        method: str = "unknown",
+        evidence_summary: str = "",
+    ) -> dict[str, Any]:
+        """Set a metric's estimated value after analysis."""
+        from cmis_v2.engines.value import set_metric_value
+
+        return self._safe_call(
+            "set_metric_value",
+            set_metric_value,
+            {
+                "metric_id": metric_id,
+                "point_estimate": point_estimate,
+                "confidence": confidence,
+                "method": method,
+                "evidence_summary": evidence_summary,
+            },
+        )
+
+    def get_metric_value(self, metric_id: str) -> dict[str, Any]:
+        """Retrieve a metric value record by metric ID."""
+        from cmis_v2.engines.value import get_metric_value
+
+        return self._safe_call("get_metric_value", get_metric_value, {"metric_id": metric_id})
+
+    # ------------------------------------------------------------------
+    # Project management wrappers
+    # ------------------------------------------------------------------
+
+    def create_project(
+        self,
+        name: str,
+        description: str,
+        domain_id: str,
+        region: str = "KR",
+    ) -> dict[str, Any]:
+        """Create a new CMIS project. Returns manifest with project_id, current_state."""
+        from cmis_v2.project import create_project
+
+        return self._safe_call(
+            "create_project",
+            create_project,
+            {"name": name, "description": description, "domain_id": domain_id, "region": region},
+        )
+
+    def load_project(self, project_id: str) -> dict[str, Any]:
+        """Load and return the manifest for a project."""
+        from cmis_v2.project import load_project
+
+        return self._safe_call("load_project", load_project, {"project_id": project_id})
+
+    def get_current_state(self, project_id: str) -> Any:
+        """Return the current state string for a project."""
+        from cmis_v2.project import get_current_state
+
+        try:
+            result = get_current_state(project_id)
+            self._log("get_current_state", {"project_id": project_id}, {})
+            return result
+        except Exception as exc:
+            err: dict[str, Any] = {"error": str(exc)}
+            self._log("get_current_state", {"project_id": project_id}, err)
+            return err
+
+    def transition(
+        self,
+        project_id: str,
+        trigger: str,
+        actor: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute a state transition on a project. Returns updated manifest."""
+        from cmis_v2.project import transition
+
+        return self._safe_call(
+            "transition",
+            transition,
+            {"project_id": project_id, "trigger": trigger, "actor": actor, "payload": payload},
+        )
+
+    def lock_scope(
+        self,
+        project_id: str,
+        scope_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Store scope data in the project manifest after scope_locked state."""
+        from cmis_v2.project import lock_scope
+
+        return self._safe_call(
+            "lock_scope",
+            lock_scope,
+            {"project_id": project_id, "scope_data": scope_data},
+        )
+
+    def add_run(
+        self,
+        project_id: str,
+        run_id: str,
+        query: str,
+        workflow_hint: str,
+    ) -> dict[str, Any]:
+        """Register a new run under a project."""
+        from cmis_v2.project import add_run
+
+        return self._safe_call(
+            "add_run",
+            add_run,
+            {"project_id": project_id, "run_id": run_id, "query": query, "workflow_hint": workflow_hint},
+        )
+
+    def save_deliverable(
+        self,
+        project_id: str,
+        filename: str,
+        content: str,
+    ) -> Any:
+        """Write content to the project's deliverables directory."""
+        from cmis_v2.project import save_deliverable
+
+        try:
+            result = save_deliverable(project_id, filename, content)
+            self._log("save_deliverable", {"project_id": project_id, "filename": filename}, {})
+            return result
+        except Exception as exc:
+            err: dict[str, Any] = {"error": str(exc)}
+            self._log("save_deliverable", {"project_id": project_id, "filename": filename}, err)
+            return err
+
+    def list_projects(self) -> list[dict[str, Any]]:
+        """Return a list of all project manifests."""
+        from cmis_v2.project import list_projects
+
+        try:
+            result = list_projects()
+            self._log("list_projects", {}, {})
+            return result
+        except Exception as exc:
+            self._log("list_projects", {}, {"error": str(exc)})
+            return []
+
+    def get_project_summary(self, project_id: str) -> dict[str, Any]:
+        """Return a compact project summary: state, run count, event count."""
+        from cmis_v2.project import get_project_summary
+
+        return self._safe_call(
+            "get_project_summary",
+            get_project_summary,
+            {"project_id": project_id},
+        )
+
+    def get_project_events(self, project_id: str) -> Any:
+        """Return the full event list for a project."""
+        from cmis_v2.project import get_project_events
+
+        try:
+            result = get_project_events(project_id)
+            self._log("get_project_events", {"project_id": project_id}, {})
+            return result
+        except Exception as exc:
+            err: dict[str, Any] = {"error": str(exc)}
+            self._log("get_project_events", {"project_id": project_id}, err)
+            return err
+
+    # ------------------------------------------------------------------
+    # RLM export
+    # ------------------------------------------------------------------
+
+    def as_rlm_tools(self) -> dict[str, dict[str, Any]]:
+        """Return all tools in RLM custom_tools format.
+
+        Format: ``{"tool_name": {"tool": callable, "description": str}}``
+        """
+        tools: dict[str, dict[str, Any]] = {
+            # --- Evidence engine ---
+            "collect_evidence": {
+                "tool": self.collect_evidence,
+                "description": (
+                    "Collect evidence for a given query. "
+                    "Args: query (str, required) - search query e.g. '한국 전기차 충전 인프라 시장 규모'; "
+                    "domain_id (str) - domain identifier e.g. 'EV_Charging_KR'; "
+                    "region (str, default 'KR'); "
+                    "metric_ids (list[str] | None) - specific metric IDs to collect for e.g. ['MET-TAM', 'MET-Revenue']. "
+                    "Returns: dict with evidence_id, query, records, sufficiency, lineage. "
+                    "Use at the start of data_collection to create an evidence container."
+                ),
+            },
+            "add_record": {
+                "tool": self.add_record,
+                "description": (
+                    "Add an evidence record to an existing evidence collection. "
+                    "Args: evidence_id (str, required) - from collect_evidence; "
+                    "source_tier (str, required) - one of 'official', 'curated', 'commercial'; "
+                    "source_name (str, required) - human-readable source name e.g. 'KOSIS 통계'; "
+                    "content (str, required) - the evidence content/summary; "
+                    "confidence (float, default 0.5) - 0.0 to 1.0; "
+                    "metric_ids_covered (list[str] | None) - which metrics this record covers. "
+                    "Returns: the new record dict with record_id. "
+                    "Use after collect_evidence to populate evidence."
+                ),
+            },
+            "get_evidence": {
+                "tool": self.get_evidence,
+                "description": (
+                    "Retrieve an evidence collection by ID. "
+                    "Args: evidence_id (str, required). "
+                    "Returns: dict with evidence_id, records, sufficiency. "
+                    "Use to check evidence completeness before proceeding."
+                ),
+            },
+            # --- World engine ---
+            "build_snapshot": {
+                "tool": self.build_snapshot,
+                "description": (
+                    "Build a Reality Snapshot (R-Graph) for a domain. "
+                    "Args: domain_id (str, required) - e.g. 'EV_Charging_KR'; "
+                    "region (str, default 'KR'); "
+                    "evidence_id (str) - evidence collection this snapshot is based on; "
+                    "focal_actor_context_id (str) - optional focal actor. "
+                    "Returns: dict with snapshot_id, nodes (empty), edges (empty), summary, lineage. "
+                    "Use after evidence collection to create the R-Graph container, then populate with add_node/add_edge."
+                ),
+            },
+            "add_node": {
+                "tool": self.add_node,
+                "description": (
+                    "Add a node to an existing R-Graph snapshot. "
+                    "Args: snapshot_id (str, required); "
+                    "node_type (str, required) - one of 'actor', 'money_flow', 'state'; "
+                    "data (dict, required) - must include 'traits' key e.g. "
+                    "{'name': 'Tesla', 'traits': {'kind': 'company', 'market_position': 'leader'}}. "
+                    "Returns: the new node dict with id, type, data. "
+                    "Use after build_snapshot to add market actors, money flows, and states."
+                ),
+            },
+            "add_edge": {
+                "tool": self.add_edge,
+                "description": (
+                    "Add an edge between two nodes in a snapshot. "
+                    "Args: snapshot_id (str, required); "
+                    "edge_type (str, required) - one of 'actor_pays_actor', 'actor_competes_with', "
+                    "'actor_serves_actor', 'actor_supplies_actor', 'actor_regulates_actor', 'money_flow_connects'; "
+                    "source (str, required) - source node ID; "
+                    "target (str, required) - target node ID; "
+                    "data (dict | None) - optional edge properties. "
+                    "Returns: the new edge dict. "
+                    "Use after adding nodes to define relationships."
+                ),
+            },
+            "get_snapshot": {
+                "tool": self.get_snapshot,
+                "description": (
+                    "Retrieve a snapshot by ID. "
+                    "Args: snapshot_id (str, required). "
+                    "Returns: full snapshot dict with nodes, edges, summary. "
+                    "Use to inspect the current R-Graph state."
+                ),
+            },
+            # --- Pattern engine ---
+            "match_patterns": {
+                "tool": self.match_patterns,
+                "description": (
+                    "Match 23 business patterns against a Reality Snapshot. "
+                    "Args: snapshot_id (str, required); top_n (int, default 5) - max matches to return. "
+                    "Returns: dict with matches (pattern_id, fit_score, matched/missing_traits), "
+                    "total_patterns_evaluated. "
+                    "Use after building an R-Graph and before opportunity discovery."
+                ),
+            },
+            "discover_gaps": {
+                "tool": self.discover_gaps,
+                "description": (
+                    "Find partially matching patterns (0.3 <= fit_score < 0.7) as potential opportunities. "
+                    "Args: snapshot_id (str, required). "
+                    "Returns: dict with gaps (pattern_id, fit_score, present/missing_traits, opportunity_description). "
+                    "Use during opportunity_discovery phase."
+                ),
+            },
+            # --- Value engine ---
+            "evaluate_metrics": {
+                "tool": self.evaluate_metrics,
+                "description": (
+                    "Create metric evaluation structures for specified metrics. "
+                    "Args: metric_ids (list[str], required) - e.g. ['MET-TAM', 'MET-Revenue', 'MET-ARPU']; "
+                    "context (dict | None) - additional context; "
+                    "snapshot_id (str) - for graph-based evaluation; "
+                    "evidence_id (str) - for evidence-based evaluation; "
+                    "policy_ref (str, default 'decision_balanced'). "
+                    "Returns: dict with value_records (metric_id, point_estimate=None, confidence, method). "
+                    "Use to initialise metrics, then fill values with set_metric_value."
+                ),
+            },
+            "set_metric_value": {
+                "tool": self.set_metric_value,
+                "description": (
+                    "Set a metric's estimated value after analysis. "
+                    "Args: metric_id (str, required) - e.g. 'MET-TAM'; "
+                    "point_estimate (float, required) - the estimated value; "
+                    "confidence (float, default 0.5) - 0.0 to 1.0; "
+                    "method (str, default 'unknown') - one of 'top_down', 'bottom_up', 'fermi', 'proxy', 'unknown'; "
+                    "evidence_summary (str) - summary of supporting evidence. "
+                    "Returns: the updated value record. "
+                    "Use after evaluate_metrics to fill in estimated values."
+                ),
+            },
+            "get_metric_value": {
+                "tool": self.get_metric_value,
+                "description": (
+                    "Retrieve a metric value record by metric ID. "
+                    "Args: metric_id (str, required) - e.g. 'MET-TAM'. "
+                    "Returns: the value record with point_estimate, confidence, method, quality. "
+                    "Use to check current metric values."
+                ),
+            },
+            # --- Project management ---
+            "create_project": {
+                "tool": self.create_project,
+                "description": (
+                    "Create a new CMIS analysis project. "
+                    "Args: name (str, required); description (str, required); "
+                    "domain_id (str, required) - e.g. 'EV_Charging_KR'; "
+                    "region (str, default 'KR'). "
+                    "Returns: manifest dict with project_id, current_state='requested'. "
+                    "Use at the very start of a new analysis."
+                ),
+            },
+            "load_project": {
+                "tool": self.load_project,
+                "description": (
+                    "Load and return the manifest for a project. "
+                    "Args: project_id (str, required). "
+                    "Returns: manifest dict or error."
+                ),
+            },
+            "get_current_state": {
+                "tool": self.get_current_state,
+                "description": (
+                    "Return the current state string for a project. "
+                    "Args: project_id (str, required). "
+                    "Returns: state string e.g. 'discovery', 'scope_review'."
+                ),
+            },
+            "transition": {
+                "tool": self.transition,
+                "description": (
+                    "Execute a state transition on a project. "
+                    "Args: project_id (str, required); "
+                    "trigger (str, required) - e.g. 'project_created', 'discovery_completed', 'scope_approved'; "
+                    "actor (str, required) - 'system', 'rlm', or 'user'; "
+                    "payload (dict | None) - optional context. "
+                    "Returns: updated manifest or error. "
+                    "Use to advance the project through its lifecycle."
+                ),
+            },
+            "lock_scope": {
+                "tool": self.lock_scope,
+                "description": (
+                    "Store scope data in the project manifest. "
+                    "Args: project_id (str, required); "
+                    "scope_data (dict, required) - scope definition e.g. "
+                    "{'target_market': '...', 'boundaries': '...', 'key_questions': [...]}. "
+                    "Returns: updated manifest. "
+                    "Use after project reaches scope_locked state."
+                ),
+            },
+            "add_run": {
+                "tool": self.add_run,
+                "description": (
+                    "Register a new run under a project. "
+                    "Args: project_id (str, required); run_id (str, required); "
+                    "query (str, required); workflow_hint (str, required) - one of "
+                    "'structure_analysis', 'opportunity_discovery', 'strategy_design', 'reality_monitoring'. "
+                    "Returns: updated manifest."
+                ),
+            },
+            "save_deliverable": {
+                "tool": self.save_deliverable,
+                "description": (
+                    "Write content to the project's deliverables directory. "
+                    "Args: project_id (str, required); "
+                    "filename (str, required) - e.g. 'market_reality_report.md'; "
+                    "content (str, required) - the deliverable content. "
+                    "Returns: file path string. "
+                    "Use at synthesis stage to save final reports."
+                ),
+            },
+            "list_projects": {
+                "tool": self.list_projects,
+                "description": (
+                    "Return a list of all project manifests. "
+                    "No args required. "
+                    "Returns: list of manifest dicts."
+                ),
+            },
+            "get_project_summary": {
+                "tool": self.get_project_summary,
+                "description": (
+                    "Return a compact project summary. "
+                    "Args: project_id (str, required). "
+                    "Returns: dict with project_id, name, current_state, run_count, event_count."
+                ),
+            },
+            "get_project_events": {
+                "tool": self.get_project_events,
+                "description": (
+                    "Return the full event list for a project. "
+                    "Args: project_id (str, required). "
+                    "Returns: list of event dicts with event_id, type, actor, payload, timestamps."
+                ),
+            },
+        }
+        return tools
