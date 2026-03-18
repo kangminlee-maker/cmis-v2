@@ -21,6 +21,70 @@ from cmis_v2 import state_machine as sm
 from cmis_v2.config import PROJECTS_DIR
 
 # ---------------------------------------------------------------------------
+# Transition preconditions
+# ---------------------------------------------------------------------------
+
+
+def _check_evidence_exists(project_id: str, manifest: dict[str, Any]) -> str | None:
+    """Verify that evidence data exists and the evidence gate has passed."""
+    from cmis_v2.engine_store import list_engine_keys
+    keys = list_engine_keys(project_id, "evidence")
+    if not keys:
+        return (
+            "Precondition failed for data_quality_passed: "
+            "no evidence data found in engine_store. "
+            "Collect evidence before transitioning."
+        )
+    return None
+
+
+def _check_scope_locked(project_id: str, manifest: dict[str, Any]) -> str | None:
+    """Verify that scope is not None and locked_at exists."""
+    scope = manifest.get("scope")
+    if scope is None:
+        return (
+            "Precondition failed for auto (scope_locked -> data_collection): "
+            "manifest.scope is None. Call lock_scope() first."
+        )
+    if not scope.get("locked_at"):
+        return (
+            "Precondition failed for auto (scope_locked -> data_collection): "
+            "scope.locked_at is missing. Call lock_scope() first."
+        )
+    return None
+
+
+def _check_policy_gate_passed(project_id: str, manifest: dict[str, Any]) -> str | None:
+    """Verify that the policy gate result exists and passed."""
+    from cmis_v2.engine_store import list_engine_keys, load_engine_data
+    keys = list_engine_keys(project_id, "policy")
+    if not keys:
+        return (
+            "Precondition failed: no policy gate result found in engine_store. "
+            "Run check_all_gates or check_evidence_gate before transitioning."
+        )
+    # Check the latest policy gate result
+    latest_key = keys[-1]
+    data = load_engine_data(project_id, "policy", latest_key)
+    if data is None:
+        return "Precondition failed: could not load policy gate data."
+    if not data.get("passed", False) and not data.get("overall_passed", False):
+        return (
+            "Precondition failed: policy gate did not pass. "
+            f"Gate result: {data}"
+        )
+    return None
+
+
+_PRECONDITIONS: dict[tuple[str, str], Any] = {
+    ("data_collection", "data_quality_passed"): _check_evidence_exists,
+    ("scope_locked", "auto"): _check_scope_locked,
+    ("finding_review", "finding_approved"): _check_policy_gate_passed,
+    ("opportunity_review", "opportunity_selected"): _check_policy_gate_passed,
+    ("decision_review", "decision_approved"): _check_policy_gate_passed,
+}
+
+# ---------------------------------------------------------------------------
 # Trigger → supplementary event type mapping
 # ---------------------------------------------------------------------------
 
@@ -193,6 +257,13 @@ def transition(
                 f"Invalid transition: state={current!r}, trigger={trigger!r}"
             )
         }
+
+    # Precondition check
+    precondition_fn = _PRECONDITIONS.get((current, trigger))
+    if precondition_fn is not None:
+        err = precondition_fn(project_id, manifest)
+        if err is not None:
+            return {"error": err}
 
     next_st = sm.next_state(current, trigger)  # type: ignore[arg-type]
 

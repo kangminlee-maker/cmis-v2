@@ -105,6 +105,7 @@ _TERMINAL_STATES: frozenset[State] = frozenset({"completed", "rejected"})
 _USER_GATE_STATES: frozenset[State] = frozenset({
     "scope_review",
     "finding_review",
+    "finding_locked",
     "opportunity_review",
     "decision_review",
 })

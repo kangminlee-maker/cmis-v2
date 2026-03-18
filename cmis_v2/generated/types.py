@@ -11,9 +11,9 @@ from pydantic import BaseModel, field_validator
 
 ONTOLOGY_VERSION: str = "1.0.0"
 
-NodeType = Literal["actor", "money_flow", "state"]
+NodeType = Literal["actor", "money_flow", "state", "product", "segment"]
 
-EdgeType = Literal["actor_pays_actor", "actor_competes_with", "actor_serves_actor", "actor_supplies_actor", "actor_regulates_actor", "money_flow_connects"]
+EdgeType = Literal["actor_pays_actor", "actor_competes_with", "actor_serves_actor", "actor_supplies_actor", "actor_regulates_actor", "money_flow_connects", "actor_offers_product", "product_targets_segment", "actor_belongs_to_segment", "product_competes_with"]
 
 KindTrait = Literal["company", "individual", "government", "ngo", "digital_service", "physical_product"]
 InstitutionTypeTrait = Literal["online_platform", "marketplace", "brick_and_mortar", "hybrid", "financial_institution", "educational_institution", "government_agency"]
@@ -30,6 +30,15 @@ SpecializationFocusTrait = Literal["horizontal", "vertical"]
 RevenueModelTrait = Literal["subscription", "one_off", "usage_based", "commission", "advertising", "licensing", "freemium"]
 PricingModelTrait = Literal["flat_rate", "tiered", "usage_based", "freemium", "free_trial", "dynamic", "auction"]
 RecurrenceTrait = Literal["monthly", "quarterly", "yearly"]
+CategoryTrait = Literal["physical_good", "digital_service", "saas", "marketplace", "content", "infrastructure"]
+LifecycleStageTrait = Literal["introduction", "growth", "maturity", "decline"]
+DifferentiationTrait = Literal["cost_leadership", "differentiation", "niche"]
+DeliveryModelTrait = Literal["direct", "platform", "franchise", "partnership", "self_service"]
+SegmentTypeTrait = Literal["b2b", "b2c", "b2b2c", "b2g"]
+SegmentSizeTierTrait = Literal["micro", "small", "medium", "large", "massive"]
+GrowthPotentialTrait = Literal["declining", "stable", "moderate", "high", "explosive"]
+PriceSensitivityTrait = Literal["low", "medium", "high"]
+GeographicScopeTrait = Literal["local", "regional", "national", "international", "global"]
 
 MetricId = Literal["MET-N_customers", "MET-Revenue", "MET-Avg_price_per_unit", "MET-TAM", "MET-SAM", "MET-SOM", "MET-Churn_rate", "MET-Gross_margin", "MET-LTV", "MET-CAC", "MET-Payback_period", "MET-ARPU", "MET-HHI_revenue", "MET-Top3_revenue_share", "MET-Top5_revenue_share", "MET-Platform_commission_fees", "MET-CapEx", "MET-Operating_margin", "MET-COGS", "MET-OPEX", "MET-Royalty_expenses", "MET-Market_growth_rate", "MET-Market_penetration_rate", "MET-Customer_concentration", "MET-Net_revenue_retention"]
 
@@ -44,17 +53,25 @@ MONEY_FLOW_REQUIRED_TRAITS: frozenset[str] = frozenset({"revenue_model"})
 MONEY_FLOW_OPTIONAL_TRAITS: frozenset[str] = frozenset({"pricing_model", "payment_recurs", "recurrence"})
 STATE_REQUIRED_TRAITS: frozenset[str] = frozenset({})
 STATE_OPTIONAL_TRAITS: frozenset[str] = frozenset({"observation_date", "confidence_level"})
+PRODUCT_REQUIRED_TRAITS: frozenset[str] = frozenset({})
+PRODUCT_OPTIONAL_TRAITS: frozenset[str] = frozenset({"category", "lifecycle_stage", "differentiation", "delivery_model", "switching_cost", "pricing_model"})
+SEGMENT_REQUIRED_TRAITS: frozenset[str] = frozenset({})
+SEGMENT_OPTIONAL_TRAITS: frozenset[str] = frozenset({"segment_type", "segment_size_tier", "growth_potential", "price_sensitivity", "geographic_scope"})
 
 _REQUIRED_TRAITS: dict[str, frozenset[str]] = {
     "actor": ACTOR_REQUIRED_TRAITS,
     "money_flow": MONEY_FLOW_REQUIRED_TRAITS,
     "state": STATE_REQUIRED_TRAITS,
+    "product": PRODUCT_REQUIRED_TRAITS,
+    "segment": SEGMENT_REQUIRED_TRAITS,
 }
 
 _ALL_TRAITS: dict[str, frozenset[str]] = {
     "actor": ACTOR_REQUIRED_TRAITS | ACTOR_OPTIONAL_TRAITS,
     "money_flow": MONEY_FLOW_REQUIRED_TRAITS | MONEY_FLOW_OPTIONAL_TRAITS,
     "state": STATE_REQUIRED_TRAITS | STATE_OPTIONAL_TRAITS,
+    "product": PRODUCT_REQUIRED_TRAITS | PRODUCT_OPTIONAL_TRAITS,
+    "segment": SEGMENT_REQUIRED_TRAITS | SEGMENT_OPTIONAL_TRAITS,
 }
 
 VALID_METRIC_IDS: frozenset[str] = frozenset({"MET-N_customers", "MET-Revenue", "MET-Avg_price_per_unit", "MET-TAM", "MET-SAM", "MET-SOM", "MET-Churn_rate", "MET-Gross_margin", "MET-LTV", "MET-CAC", "MET-Payback_period", "MET-ARPU", "MET-HHI_revenue", "MET-Top3_revenue_share", "MET-Top5_revenue_share", "MET-Platform_commission_fees", "MET-CapEx", "MET-Operating_margin", "MET-COGS", "MET-OPEX", "MET-Royalty_expenses", "MET-Market_growth_rate", "MET-Market_penetration_rate", "MET-Customer_concentration", "MET-Net_revenue_retention"})

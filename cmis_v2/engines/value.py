@@ -10,6 +10,7 @@ All inputs/outputs are plain dicts (JSON-serializable).
 
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 from typing import Any
 
@@ -115,6 +116,8 @@ def set_metric_value(
     confidence: float = 0.5,
     method: str = "unknown",
     evidence_summary: str = "",
+    evidence_id: str = "",
+    force_unverified: bool = False,
     project_id: str = "",
 ) -> dict[str, Any]:
     """Manually set a metric value (used by LM after analysis).
@@ -125,6 +128,11 @@ def set_metric_value(
         confidence: Confidence score 0.0-1.0 (default 0.5).
         method: Estimation method used ("top_down", "bottom_up", "fermi", "proxy", "unknown").
         evidence_summary: Summary of evidence supporting this estimate.
+        evidence_id: ID of the evidence record that supports this estimate.
+            Required unless *force_unverified* is True.
+        force_unverified: If True, allow saving without evidence_id.
+            The quality.status will be set to "force_unverified".
+        project_id: Optional project ID for file-based persistence.
 
     Returns:
         The updated value record, or an error dict.
@@ -134,6 +142,17 @@ def set_metric_value(
 
     if method not in _VALID_METHODS:
         return {"error": f"Invalid method: {method!r}. Must be one of: {sorted(_VALID_METHODS)}"}
+
+    # evidence_id is now required unless force_unverified
+    if not evidence_id and not force_unverified:
+        return {
+            "error": (
+                "evidence_id is required for set_metric_value. "
+                "Provide the evidence_id that supports this estimate, "
+                "or set force_unverified=True to bypass (quality.status "
+                "will be 'force_unverified')."
+            )
+        }
 
     confidence = max(0.0, min(1.0, confidence))
 
@@ -168,8 +187,51 @@ def set_metric_value(
     record["point_estimate"] = point_estimate
     record["confidence"] = confidence
     record["method"] = method
-    record["quality"]["status"] = "ok" if confidence >= 0.3 else "unverified"
+
+    # --- Lineage enforcement ---
+    lineage_warnings: list[str] = []
+
+    # evidence_id linkage
+    if evidence_id:
+        record["lineage"]["evidence_id"] = evidence_id
+    else:
+        lineage_warnings.append(
+            "evidence_id not provided: this metric value has no traceable "
+            "evidence source. Provide evidence_id for auditability."
+        )
+        warnings.warn(
+            f"set_metric_value({metric_id}): evidence_id not provided. "
+            "Metric value cannot be traced to an evidence source.",
+            stacklevel=2,
+        )
+
     record["lineage"]["method_details"] = evidence_summary
+
+    # --- Quality status determination ---
+    if force_unverified and not evidence_id:
+        record["quality"]["status"] = "force_unverified"
+        lineage_warnings.append(
+            "force_unverified=True: quality.status set to 'force_unverified'."
+        )
+    elif not evidence_summary:
+        record["quality"]["status"] = "unverified"
+        lineage_warnings.append(
+            "evidence_summary is empty: quality.status forced to 'unverified'. "
+            "Provide a summary of supporting evidence."
+        )
+    elif not evidence_id:
+        record["quality"]["status"] = "unverified"
+        lineage_warnings.append(
+            "evidence_id is missing: quality.status forced to 'unverified' "
+            "even though evidence_summary is present."
+        )
+    elif evidence_summary and evidence_id and confidence >= 0.3:
+        record["quality"]["status"] = "ok"
+    else:
+        record["quality"]["status"] = "unverified"
+
+    # Attach lineage warnings to the record for downstream inspection
+    record["_lineage_warnings"] = lineage_warnings
 
     if project_id:
         from cmis_v2.engine_store import save_engine_data

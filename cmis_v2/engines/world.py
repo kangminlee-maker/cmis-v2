@@ -31,6 +31,8 @@ _NODE_PREFIX: dict[str, str] = {
     "actor": "ACT",
     "money_flow": "MFL",
     "state": "STT",
+    "product": "PRD",
+    "segment": "SEG",
 }
 
 # ---------------------------------------------------------------------------
@@ -72,6 +74,8 @@ def build_snapshot(
             "actor_count": 0,
             "money_flow_count": 0,
             "state_count": 0,
+            "product_count": 0,
+            "segment_count": 0,
             "edge_count": 0,
         },
         "lineage": {

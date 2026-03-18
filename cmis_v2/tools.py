@@ -10,6 +10,84 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+# ---------------------------------------------------------------------------
+# State-based tool filtering
+# ---------------------------------------------------------------------------
+
+_ALWAYS_ALLOWED: frozenset[str] = frozenset({
+    "load_project",
+    "get_current_state",
+    "get_project_summary",
+    "get_project_events",
+    "list_projects",
+    "load_policy",
+    "check_compatibility",
+})
+
+_STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
+    "requested": frozenset({"create_project", "transition"}),
+    "discovery": frozenset({
+        "collect_evidence", "add_record", "get_evidence",
+        "set_prior", "get_prior", "list_beliefs",
+        "check_evidence_gate", "transition", "lock_scope",
+    }),
+    "scope_locked": frozenset({"transition"}),
+    "data_collection": frozenset({
+        "collect_evidence", "add_record", "get_evidence",
+        "set_prior", "get_prior", "update_belief", "list_beliefs",
+        "check_evidence_gate", "transition", "add_run",
+    }),
+    "structure_analysis": frozenset({
+        "build_snapshot", "add_node", "add_edge", "get_snapshot",
+        "match_patterns", "evaluate_metrics", "set_metric_value",
+        "get_metric_value", "check_value_gate", "check_all_gates",
+        "transition", "get_evidence", "add_run",
+    }),
+    "finding_locked": frozenset({
+        "discover_gaps", "get_snapshot", "match_patterns", "transition",
+    }),
+    "opportunity_discovery": frozenset({
+        "discover_gaps", "get_snapshot", "match_patterns",
+        "evaluate_metrics", "set_metric_value", "get_metric_value",
+        "transition", "add_run",
+    }),
+    "strategy_design": frozenset({
+        "search_strategies", "evaluate_portfolio", "get_snapshot",
+        "get_metric_value", "evaluate_metrics", "set_metric_value",
+        "check_value_gate", "check_all_gates", "transition",
+        "add_run", "update_belief", "set_strategy_impact",
+    }),
+    "synthesis": frozenset({
+        "save_deliverable", "get_snapshot", "get_evidence",
+        "get_metric_value", "get_project_summary", "get_project_events",
+        "transition", "check_all_gates",
+    }),
+    "completed": frozenset({
+        "record_outcome", "get_learning_summary", "apply_learnings",
+    }),
+    # User gates — read-only
+    "scope_review": frozenset({
+        "get_evidence", "get_snapshot", "get_metric_value",
+    }),
+    "finding_review": frozenset({
+        "get_evidence", "get_snapshot", "get_metric_value",
+    }),
+    "opportunity_review": frozenset({
+        "get_evidence", "get_snapshot", "get_metric_value",
+    }),
+    "decision_review": frozenset({
+        "get_evidence", "get_snapshot", "get_metric_value",
+    }),
+}
+
+
+def is_tool_allowed(tool_name: str, state: str) -> bool:
+    """Return True if *tool_name* is allowed in *state*."""
+    if tool_name in _ALWAYS_ALLOWED:
+        return True
+    state_tools = _STATE_ALLOWED_TOOLS.get(state, frozenset())
+    return tool_name in state_tools
+
 
 class CMISTools:
     """Wraps all CMIS v2 engines and project management as RLM custom_tools."""
@@ -37,10 +115,31 @@ class CMISTools:
                 },
             )
 
+    def _get_current_state_str(self) -> str:
+        """Return the current project state, or empty string if unknown."""
+        if not self.project_id:
+            return ""
+        try:
+            from cmis_v2.project import get_current_state
+            return get_current_state(self.project_id)
+        except Exception:
+            return ""
+
     def _safe_call(
         self, tool_name: str, fn: Callable[..., Any], args: dict[str, Any]
     ) -> dict[str, Any]:
         """Call *fn* with *args*, log, and return the result or an error dict."""
+        # --- Tool guard: state-based filtering ---
+        current_state = self._get_current_state_str()
+        if current_state and not is_tool_allowed(tool_name, current_state):
+            err: dict[str, Any] = {
+                "error": (
+                    f"Tool '{tool_name}' is not allowed in state '{current_state}'. "
+                    f"Allowed tools: {sorted(_ALWAYS_ALLOWED | _STATE_ALLOWED_TOOLS.get(current_state, frozenset()))}"
+                )
+            }
+            self._log(tool_name, args, err)
+            return err
         try:
             result = fn(**args)
             # Normalise to dict for logging (some functions return list/str)
@@ -230,6 +329,8 @@ class CMISTools:
         confidence: float = 0.5,
         method: str = "unknown",
         evidence_summary: str = "",
+        evidence_id: str = "",
+        force_unverified: bool = False,
     ) -> dict[str, Any]:
         """Set a metric's estimated value after analysis."""
         from cmis_v2.engines.value import set_metric_value
@@ -243,6 +344,8 @@ class CMISTools:
                 "confidence": confidence,
                 "method": method,
                 "evidence_summary": evidence_summary,
+                "evidence_id": evidence_id,
+                "force_unverified": force_unverified,
                 "project_id": self.project_id or "",
             },
         )
@@ -279,11 +382,36 @@ class CMISTools:
             },
         )
 
+    def set_strategy_impact(
+        self,
+        strategy_id: str,
+        revenue_change: str,
+        market_share_change: str,
+        evidence_id: str,
+        rationale: str = "",
+    ) -> dict[str, Any]:
+        """Set expected impact for a strategy, linked to evidence."""
+        from cmis_v2.engines.strategy import set_strategy_impact
+
+        return self._safe_call(
+            "set_strategy_impact",
+            set_strategy_impact,
+            {
+                "strategy_id": strategy_id,
+                "revenue_change": revenue_change,
+                "market_share_change": market_share_change,
+                "evidence_id": evidence_id,
+                "rationale": rationale,
+                "project_id": self.project_id or "",
+            },
+        )
+
     def evaluate_portfolio(
         self,
         strategy_ids: list[str],
         value_records: list[dict[str, Any]] | None = None,
         policy_ref: str = "decision_balanced",
+        pending_policy: str = "exclude",
     ) -> dict[str, Any]:
         """Evaluate and rank a portfolio of strategy candidates."""
         from cmis_v2.engines.strategy import evaluate_portfolio
@@ -295,6 +423,7 @@ class CMISTools:
                 "strategy_ids": strategy_ids,
                 "value_records": value_records,
                 "policy_ref": policy_ref,
+                "pending_policy": pending_policy,
                 "project_id": self.project_id or "",
             },
         )
@@ -771,7 +900,10 @@ class CMISTools:
                     "point_estimate (float, required) - the estimated value; "
                     "confidence (float, default 0.5) - 0.0 to 1.0; "
                     "method (str, default 'unknown') - one of 'top_down', 'bottom_up', 'fermi', 'proxy', 'unknown'; "
-                    "evidence_summary (str) - summary of supporting evidence. "
+                    "evidence_summary (str) - summary of supporting evidence; "
+                    "evidence_id (str, required) - ID of evidence record supporting this estimate; "
+                    "force_unverified (bool, default False) - set True to bypass evidence_id requirement "
+                    "(quality.status will be 'force_unverified'). "
                     "Returns: the updated value record. "
                     "Use after evaluate_metrics to fill in estimated values."
                 ),
@@ -798,14 +930,31 @@ class CMISTools:
                     "Use after pattern matching to generate strategy options."
                 ),
             },
+            "set_strategy_impact": {
+                "tool": self.set_strategy_impact,
+                "description": (
+                    "Set expected impact for a strategy, linked to evidence. "
+                    "Args: strategy_id (str, required) - from search_strategies; "
+                    "revenue_change (str, required) - e.g. '+15%', '-5%'; "
+                    "market_share_change (str, required) - e.g. '+8%'; "
+                    "evidence_id (str, required) - evidence record supporting this estimate; "
+                    "rationale (str) - explanation of how evidence supports estimate. "
+                    "Returns: updated strategy dict with evidence_linked impact. "
+                    "Use after search_strategies to set evidence-backed impact estimates."
+                ),
+            },
             "evaluate_portfolio": {
                 "tool": self.evaluate_portfolio,
                 "description": (
                     "Evaluate and rank a portfolio of strategy candidates. "
                     "Args: strategy_ids (list[str], required) - strategy IDs from search_strategies; "
                     "value_records (list[dict] | None) - metric values for context; "
-                    "policy_ref (str, default 'decision_balanced'). "
-                    "Returns: dict with portfolio_id, ranked_strategies (overall_score, recommendation), trade_offs. "
+                    "policy_ref (str, default 'decision_balanced'); "
+                    "pending_policy (str, default 'exclude') - how to handle pending_evidence items: "
+                    "'exclude' (skip, is_complete=False), 'fail' (error if any pending), "
+                    "'partial' (separate into pending_items). "
+                    "Returns: dict with portfolio_id, ranked_strategies (overall_score, recommendation), "
+                    "trade_offs, is_complete, pending_items. "
                     "Use after search_strategies to compare and rank options."
                 ),
             },

@@ -194,6 +194,15 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 7. If a tool returns {{"error": "..."}}, log the error and attempt an alternative approach.
 8. If multiple tools fail consecutively, produce a partial report and stop at the current gate.
 
+### Resuming from User Gates
+
+9. When resuming from a user gate, the prompt will include a "Previous User Decision" section
+   containing the user's revision_note, selected opportunity, or other feedback.
+   You MUST read and incorporate every instruction in that section.
+   If a revision_note says "limit scope to B2C", your next analysis phase must reflect that constraint.
+   If a selection is provided, focus exclusively on the selected item.
+   Do NOT ignore or override user gate decisions.
+
 ## Policy Modes
 
 - **reporting_strict**: High evidence thresholds, conservative estimates, prioritise accuracy.

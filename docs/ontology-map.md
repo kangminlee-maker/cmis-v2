@@ -11,6 +11,8 @@
 | `actor` | 시장 참여자 (기업, 기관, 개인 등) | kind | institution_type, market_position, value_chain_position, scale_tier, switching_cost, inventory_risk, marginal_cost_profile, outsourcing_ratio, market_focus, specialization_level, specialization_focus |
 | `money_flow` | 참여자 간 금전 흐름 (수익 모델, 결제 구조) | revenue_model | pricing_model, payment_recurs, recurrence |
 | `state` | 시장/참여자의 관측 가능 상태 (시점별 스냅샷) | - | observation_date, confidence_level |
+| `product` | 시장에서 거래되는 제품 또는 서비스 | - | category, lifecycle_stage, differentiation, delivery_model, switching_cost, pricing_model |
+| `segment` | 시장 세그먼트 (고객군, 지역, 산업 등) | - | segment_type, segment_size_tier, growth_potential, price_sensitivity, geographic_scope |
 
 ## Edge Types
 
@@ -22,6 +24,10 @@
 | `actor_supplies_actor` | 참여자 간 공급망 관계 (원재료/부품) | actor | actor | - |
 | `actor_regulates_actor` | 규제 기관과 피규제 참여자 간 관계 | actor | actor | - |
 | `money_flow_connects` | 금전 흐름이 연결하는 참여자 쌍 | money_flow | actor | - |
+| `actor_offers_product` | 참여자가 제공하는 제품/서비스 | actor | product | - |
+| `product_targets_segment` | 제품/서비스가 타겟하는 시장 세그먼트 | product | segment | - |
+| `actor_belongs_to_segment` | 참여자가 속한 시장 세그먼트 | actor | segment | - |
+| `product_competes_with` | 제품/서비스 간 경쟁 관계 | product | product | - |
 
 ## Metrics
 
@@ -62,7 +68,7 @@
 | `market_position` | enum | 시장 내 경쟁 포지션 | actor | leader, challenger, follower, niche |
 | `value_chain_position` | enum | 가치사슬 내 위치 | actor | upstream, midstream, downstream |
 | `scale_tier` | enum | 사업 규모 단계 | actor | startup, growth_stage, enterprise, hyperscale |
-| `switching_cost` | enum | 고객 전환 비용 수준 | actor | low, medium, high |
+| `switching_cost` | enum | 고객 전환 비용 수준 | actor, product | low, medium, high |
 | `inventory_risk` | enum | 재고 보유 리스크 수준 | actor | low, medium, high |
 | `marginal_cost_profile` | enum | 한계 비용 구조 | actor | low, medium, high |
 | `outsourcing_ratio` | enum | 외주 비율 수준 | actor | low, medium, high |
@@ -70,9 +76,18 @@
 | `specialization_level` | enum | 전문화 수준 | actor | low, medium, high |
 | `specialization_focus` | enum | 전문화 방향 | actor | horizontal, vertical |
 | `revenue_model` | enum | 수익 모델 유형 | money_flow | subscription, one_off, usage_based, commission, advertising, licensing, freemium |
-| `pricing_model` | enum | 가격 책정 모델 | money_flow | flat_rate, tiered, usage_based, freemium, free_trial, dynamic, auction |
+| `pricing_model` | enum | 가격 책정 모델 | money_flow, product | flat_rate, tiered, usage_based, freemium, free_trial, dynamic, auction |
 | `payment_recurs` | boolean | 결제 반복 여부 | money_flow | - |
 | `recurrence` | enum | 결제 반복 주기 | money_flow | monthly, quarterly, yearly |
 | `observation_date` | string | 관측 일자 (ISO 8601) | state | - |
 | `confidence_level` | number | 관측 신뢰도 (0.0 ~ 1.0) | state | - |
+| `category` | enum | 제품/서비스 카테고리 | product | physical_good, digital_service, saas, marketplace, content, infrastructure |
+| `lifecycle_stage` | enum | 제품 수명 주기 단계 | product | introduction, growth, maturity, decline |
+| `differentiation` | enum | 차별화 전략 | product | cost_leadership, differentiation, niche |
+| `delivery_model` | enum | 제품/서비스 전달 방식 | product | direct, platform, franchise, partnership, self_service |
+| `segment_type` | enum | 세그먼트 유형 | segment | b2b, b2c, b2b2c, b2g |
+| `segment_size_tier` | enum | 세그먼트 규모 단계 | segment | micro, small, medium, large, massive |
+| `growth_potential` | enum | 성장 잠재력 | segment | declining, stable, moderate, high, explosive |
+| `price_sensitivity` | enum | 가격 민감도 | segment | low, medium, high |
+| `geographic_scope` | enum | 지리적 범위 | segment | local, regional, national, international, global |
 

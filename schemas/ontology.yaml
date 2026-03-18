@@ -42,6 +42,27 @@ ontology:
         - observation_date
         - confidence_level
 
+    product:
+      description: "시장에서 거래되는 제품 또는 서비스"
+      required_traits: []
+      optional_traits:
+        - category
+        - lifecycle_stage
+        - differentiation
+        - delivery_model
+        - switching_cost
+        - pricing_model
+
+    segment:
+      description: "시장 세그먼트 (고객군, 지역, 산업 등)"
+      required_traits: []
+      optional_traits:
+        - segment_type
+        - segment_size_tier
+        - growth_potential
+        - price_sensitivity
+        - geographic_scope
+
   # ---------------------------------------------------------------------------
   # Edge Types
   # ---------------------------------------------------------------------------
@@ -76,6 +97,26 @@ ontology:
       description: "금전 흐름이 연결하는 참여자 쌍"
       source: money_flow
       target: actor
+
+    actor_offers_product:
+      description: "참여자가 제공하는 제품/서비스"
+      source: actor
+      target: product
+
+    product_targets_segment:
+      description: "제품/서비스가 타겟하는 시장 세그먼트"
+      source: product
+      target: segment
+
+    actor_belongs_to_segment:
+      description: "참여자가 속한 시장 세그먼트"
+      source: actor
+      target: segment
+
+    product_competes_with:
+      description: "제품/서비스 간 경쟁 관계"
+      source: product
+      target: product
 
   # ---------------------------------------------------------------------------
   # Trait Definitions
@@ -149,6 +190,7 @@ ontology:
         - high
       used_by:
         - actor
+        - product
 
     inventory_risk:
       type: enum
@@ -235,6 +277,7 @@ ontology:
         - auction
       used_by:
         - money_flow
+        - product
 
     payment_recurs:
       type: boolean
@@ -266,6 +309,109 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+
+    category:
+      type: enum
+      description: "제품/서비스 카테고리"
+      values:
+        - physical_good
+        - digital_service
+        - saas
+        - marketplace
+        - content
+        - infrastructure
+      used_by:
+        - product
+
+    lifecycle_stage:
+      type: enum
+      description: "제품 수명 주기 단계"
+      values:
+        - introduction
+        - growth
+        - maturity
+        - decline
+      used_by:
+        - product
+
+    differentiation:
+      type: enum
+      description: "차별화 전략"
+      values:
+        - cost_leadership
+        - differentiation
+        - niche
+      used_by:
+        - product
+
+    delivery_model:
+      type: enum
+      description: "제품/서비스 전달 방식"
+      values:
+        - direct
+        - platform
+        - franchise
+        - partnership
+        - self_service
+      used_by:
+        - product
+
+    segment_type:
+      type: enum
+      description: "세그먼트 유형"
+      values:
+        - b2b
+        - b2c
+        - b2b2c
+        - b2g
+      used_by:
+        - segment
+
+    segment_size_tier:
+      type: enum
+      description: "세그먼트 규모 단계"
+      values:
+        - micro
+        - small
+        - medium
+        - large
+        - massive
+      used_by:
+        - segment
+
+    growth_potential:
+      type: enum
+      description: "성장 잠재력"
+      values:
+        - declining
+        - stable
+        - moderate
+        - high
+        - explosive
+      used_by:
+        - segment
+
+    price_sensitivity:
+      type: enum
+      description: "가격 민감도"
+      values:
+        - low
+        - medium
+        - high
+      used_by:
+        - segment
+
+    geographic_scope:
+      type: enum
+      description: "지리적 범위"
+      values:
+        - local
+        - regional
+        - national
+        - international
+        - global
+      used_by:
+        - segment
 
   # ---------------------------------------------------------------------------
   # Metrics
