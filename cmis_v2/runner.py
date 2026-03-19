@@ -781,7 +781,7 @@ def build_rlm(
     tools: CMISTools,
     execution_mode: str = "autopilot",
     backend: str = "openai",
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-5",
 ) -> Any:
     """Create an RLM instance with CMIS tools registered.
 
@@ -789,7 +789,7 @@ def build_rlm(
         tools: CMISTools instance with project_id set.
         execution_mode: One of "autopilot", "review", "manual".
         backend: LLM backend - "openai" or "anthropic".
-        model_name: Model name e.g. "gpt-4o".
+        model_name: Model name e.g. "gpt-5".
 
     Returns:
         Configured RLM instance.
@@ -810,6 +810,40 @@ def build_rlm(
     )
 
 
+def _run_rlm_with_retry(
+    rlm: Any,
+    task_prompt: str,
+    system_prompt: str,
+    max_retries: int = 3,
+) -> Any:
+    """Run rlm.completion() with retry on transient API errors.
+
+    OpenAI API occasionally returns 400 (JSON parse) or 500 errors
+    that succeed on retry with the same payload.
+    """
+    import time
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            return rlm.completion(task_prompt, root_prompt=system_prompt)
+        except Exception as e:
+            error_str = str(e)
+            is_transient = any(keyword in error_str for keyword in [
+                "could not parse the JSON body",
+                "500",
+                "502",
+                "503",
+                "overloaded",
+                "rate_limit",
+            ])
+            if is_transient and attempt < max_retries:
+                wait = 2 ** attempt
+                print(f"[CMIS] API error (attempt {attempt}/{max_retries}), retrying in {wait}s: {error_str[:120]}")
+                time.sleep(wait)
+                continue
+            raise
+
+
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
@@ -820,7 +854,7 @@ def run_new(
     policy_mode: str = "decision_balanced",
     execution_mode: str = "autopilot",
     backend: str = "openai",
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-5",
 ) -> dict[str, Any]:
     """Start a new analysis project.
 
@@ -846,15 +880,28 @@ def run_new(
     # 2b. Auto-advance through any auto-trigger states
     _auto_advance(project_id)
 
-    # 3. Build prompt
-    prompt = build_prompt(target, execution_mode=execution_mode, policy_mode=policy_mode)
+    # 3. Build prompt — separate system prompt (root_prompt) from task (prompt)
+    system_prompt = build_system_prompt()
+    task_prompt = (
+        f"## Current Session\n\n"
+        f"- **Project ID**: {project_id}\n"
+        f"- **Current state**: discovery\n"
+        f"- **Policy mode**: {policy_mode}\n"
+        f"- **Execution mode**: {execution_mode}\n\n"
+        f"## Task\n\n"
+        f"Analyze: {target}\n\n"
+        f"Start by collecting evidence with collect_evidence(), then propose a scope "
+        f"with lock_scope(). After scope is ready, call transition() with "
+        f"'discovery_completed' to move to scope_review.\n"
+        f"At scope_review, produce a scope summary as FINAL_VAR() and stop.\n"
+    )
 
     # 4. Build RLM
     tools = CMISTools(project_id=project_id)
     rlm = build_rlm(tools, execution_mode=execution_mode, backend=backend, model_name=model_name)
 
-    # 5. Run completion
-    result = rlm.completion(prompt)
+    # 5. Run completion — system prompt as root_prompt, task as prompt
+    result = _run_rlm_with_retry(rlm, task_prompt, system_prompt)
 
     final_state = get_current_state(project_id)
     output: dict[str, Any] = {
@@ -878,7 +925,7 @@ def resume(
     policy_mode: str = "decision_balanced",
     execution_mode: str = "autopilot",
     backend: str = "openai",
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-5",
 ) -> dict[str, Any]:
     """Resume a project from a user gate.
 
@@ -942,14 +989,50 @@ def resume(
             + ("Project complete." if is_terminal(new_state) else "Awaiting user action."),  # type: ignore[arg-type]
         }
 
-    # 4. Build prompt for next automatic segment
+    # 4. Build prompt for next automatic segment — separate system from task
     manifest = load_project(project_id)
-    prompt = _build_state_prompt(project_id, manifest, policy_mode, execution_mode)
+    system_prompt = build_system_prompt()
+    state = manifest.get("current_state", "requested")
+    context = _extract_context(project_id, manifest)
+    context["state"] = state
+    template = _STATE_PROMPTS.get(state, "Continue the analysis from state: {state}.")
+    state_instruction = template.format(**context)
 
-    # 5. Run RLM
+    gate_context = _extract_last_gate_context(project_id)
+    gate_section = ""
+    if gate_context:
+        gate_section = "\n## Previous User Decision\n\n"
+        gate_section += f"- **Gate**: {gate_context.get('gate', '(unknown)')}\n"
+        gate_section += f"- **Action**: {gate_context.get('action', '(unknown)')}\n"
+        revision_note = gate_context.get("revision_note")
+        if revision_note:
+            gate_section += f"- **Revision Note**: \"{revision_note}\"\n"
+        selected = gate_context.get("selected")
+        if selected:
+            gate_section += f"- **Selected**: {selected}\n"
+        action_data = gate_context.get("action_data")
+        if action_data and action_data != revision_note and action_data != selected:
+            gate_section += f"- **Additional Data**: {action_data}\n"
+        gate_section += (
+            "\nYou MUST incorporate the above user instructions into your analysis.\n"
+        )
+
+    task_prompt = (
+        f"## Current Session\n\n"
+        f"- **Project ID**: {project_id}\n"
+        f"- **Current state**: {state}\n"
+        f"- **Policy mode**: {policy_mode}\n"
+        f"- **Execution mode**: {execution_mode}\n\n"
+        f"{gate_section}"
+        f"## Task\n\n"
+        f"{state_instruction}\n\n"
+        f"When you reach a user gate or terminal state, produce the result as FINAL_VAR().\n"
+    )
+
+    # 5. Run RLM — system prompt as root_prompt, task as prompt
     tools = CMISTools(project_id=project_id)
     rlm = build_rlm(tools, execution_mode=execution_mode, backend=backend, model_name=model_name)
-    result = rlm.completion(prompt)
+    result = _run_rlm_with_retry(rlm, task_prompt, system_prompt)
 
     final_state = get_current_state(project_id)
     output: dict[str, Any] = {
@@ -1077,8 +1160,8 @@ Examples:
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o",
-        help="Model name (default: gpt-4o)",
+        default="gpt-5",
+        help="Model name (default: gpt-5)",
     )
 
     args = parser.parse_args()
