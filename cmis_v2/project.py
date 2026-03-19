@@ -104,7 +104,7 @@ _TRIGGER_EVENT_MAP: dict[str, ev.EventType] = {
     "opportunity_completed": "opportunity.completed",
     "opportunity_selected": "opportunity.selected",
     "opportunity_deepened": "opportunity.deepened",
-    "opportunity_not_included": "opportunity.completed_early",
+    "opportunity_not_included": "opportunity.skipped",
     "opportunity_completed_early": "opportunity.completed_early",
     "strategy_completed": "strategy.completed",
     "decision_approved": "decision.approved",

@@ -42,6 +42,7 @@ EventType = Literal[
     "opportunity.selected",
     "opportunity.deepened",
     "opportunity.completed_early",
+    "opportunity.skipped",
     "strategy.started",
     "strategy.completed",
     "decision.approved",

@@ -353,6 +353,95 @@ def check_all_gates(
                             "Increase literal ratio by using more evidence-backed estimates."
                         )
 
+    # Prior ratio gate
+    mode_gates = mode.get("gates", [])
+    prior_gate_result: dict[str, Any] | None = None
+    if "prior_ratio_limit" in mode_gates:
+        total_gate_groups += 1
+        prior_profile_name = mode.get("profiles", {}).get("prior", "")
+        prior_profile = _get_profile("prior", prior_profile_name)
+        max_prior_ratio = prior_profile.get("max_prior_ratio", 1.0)
+        allow_prior = prior_profile.get("allow_prior", True)
+
+        if not allow_prior:
+            # prior_none: no prior allowed at all — gate passes if no prior-based values exist
+            # We check value_records for prior-sourced values
+            prior_count = 0
+            total_count = 0
+            if value_records:
+                for r in value_records:
+                    total_count += 1
+                    method = r.get("method", "")
+                    if method in ("prior", "expert_guess"):
+                        prior_count += 1
+            passed = prior_count == 0
+            actual_ratio = prior_count / total_count if total_count > 0 else 0.0
+        else:
+            # Check ratio of prior-based values
+            prior_count = 0
+            total_count = 0
+            if value_records:
+                for r in value_records:
+                    total_count += 1
+                    method = r.get("method", "")
+                    if method in ("prior", "expert_guess"):
+                        prior_count += 1
+            actual_ratio = prior_count / total_count if total_count > 0 else 0.0
+            passed = actual_ratio <= max_prior_ratio
+
+        if passed:
+            passed_gate_groups += 1
+
+        prior_gate_result = {
+            "gate": "prior_ratio_limit",
+            "required_max": max_prior_ratio,
+            "allow_prior": allow_prior,
+            "actual_ratio": round(actual_ratio, 3),
+            "passed": passed,
+        }
+
+        if not passed:
+            suggested_actions.append(
+                f"Reduce prior-based estimates (current ratio: {actual_ratio:.1%}, max: {max_prior_ratio:.1%}). "
+                "Use more evidence-backed estimation methods."
+            )
+
+    # Convergence gate
+    convergence_gate_result: dict[str, Any] | None = None
+    if "convergence_methods_required" in mode_gates:
+        total_gate_groups += 1
+        conv_profile_name = mode.get("profiles", {}).get("convergence", "")
+        conv_profile = _get_profile("convergence", conv_profile_name)
+        default_methods_required = conv_profile.get("default_methods_required", 1)
+
+        if value_records:
+            methods_used: set[str] = set()
+            for r in value_records:
+                method = r.get("method", "unknown")
+                if method != "unknown":
+                    methods_used.add(method)
+            actual_methods = len(methods_used)
+            passed = actual_methods >= default_methods_required
+        else:
+            actual_methods = 0
+            passed = default_methods_required <= 1
+
+        if passed:
+            passed_gate_groups += 1
+
+        convergence_gate_result = {
+            "gate": "convergence_methods_required",
+            "required": default_methods_required,
+            "actual_methods": actual_methods,
+            "passed": passed,
+        }
+
+        if not passed:
+            suggested_actions.append(
+                f"Use more estimation methods (need {default_methods_required}, have {actual_methods}). "
+                "Try top_down, bottom_up, fermi, or proxy methods."
+            )
+
     overall_passed = total_gate_groups > 0 and total_gate_groups == passed_gate_groups
     summary = f"{passed_gate_groups}/{total_gate_groups} gates passed"
 
@@ -364,6 +453,8 @@ def check_all_gates(
         "overall_passed": overall_passed,
         "evidence_gate": evidence_gate_result,
         "value_gate": value_gate_result,
+        "prior_gate": prior_gate_result,
+        "convergence_gate": convergence_gate_result,
         "summary": summary,
         "suggested_actions": suggested_actions,
     }

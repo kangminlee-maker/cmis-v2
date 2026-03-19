@@ -169,6 +169,7 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 
 - **scope_review**: User reviews the proposed scope. Triggers: scope_approved, scope_revised, scope_rejected.
 - **finding_review**: User reviews findings. Triggers: finding_approved, finding_deepened, finding_completed_early.
+- **finding_locked**: User decides whether to explore opportunities. Triggers: opportunity_included, opportunity_not_included.
 - **opportunity_review**: User reviews opportunities. Triggers: opportunity_selected, opportunity_deepened, opportunity_completed_early.
 - **decision_review**: User reviews strategy decision. Triggers: decision_approved, decision_revised.
 

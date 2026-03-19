@@ -73,7 +73,7 @@ def _search_via_openai(query: str, max_results: int = 5) -> list[dict[str, Any]]
 
                         records.append({
                             "record_id": f"REC-{uuid4().hex[:6]}",
-                            "source_tier": "commercial",
+                            "source_tier": "web",
                             "source_name": "openai_web_search",
                             "title": query,
                             "content": content.text[:2000],
@@ -261,7 +261,7 @@ def collect_evidence(
             # Graceful degradation: continue with other sources
 
     # Compute sufficiency
-    by_tier: dict[str, int] = {"official": 0, "curated": 0, "commercial": 0}
+    by_tier: dict[str, int] = {"official": 0, "curated": 0, "commercial": 0, "web": 0}
     for rec in all_records:
         tier = rec.get("source_tier", "")
         if tier in by_tier:
@@ -327,8 +327,8 @@ def add_record(
         if evidence_id not in _EVIDENCE_STORE:
             return {"error": f"Evidence collection not found: {evidence_id}"}
 
-    if source_tier not in ("official", "curated", "commercial"):
-        return {"error": f"Invalid source_tier: {source_tier!r}. Must be one of: official, curated, commercial"}
+    if source_tier not in ("official", "curated", "commercial", "web"):
+        return {"error": f"Invalid source_tier: {source_tier!r}. Must be one of: official, curated, commercial, web"}
 
     confidence = max(0.0, min(1.0, confidence))
 
