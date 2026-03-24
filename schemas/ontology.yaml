@@ -124,12 +124,14 @@ ontology:
   trait_definitions:
     kind:
       type: enum
-      description: "참여자/자원의 유형 분류"
+      description: "시장 참여 주체 또는 주요 자원 유형. 주체(company~ngo)와 산출물 유형(digital_service, physical_product) 구분. 산출물 유형 상세는 product 노드의 category trait 참조"
       values:
+        # 주체 유형 (entity)
         - company
         - individual
         - government
         - ngo
+        # 산출물/서비스 유형 (offering) — actor의 주요 제공 형태
         - digital_service
         - physical_product
       used_by:

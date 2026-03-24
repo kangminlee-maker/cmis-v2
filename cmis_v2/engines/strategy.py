@@ -14,6 +14,8 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+from cmis_v2.generated.types import PolicyMode
+
 # ---------------------------------------------------------------------------
 # Module-level store
 # ---------------------------------------------------------------------------
@@ -264,7 +266,7 @@ def set_strategy_impact(
 def evaluate_portfolio(
     strategy_ids: list[str],
     value_records: list[dict[str, Any]] | None = None,
-    policy_ref: str = "decision_balanced",
+    policy_ref: PolicyMode = "decision_balanced",
     pending_policy: str = "exclude",
     project_id: str = "",
 ) -> dict[str, Any]:

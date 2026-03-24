@@ -224,9 +224,8 @@ def migrate_project(
     manifest["ontology_version"] = current_version
     changes_applied.append(f"Updated ontology_version from {project_version} to {current_version}")
 
-    from cmis_v2.config import PROJECTS_DIR
-    manifest_path = PROJECTS_DIR / project_id / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
+    from cmis_v2.project import _write_manifest
+    _write_manifest(project_id, manifest)
 
     # 2. Migrate engine_store data (rename/remove metric/trait IDs)
     from cmis_v2.engine_store import list_engine_keys, load_engine_data, save_engine_data

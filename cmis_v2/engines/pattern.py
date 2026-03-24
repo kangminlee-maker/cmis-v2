@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from cmis_v2.generated.types import _ALL_TRAITS as _ONTOLOGY_TRAITS
+
 # ---------------------------------------------------------------------------
 # Pattern loading and cache
 # ---------------------------------------------------------------------------
@@ -77,10 +79,19 @@ def _evaluate_trait_match(
     matched_trait_names: list[str] = []
     missing_trait_names: list[str] = []
 
+    unrecognized_traits: list[str] = []
+
     for node_type, constraint in constraints.items():
         required_traits = constraint.get("required_traits", {})
         if not required_traits:
             continue
+
+        # Validate trait names against ontology
+        valid_traits = _ONTOLOGY_TRAITS.get(node_type, frozenset())
+        if valid_traits:
+            for t in required_traits:
+                if t not in valid_traits:
+                    unrecognized_traits.append(f"{node_type}.{t}")
 
         # Find nodes of this type in the snapshot
         type_nodes = [n for n in nodes if n.get("type") == node_type]
@@ -104,11 +115,14 @@ def _evaluate_trait_match(
 
     fit_score = matched_required / total_required if total_required > 0 else 0.0
 
-    return {
+    result: dict[str, Any] = {
         "fit_score": round(fit_score, 3),
         "matched_traits": matched_trait_names,
         "missing_traits": missing_trait_names,
     }
+    if unrecognized_traits:
+        result["unrecognized_traits"] = unrecognized_traits
+    return result
 
 
 # ---------------------------------------------------------------------------

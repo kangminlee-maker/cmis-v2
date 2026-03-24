@@ -24,16 +24,36 @@ from cmis_v2.generated.validators import validate_node_traits
 _SNAPSHOTS: dict[str, dict[str, Any]] = {}
 
 # ---------------------------------------------------------------------------
-# ID prefix helpers
+# ID prefix helpers — derived from generated NodeType
 # ---------------------------------------------------------------------------
 
-_NODE_PREFIX: dict[str, str] = {
-    "actor": "ACT",
+def _derive_node_prefix(node_type: str) -> str:
+    """Derive a 3-letter ID prefix from a node_type string.
+
+    Rules: split by '_', take first letter of each part, uppercase.
+    Single-word types use first 3 letters. Pad to 3 chars if needed.
+    """
+    parts = node_type.split("_")
+    if len(parts) >= 2:
+        prefix = "".join(p[0] for p in parts[:3]).upper()
+    else:
+        prefix = node_type[:3].upper()
+    return prefix.ljust(3, "X")
+
+
+# Build prefix map from generated NodeType at import time
+from cmis_v2.generated.types import NodeType as _NodeType
+import typing as _typing
+
+# Legacy overrides for backward compatibility with existing node IDs
+_PREFIX_OVERRIDES: dict[str, str] = {
     "money_flow": "MFL",
     "state": "STT",
-    "product": "PRD",
-    "segment": "SEG",
 }
+
+_NODE_PREFIX: dict[str, str] = {}
+for _nt in _typing.get_args(_NodeType):
+    _NODE_PREFIX[_nt] = _PREFIX_OVERRIDES.get(_nt, _derive_node_prefix(_nt))
 
 # ---------------------------------------------------------------------------
 # Public API

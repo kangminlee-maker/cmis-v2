@@ -225,8 +225,22 @@ def set_metric_value(
             "evidence_id is missing: quality.status forced to 'unverified' "
             "even though evidence_summary is present."
         )
-    elif evidence_summary and evidence_id and confidence >= 0.3:
-        record["quality"]["status"] = "ok"
+    elif evidence_summary and evidence_id:
+        # Derive min_confidence threshold from policy (default 0.3)
+        min_conf = 0.3
+        try:
+            from cmis_v2.engines.policy import _resolve_mode, _get_profile
+            mode = _resolve_mode("decision_balanced")
+            if mode:
+                vp_name = mode.get("profiles", {}).get("value", "")
+                vp = _get_profile("value", vp_name)
+                min_conf = vp.get("min_confidence", 0.3)
+        except Exception:
+            pass
+        if confidence >= min_conf:
+            record["quality"]["status"] = "ok"
+        else:
+            record["quality"]["status"] = "low_confidence"
     else:
         record["quality"]["status"] = "unverified"
 

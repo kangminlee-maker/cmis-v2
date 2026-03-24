@@ -14,25 +14,24 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
+from uuid import uuid4
 
 # ---------------------------------------------------------------------------
 # Event types (exhaustive)
 # ---------------------------------------------------------------------------
 
 EventType = Literal[
+    # --- Active: emitted by project.py / tools.py ---
     "project.created",
     "project.completed",
     "project.rejected",
     "state.transitioned",
-    "discovery.started",
     "discovery.completed",
     "scope.approved",
     "scope.revised",
     "scope.rejected",
     "data.collection_started",
     "data.quality_passed",
-    "data.quality_failed",
-    "analysis.started",
     "analysis.completed",
     "finding.approved",
     "finding.deepened",
@@ -43,15 +42,19 @@ EventType = Literal[
     "opportunity.deepened",
     "opportunity.completed_early",
     "opportunity.skipped",
-    "strategy.started",
     "strategy.completed",
     "decision.approved",
     "decision.revised",
-    "synthesis.started",
-    "synthesis.completed",
     "deliverable.saved",
     "engine.called",
     "error.occurred",
+    # --- Reserved: declared for future use, not yet emitted ---
+    "discovery.started",      # reserved: auto-emit when entering discovery
+    "data.quality_failed",    # reserved: emit on evidence gate failure
+    "analysis.started",       # reserved: auto-emit when entering structure_analysis
+    "strategy.started",       # reserved: auto-emit when entering strategy_design
+    "synthesis.started",      # reserved: auto-emit when entering synthesis
+    "synthesis.completed",    # reserved: emit before deliverable.saved
 ]
 
 # ---------------------------------------------------------------------------
@@ -101,10 +104,8 @@ def _connect(project_id: str) -> sqlite3.Connection:
 
 
 def _next_event_id(conn: sqlite3.Connection) -> str:
-    """Generate the next ``evt_NNNN`` id based on current row count."""
-    cur = conn.execute("SELECT COUNT(*) FROM events")
-    count: int = cur.fetchone()[0]
-    return f"evt_{count + 1:04d}"
+    """Generate a unique event ID using uuid4."""
+    return f"evt_{uuid4().hex[:12]}"
 
 
 def _row_to_dict(row: tuple[Any, ...]) -> dict[str, Any]:
@@ -212,26 +213,3 @@ def list_events(
         conn.close()
 
 
-def get_latest_state_event(project_id: str) -> dict[str, Any] | None:
-    """Return the most recent event that carries a ``state_after`` value."""
-    db = _db_path(project_id)
-    if not db.exists():
-        return None
-
-    conn = _connect(project_id)
-    try:
-        cur = conn.execute(
-            """\
-            SELECT * FROM events
-            WHERE project_id = ? AND state_after IS NOT NULL
-            ORDER BY event_id DESC
-            LIMIT 1
-            """,
-            (project_id,),
-        )
-        row = cur.fetchone()
-        if row is None:
-            return None
-        return _row_to_dict(row)
-    finally:
-        conn.close()
