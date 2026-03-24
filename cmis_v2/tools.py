@@ -65,6 +65,10 @@ _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
     "completed": frozenset({
         "record_outcome", "get_learning_summary", "apply_learnings",
     }),
+    "rejected": frozenset({
+        "get_evidence", "get_snapshot", "get_metric_value",
+        "get_learning_summary",
+    }),
     # User gates — read-only
     "scope_review": frozenset({
         "get_evidence", "get_snapshot", "get_metric_value",
@@ -795,7 +799,8 @@ class CMISTools:
                     "source_tier (str, required) - one of 'official', 'curated', 'commercial'; "
                     "source_name (str, required) - human-readable source name e.g. 'KOSIS 통계'; "
                     "content (str, required) - the evidence content/summary; "
-                    "confidence (float, default 0.5) - 0.0 to 1.0; "
+                    "confidence (float, default 0.5) - evidence_confidence: 0.0 to 1.0, "
+                    "how reliable this source is (1.0 = official verified data); "
                     "metric_ids_covered (list[str] | None) - which metrics this record covers. "
                     "Returns: the new record dict with record_id. "
                     "Use after collect_evidence to populate evidence."
@@ -888,7 +893,7 @@ class CMISTools:
                     "snapshot_id (str) - for graph-based evaluation; "
                     "evidence_id (str) - for evidence-based evaluation; "
                     "policy_ref (str, default 'decision_balanced'). "
-                    "Returns: dict with value_records (metric_id, point_estimate=None, confidence, method). "
+                    "Returns: dict with value_records (metric_id, point_estimate=None, value_confidence, method). "
                     "Use to initialise metrics, then fill values with set_metric_value."
                 ),
             },
@@ -898,7 +903,8 @@ class CMISTools:
                     "Set a metric's estimated value after analysis. "
                     "Args: metric_id (str, required) - e.g. 'MET-TAM'; "
                     "point_estimate (float, required) - the estimated value; "
-                    "confidence (float, default 0.5) - 0.0 to 1.0; "
+                    "confidence (float, default 0.5) - value_confidence: 0.0 to 1.0, "
+                    "how confident you are in this metric estimate (1.0 = highly certain); "
                     "method (str, default 'unknown') - one of 'top_down', 'bottom_up', 'fermi', 'proxy', 'unknown'; "
                     "evidence_summary (str) - summary of supporting evidence; "
                     "evidence_id (str, required) - ID of evidence record supporting this estimate; "
@@ -913,7 +919,7 @@ class CMISTools:
                 "description": (
                     "Retrieve a metric value record by metric ID. "
                     "Args: metric_id (str, required) - e.g. 'MET-TAM'. "
-                    "Returns: the value record with point_estimate, confidence, method, quality. "
+                    "Returns: the value record with point_estimate, value_confidence, method, quality. "
                     "Use to check current metric values."
                 ),
             },
@@ -1007,10 +1013,11 @@ class CMISTools:
                     "Set a prior belief for a metric. "
                     "Args: metric_id (str, required) - e.g. 'MET-TAM'; "
                     "point_estimate (float, required) - initial estimate; "
-                    "confidence (float, default 0.3) - 0.0 to 1.0; "
+                    "confidence (float, default 0.3) - belief_confidence: 0.0 to 1.0, "
+                    "how confident you are in this prior estimate (0.3 = low/speculative); "
                     "source (str, default 'expert_guess') - one of 'expert_guess', 'historical', 'benchmark'; "
                     "distribution (dict | None) - optional {'min': ..., 'max': ...} range. "
-                    "Returns: belief dict with belief_id, metric_id, point_estimate, confidence, version. "
+                    "Returns: belief dict with belief_id, metric_id, point_estimate, belief_confidence, version. "
                     "Use to establish initial estimates before evidence collection."
                 ),
             },
@@ -1028,7 +1035,8 @@ class CMISTools:
                     "Update belief using new evidence (pseudo-Bayesian weighted average). "
                     "Args: metric_id (str, required); "
                     "new_evidence_value (float, required) - observed/estimated value; "
-                    "evidence_confidence (float, default 0.5) - 0.0 to 1.0. "
+                    "evidence_confidence (float, default 0.5) - evidence_confidence: 0.0 to 1.0, "
+                    "reliability of the new evidence being incorporated. "
                     "Returns: updated belief dict with incremented version. "
                     "Use after collecting evidence to refine estimates."
                 ),

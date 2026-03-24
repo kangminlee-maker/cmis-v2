@@ -76,9 +76,23 @@ def _check_policy_gate_passed(project_id: str, manifest: dict[str, Any]) -> str 
     return None
 
 
+def _check_snapshot_exists(project_id: str, manifest: dict[str, Any]) -> str | None:
+    """Verify that a world snapshot exists before leaving structure_analysis."""
+    from cmis_v2.engine_store import list_engine_keys
+    keys = list_engine_keys(project_id, "world")
+    if not keys:
+        return (
+            "Precondition failed for analysis_completed: "
+            "no world snapshot found in engine_store. "
+            "Build a snapshot with build_snapshot() before transitioning."
+        )
+    return None
+
+
 _PRECONDITIONS: dict[tuple[str, str], Any] = {
     ("data_collection", "data_quality_passed"): _check_evidence_exists,
     ("scope_locked", "auto"): _check_scope_locked,
+    ("structure_analysis", "analysis_completed"): _check_snapshot_exists,
     ("finding_review", "finding_approved"): _check_policy_gate_passed,
     ("opportunity_review", "opportunity_selected"): _check_policy_gate_passed,
     ("decision_review", "decision_approved"): _check_policy_gate_passed,

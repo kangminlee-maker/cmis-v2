@@ -162,16 +162,39 @@ def check_evidence_gate(
             "passed": passed,
         })
 
-    # Gate: evidence_max_age_days (placeholder — records don't carry age yet)
+    # Gate: evidence_max_age_days
     if "evidence_max_age_days" in mode_gates:
         gates_checked += 1
-        # In MVP, we pass this gate automatically
-        gates_passed += 1
+        max_age_days = ev_profile.get("max_age_days", 730)
+        stale_records: list[str] = []
+
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        for r in records:
+            collected_at = r.get("collected_at") or r.get("timestamp") or r.get("date")
+            if not collected_at:
+                continue
+            try:
+                if isinstance(collected_at, str):
+                    # Support ISO format and date-only
+                    dt = datetime.fromisoformat(collected_at.replace("Z", "+00:00"))
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    age_days = (now - dt).days
+                    if age_days > max_age_days:
+                        source_name = r.get("source_name", r.get("source", "unknown"))
+                        stale_records.append(f"{source_name} ({age_days}d)")
+            except (ValueError, TypeError):
+                continue
+
+        passed = len(stale_records) == 0
+        if passed:
+            gates_passed += 1
         violations.append({
             "gate": "evidence_max_age_days",
-            "required": ev_profile.get("max_age_days", 730),
-            "actual": "not_checked_in_mvp",
-            "passed": True,
+            "required_max_days": max_age_days,
+            "stale_records": stale_records,
+            "passed": passed,
         })
 
     overall_passed = gates_checked == gates_passed
@@ -243,13 +266,33 @@ def check_value_gate(
     if "value_spread_ratio" in mode_gates:
         gates_checked += 1
         max_spread = val_profile.get("max_spread_ratio", 1.0)
-        # In MVP, spread is not computed on records; pass automatically
-        gates_passed += 1
+        exceeded: list[dict[str, Any]] = []
+
+        for r in value_records:
+            value = r.get("value")
+            low = r.get("range_low") or r.get("low")
+            high = r.get("range_high") or r.get("high")
+            if value and low is not None and high is not None:
+                try:
+                    v, lo, hi = float(value), float(low), float(high)
+                    if v != 0:
+                        spread = (hi - lo) / abs(v)
+                        if spread > max_spread:
+                            exceeded.append({
+                                "metric_id": r.get("metric_id", "?"),
+                                "spread_ratio": round(spread, 3),
+                            })
+                except (ValueError, TypeError, ZeroDivisionError):
+                    continue
+
+        passed = len(exceeded) == 0
+        if passed:
+            gates_passed += 1
         violations.append({
             "gate": "value_spread_ratio",
             "required_max": max_spread,
-            "actual": "not_checked_in_mvp",
-            "passed": True,
+            "exceeded_metrics": exceeded,
+            "passed": passed,
         })
 
     # Gate: value_literal_ratio
@@ -307,54 +350,97 @@ def check_all_gates(
     if mode is None:
         return {"error": f"Policy not found: {policy_id}"}
 
+    mode_gates = mode.get("gates", [])
     total_gate_groups = 0
     passed_gate_groups = 0
     suggested_actions: list[str] = []
+    skipped_gates: list[dict[str, Any]] = []
 
     evidence_gate_result: dict[str, Any] | None = None
     value_gate_result: dict[str, Any] | None = None
 
+    # Determine which input groups are required by declared gates
+    _EVIDENCE_GATES = {"evidence_min_sources", "evidence_require_official_if_configured", "evidence_max_age_days"}
+    _VALUE_GATES = {"value_min_confidence", "value_spread_ratio", "value_literal_ratio"}
+
+    declared_evidence_gates = [g for g in mode_gates if g in _EVIDENCE_GATES]
+    declared_value_gates = [g for g in mode_gates if g in _VALUE_GATES]
+
     # Evidence gate
-    if evidence_result is not None:
+    if declared_evidence_gates:
+        if evidence_result is not None:
+            total_gate_groups += 1
+            evidence_gate_result = check_evidence_gate(evidence_result, policy_id)
+            if evidence_gate_result.get("passed", False):
+                passed_gate_groups += 1
+            else:
+                for v in evidence_gate_result.get("violations", []):
+                    if not v.get("passed", True):
+                        gate_name = v.get("gate", "")
+                        if gate_name == "evidence_min_sources":
+                            suggested_actions.append(
+                                f"Collect more evidence sources (need {v['required']}, have {v['actual']})."
+                            )
+                        elif gate_name == "evidence_require_official":
+                            suggested_actions.append(
+                                "Collect at least one official source (e.g., KOSIS, DART)."
+                            )
+        else:
+            total_gate_groups += 1
+            skipped_gates.append({
+                "group": "evidence",
+                "declared_gates": declared_evidence_gates,
+                "reason": "evidence_result not provided",
+            })
+            suggested_actions.append(
+                f"Evidence gates declared ({', '.join(declared_evidence_gates)}) but evidence_result not provided. "
+                "Pass evidence_result to check_all_gates()."
+            )
+    elif evidence_result is not None:
+        # No evidence gates declared but data provided — run anyway as informational
         total_gate_groups += 1
         evidence_gate_result = check_evidence_gate(evidence_result, policy_id)
         if evidence_gate_result.get("passed", False):
             passed_gate_groups += 1
-        else:
-            # Build suggested actions from violations
-            for v in evidence_gate_result.get("violations", []):
-                if not v.get("passed", True):
-                    gate_name = v.get("gate", "")
-                    if gate_name == "evidence_min_sources":
-                        suggested_actions.append(
-                            f"Collect more evidence sources (need {v['required']}, have {v['actual']})."
-                        )
-                    elif gate_name == "evidence_require_official":
-                        suggested_actions.append(
-                            "Collect at least one official source (e.g., KOSIS, DART)."
-                        )
 
     # Value gate
-    if value_records is not None:
+    if declared_value_gates:
+        if value_records is not None:
+            total_gate_groups += 1
+            value_gate_result = check_value_gate(value_records, policy_id)
+            if value_gate_result.get("passed", False):
+                passed_gate_groups += 1
+            else:
+                for v in value_gate_result.get("violations", []):
+                    if not v.get("passed", True):
+                        gate_name = v.get("gate", "")
+                        if gate_name == "value_min_confidence":
+                            suggested_actions.append(
+                                "Increase metric confidence by collecting more evidence or using additional estimation methods."
+                            )
+                        elif gate_name == "value_literal_ratio":
+                            suggested_actions.append(
+                                "Increase literal ratio by using more evidence-backed estimates."
+                            )
+        else:
+            total_gate_groups += 1
+            skipped_gates.append({
+                "group": "value",
+                "declared_gates": declared_value_gates,
+                "reason": "value_records not provided",
+            })
+            suggested_actions.append(
+                f"Value gates declared ({', '.join(declared_value_gates)}) but value_records not provided. "
+                "Pass value_records to check_all_gates()."
+            )
+    elif value_records is not None:
+        # No value gates declared but data provided — run anyway as informational
         total_gate_groups += 1
         value_gate_result = check_value_gate(value_records, policy_id)
         if value_gate_result.get("passed", False):
             passed_gate_groups += 1
-        else:
-            for v in value_gate_result.get("violations", []):
-                if not v.get("passed", True):
-                    gate_name = v.get("gate", "")
-                    if gate_name == "value_min_confidence":
-                        suggested_actions.append(
-                            "Increase metric confidence by collecting more evidence or using additional estimation methods."
-                        )
-                    elif gate_name == "value_literal_ratio":
-                        suggested_actions.append(
-                            "Increase literal ratio by using more evidence-backed estimates."
-                        )
 
     # Prior ratio gate
-    mode_gates = mode.get("gates", [])
     prior_gate_result: dict[str, Any] | None = None
     if "prior_ratio_limit" in mode_gates:
         total_gate_groups += 1
@@ -442,13 +528,20 @@ def check_all_gates(
                 "Try top_down, bottom_up, fermi, or proxy methods."
             )
 
-    overall_passed = total_gate_groups > 0 and total_gate_groups == passed_gate_groups
+    overall_passed = (
+        total_gate_groups > 0
+        and total_gate_groups == passed_gate_groups
+        and len(skipped_gates) == 0
+    )
+    skipped_count = len(skipped_gates)
     summary = f"{passed_gate_groups}/{total_gate_groups} gates passed"
+    if skipped_count:
+        summary += f" ({skipped_count} skipped due to missing input)"
 
     if not suggested_actions:
         suggested_actions.append("All gates passed. Analysis quality meets policy requirements.")
 
-    return {
+    result: dict[str, Any] = {
         "policy_id": policy_id,
         "overall_passed": overall_passed,
         "evidence_gate": evidence_gate_result,
@@ -457,4 +550,52 @@ def check_all_gates(
         "convergence_gate": convergence_gate_result,
         "summary": summary,
         "suggested_actions": suggested_actions,
+    }
+    if skipped_gates:
+        result["skipped_gates"] = skipped_gates
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Declaration–implementation sync validation
+# ---------------------------------------------------------------------------
+
+# All gate identifiers that have actual implementation in this module
+_IMPLEMENTED_GATES: frozenset[str] = frozenset({
+    "evidence_min_sources",
+    "evidence_require_official_if_configured",
+    "evidence_max_age_days",
+    "value_min_confidence",
+    "value_spread_ratio",
+    "value_literal_ratio",
+    "prior_ratio_limit",
+    "convergence_methods_required",
+})
+
+
+def validate_gate_sync() -> dict[str, Any]:
+    """Check that every gate declared in policies.yaml is implemented, and vice versa.
+
+    Returns:
+        dict with 'in_sync' (bool), 'declared_only' (gates declared but not
+        implemented), 'implemented_only' (gates implemented but not declared
+        in any mode).
+    """
+    pack = _load_policy_pack()
+    modes = pack.get("modes", {})
+
+    declared: set[str] = set()
+    for mode_def in modes.values():
+        for gate in mode_def.get("gates", []):
+            declared.add(gate)
+
+    declared_only = sorted(declared - _IMPLEMENTED_GATES)
+    implemented_only = sorted(_IMPLEMENTED_GATES - declared)
+
+    return {
+        "in_sync": len(declared_only) == 0 and len(implemented_only) == 0,
+        "declared_gates": sorted(declared),
+        "implemented_gates": sorted(_IMPLEMENTED_GATES),
+        "declared_only": declared_only,
+        "implemented_only": implemented_only,
     }

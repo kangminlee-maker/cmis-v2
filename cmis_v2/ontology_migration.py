@@ -218,24 +218,44 @@ def migrate_project(
     renames = migration_info.get("renames", {})
     removals = migration_info.get("removals", [])
 
-    # Apply renames and removals (in-memory manifest update)
     changes_applied: list[str] = []
 
-    # Update manifest ontology_version
+    # 1. Update manifest ontology_version
     manifest["ontology_version"] = current_version
     changes_applied.append(f"Updated ontology_version from {project_version} to {current_version}")
 
-    # Persist updated manifest to disk
     from cmis_v2.config import PROJECTS_DIR
     manifest_path = PROJECTS_DIR / project_id / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
 
-    # Note: Full event/data migration would require iterating over project
-    # events and updating metric references. This is a simplified version.
-    if renames:
-        changes_applied.append(f"Renames registered: {renames}")
-    if removals:
-        changes_applied.append(f"Removals registered: {removals}")
+    # 2. Migrate engine_store data (rename/remove metric/trait IDs)
+    from cmis_v2.engine_store import list_engine_keys, load_engine_data, save_engine_data
+
+    engines = ["evidence", "world", "value", "pattern", "strategy", "policy", "belief", "learning"]
+    engine_data_dir = PROJECTS_DIR / project_id / "engine_data"
+
+    if engine_data_dir.exists():
+        for engine_name in engines:
+            keys = list_engine_keys(project_id, engine_name)
+            for key in keys:
+                data = load_engine_data(project_id, engine_name, key)
+                if data is None:
+                    continue
+                original = json.dumps(data, ensure_ascii=False)
+                updated = original
+                # Apply renames as string replacement on serialized JSON
+                for old_id, new_id in renames.items():
+                    updated = updated.replace(f'"{old_id}"', f'"{new_id}"')
+                # Apply removals: remove dict entries with removed keys
+                if updated != original or removals:
+                    new_data = json.loads(updated)
+                    if removals:
+                        new_data = _remove_keys_recursive(new_data, set(removals))
+                    save_engine_data(project_id, engine_name, key, new_data)
+                    if updated != original:
+                        changes_applied.append(f"{engine_name}/{key}: renamed IDs applied")
+                    if removals:
+                        changes_applied.append(f"{engine_name}/{key}: removals checked")
 
     return {
         "project_id": project_id,
@@ -245,3 +265,23 @@ def migrate_project(
         "renames": renames,
         "removals": removals,
     }
+
+
+def _remove_keys_recursive(obj: Any, removal_ids: set[str]) -> Any:
+    """Recursively remove dict entries whose values match removal IDs."""
+    if isinstance(obj, dict):
+        cleaned: dict[str, Any] = {}
+        for k, v in obj.items():
+            if isinstance(v, str) and v in removal_ids:
+                continue
+            if k in removal_ids:
+                continue
+            cleaned[k] = _remove_keys_recursive(v, removal_ids)
+        return cleaned
+    elif isinstance(obj, list):
+        return [
+            _remove_keys_recursive(item, removal_ids)
+            for item in obj
+            if not (isinstance(item, str) and item in removal_ids)
+        ]
+    return obj
