@@ -932,7 +932,9 @@ class CMISTools:
                     "snapshot_id (str) - reality snapshot reference; "
                     "pattern_matches (list[dict] | None) - results from match_patterns(); "
                     "constraints (dict | None) - business constraints e.g. {'budget': 'limited', 'timeline': 'short'}. "
-                    "Returns: dict with strategy_search_id, goal, candidates (strategy_id, name, feasibility_score, risk_factors). "
+                    "Returns: dict with strategy_search_id, goal, candidates "
+                    "(strategy_id, name, feasibility_score, risk_factors=[{category, severity, score, description}], risk_score). "
+                    "risk categories: capability_gap, market_risk, integration_complexity, resource_constraint, competitive_response, execution_risk. "
                     "Use after pattern matching to generate strategy options."
                 ),
             },

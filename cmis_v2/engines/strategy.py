@@ -17,6 +17,115 @@ from uuid import uuid4
 from cmis_v2.generated.types import PolicyMode
 
 # ---------------------------------------------------------------------------
+# Risk categories and severity
+# ---------------------------------------------------------------------------
+
+RISK_CATEGORIES = frozenset({
+    "capability_gap",        # 필요 역량 부재
+    "market_risk",           # 시장 불확실성/변동성
+    "integration_complexity",  # 다중 패턴 통합 복잡도
+    "resource_constraint",   # 예산/인력/시간 제약
+    "competitive_response",  # 경쟁자 반응 위험
+    "execution_risk",        # 실행/운영 위험
+})
+
+SEVERITY_SCORES: dict[str, float] = {
+    "low": 0.1,
+    "medium": 0.2,
+    "high": 0.4,
+    "critical": 0.6,
+}
+
+
+def _make_risk(
+    category: str,
+    severity: str,
+    description: str,
+) -> dict[str, Any]:
+    """Create a structured risk factor entry."""
+    return {
+        "category": category,
+        "severity": severity,
+        "score": SEVERITY_SCORES.get(severity, 0.2),
+        "description": description,
+    }
+
+
+def _assess_risks(
+    missing_traits: list[str],
+    constraints: dict[str, Any],
+    is_combined: bool = False,
+) -> list[dict[str, Any]]:
+    """Assess risks based on pattern gaps and constraints."""
+    risks: list[dict[str, Any]] = []
+
+    # Capability gap risks from missing traits
+    if missing_traits:
+        gap_count = len(missing_traits)
+        severity = "high" if gap_count >= 3 else ("medium" if gap_count >= 1 else "low")
+        risks.append(_make_risk(
+            "capability_gap",
+            severity,
+            f"Missing {gap_count} trait(s): {missing_traits[:5]}",
+        ))
+
+    # Resource constraint risks from constraints
+    if constraints.get("budget") == "limited":
+        risks.append(_make_risk(
+            "resource_constraint",
+            "medium",
+            "Budget is limited — may restrict implementation scope",
+        ))
+    if constraints.get("timeline") == "short":
+        risks.append(_make_risk(
+            "resource_constraint",
+            "medium",
+            "Short timeline — increases execution pressure",
+        ))
+
+    # Integration complexity for combined strategies
+    if is_combined:
+        risks.append(_make_risk(
+            "integration_complexity",
+            "high",
+            "Combining multiple patterns increases coordination overhead",
+        ))
+        risks.append(_make_risk(
+            "resource_constraint",
+            "medium",
+            "Combined strategy requires more resources than individual patterns",
+        ))
+
+    # If no risks identified, add baseline
+    if not risks:
+        risks.append(_make_risk(
+            "execution_risk",
+            "low",
+            "Pattern fully matched — standard execution risk only",
+        ))
+
+    return risks
+
+
+def compute_risk_score(risk_factors: list[dict[str, Any]]) -> float:
+    """Compute aggregate risk score (0.0~1.0) from structured risk factors.
+
+    Uses the highest single risk as base, then adds diminishing
+    increments from additional risks (capped at 1.0).
+    """
+    if not risk_factors:
+        return 0.0
+    scores = sorted(
+        [r.get("score", 0.2) for r in risk_factors],
+        reverse=True,
+    )
+    total = scores[0]
+    for s in scores[1:]:
+        total += s * 0.3  # diminishing contribution
+    return min(1.0, round(total, 3))
+
+
+# ---------------------------------------------------------------------------
 # Module-level store
 # ---------------------------------------------------------------------------
 
@@ -77,9 +186,8 @@ def _generate_candidates_from_patterns(
                 "_rationale": "",
             },
             "feasibility_score": round(feasibility, 3),
-            "risk_factors": (
-                [f"Missing traits: {missing}"] if missing else ["Low risk — pattern already present"]
-            ),
+            "risk_factors": _assess_risks(missing, constraints),
+            "risk_score": compute_risk_score(_assess_risks(missing, constraints)),
             "required_capabilities": (
                 [f"Develop: {t}" for t in missing[:3]] if missing else ["Execution capability"]
             ),
@@ -114,10 +222,8 @@ def _generate_candidates_from_patterns(
                 "_rationale": "",
             },
             "feasibility_score": round(max(0.1, avg_fit * 0.75), 3),
-            "risk_factors": [
-                "Integration complexity between patterns",
-                "Higher resource requirements",
-            ],
+            "risk_factors": _assess_risks([], constraints, is_combined=True),
+            "risk_score": compute_risk_score(_assess_risks([], constraints, is_combined=True)),
             "required_capabilities": ["Cross-pattern integration", "Resource coordination"],
             "evidence_lineage": {
                 "impact_evidence_ids": [],
@@ -367,10 +473,16 @@ def evaluate_portfolio(
                 impact_pct = 0
             impact_score = min(1.0, abs(impact_pct) / 40.0)
 
-        # Risk-adjusted = feasibility weighted by risk factor count
-        risk_count = len(candidate.get("risk_factors", []))
-        risk_penalty = min(0.3, risk_count * 0.1)
-        risk_adjusted = max(0.0, feasibility - risk_penalty)
+        # Risk-adjusted score using structured risk_score
+        risk_score = candidate.get("risk_score")
+        if risk_score is None:
+            # Legacy fallback: compute from structured risk_factors if available
+            rf = candidate.get("risk_factors", [])
+            if rf and isinstance(rf[0], dict):
+                risk_score = compute_risk_score(rf)
+            else:
+                risk_score = min(0.3, len(rf) * 0.1)
+        risk_adjusted = max(0.0, feasibility * (1.0 - risk_score))
 
         overall = round((impact_score * 0.4 + feasibility * 0.35 + risk_adjusted * 0.25), 3)
 
@@ -389,6 +501,7 @@ def evaluate_portfolio(
             "scores": {
                 "impact": round(impact_score, 3),
                 "feasibility": round(feasibility, 3),
+                "risk_score": round(risk_score, 3),
                 "risk_adjusted": round(risk_adjusted, 3),
             },
             "recommendation": recommendation,
