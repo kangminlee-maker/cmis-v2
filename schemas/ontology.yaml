@@ -580,6 +580,58 @@ ontology:
       aggregation: latest
 
   # ---------------------------------------------------------------------------
+  # Metric Relations (Constraint Propagation 입력)
+  # ---------------------------------------------------------------------------
+  # type: identity — 등식 관계. formula로 역방향 계산 가능.
+  # type: inequality — 부등식 관계. 구간 축소에 사용.
+  # 변수명은 반드시 위 metrics 섹션에 정의된 ID를 사용.
+
+  metric_relations:
+    # 수익 분해: Revenue = N_customers × ARPU
+    - type: identity
+      formula: "MET-Revenue = MET-N_customers * MET-ARPU"
+      variables: ["MET-Revenue", "MET-N_customers", "MET-ARPU"]
+
+    # 평균 단가: Avg_price = Revenue / N_customers
+    - type: identity
+      formula: "MET-Avg_price_per_unit = MET-Revenue / MET-N_customers"
+      variables: ["MET-Avg_price_per_unit", "MET-Revenue", "MET-N_customers"]
+
+    # 시장 규모 계층: TAM >= SAM >= SOM >= 0
+    - type: inequality
+      constraint: "MET-TAM >= MET-SAM"
+      variables: ["MET-TAM", "MET-SAM"]
+
+    - type: inequality
+      constraint: "MET-SAM >= MET-SOM"
+      variables: ["MET-SAM", "MET-SOM"]
+
+    # 시장 침투: Revenue = TAM × Market_penetration_rate
+    - type: identity
+      formula: "MET-Revenue = MET-TAM * MET-Market_penetration_rate"
+      variables: ["MET-Revenue", "MET-TAM", "MET-Market_penetration_rate"]
+
+    # 고객 생애 가치: LTV = ARPU / Churn_rate
+    - type: identity
+      formula: "MET-LTV = MET-ARPU / MET-Churn_rate"
+      variables: ["MET-LTV", "MET-ARPU", "MET-Churn_rate"]
+
+    # CAC 회수: Payback_period = CAC / ARPU (단위: 개월)
+    - type: identity
+      formula: "MET-Payback_period = MET-CAC / MET-ARPU"
+      variables: ["MET-Payback_period", "MET-CAC", "MET-ARPU"]
+
+    # 매출 총이익: Gross_margin = (Revenue - COGS) / Revenue
+    - type: identity
+      formula: "MET-Gross_margin = (MET-Revenue - MET-COGS) / MET-Revenue"
+      variables: ["MET-Gross_margin", "MET-Revenue", "MET-COGS"]
+
+    # 점유율 순서: Top3 <= Top5
+    - type: inequality
+      constraint: "MET-Top3_revenue_share <= MET-Top5_revenue_share"
+      variables: ["MET-Top3_revenue_share", "MET-Top5_revenue_share"]
+
+  # ---------------------------------------------------------------------------
   # Policy Schema
   # ---------------------------------------------------------------------------
   policy_schema:

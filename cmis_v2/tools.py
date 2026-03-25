@@ -49,6 +49,7 @@ _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
         "get_metric_value", "check_value_gate", "check_all_gates",
         "create_estimate", "get_estimate", "update_estimate",
         "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
+        "check_constraints",
         "transition", "get_evidence", "add_run",
     }),
     "finding_locked": frozenset({
@@ -66,6 +67,7 @@ _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
         "add_run", "update_belief", "set_strategy_impact",
         "create_estimate", "get_estimate", "update_estimate",
         "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
+        "check_constraints",
     }),
     "synthesis": frozenset({
         "save_deliverable", "get_snapshot", "get_evidence",
@@ -758,6 +760,19 @@ class CMISTools:
 
         return self._safe_call("evaluate_fermi_tree", evaluate_fermi_tree, {"tree_id": tree_id, "project_id": self.project_id or ""})
 
+    def check_constraints(
+        self,
+        metric_intervals: dict[str, dict[str, float]],
+    ) -> dict[str, Any]:
+        """Check metric relations (identity/inequality) from ontology.yaml."""
+        from cmis_v2.engines.constraints import check_constraints
+
+        return self._safe_call(
+            "check_constraints",
+            check_constraints,
+            {"metric_intervals": metric_intervals, "project_id": self.project_id or ""},
+        )
+
     # ------------------------------------------------------------------
     # Belief engine wrappers (DEPRECATED → Estimation Engine)
     # ------------------------------------------------------------------
@@ -1220,6 +1235,17 @@ class CMISTools:
                     "Args: tree_id (str, required). "
                     "Returns: dict with result interval {lo, hi, midpoint}, point_estimate, "
                     "spread_ratio, unverified_leaves count."
+                ),
+            },
+            "check_constraints": {
+                "tool": self.check_constraints,
+                "description": (
+                    "Check metric relations (identity/inequality) from ontology.yaml. "
+                    "Validates intervals against declared constraints and narrows them. "
+                    "Args: metric_intervals (dict, required) - variable_name → {lo, hi}. "
+                    "Example: {'MET-TAM': {'lo': 1.5e12, 'hi': 2.5e12}, 'MET-SAM': {'lo': 0.5e12, 'hi': 1.0e12}}. "
+                    "Returns: violations list, narrowed_intervals, all_passed bool. "
+                    "Use after estimating multiple metrics to verify cross-metric consistency."
                 ),
             },
             # --- Belief engine (DEPRECATED → use Estimation engine above) ---
