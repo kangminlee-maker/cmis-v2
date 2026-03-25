@@ -118,6 +118,17 @@ class Interval:
             min(self.hi, bound_hi),
         )
 
+    # -- Distribution conversion (Phase 4 bridge) --
+
+    def to_uniform_samples(self, n: int = 1000) -> list[float]:
+        """Generate uniform random samples from this interval.
+
+        Entry point for Monte Carlo simulation. When richer distributions
+        are needed (Phase 4), replace this with distribution-aware sampling.
+        """
+        import random
+        return [random.uniform(self.lo, self.hi) for _ in range(n)]
+
     # -- Serialization --
 
     def to_dict(self) -> dict[str, float]:

@@ -105,6 +105,7 @@ def create_estimate(
         "variable_name": variable_name,
         "interval": interval.to_dict(),
         "point_estimate": interval.midpoint,
+        "distribution": None,  # Phase 4: Distribution object for precision metrics
         "method": method,
         "source": source,
         "source_reliability": max(0.0, min(1.0, source_reliability)),
