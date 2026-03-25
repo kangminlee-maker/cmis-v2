@@ -8,17 +8,22 @@
 - Fermi 분해 트리, Constraint Propagation, batch fusion 포함
 - confidence→sigma 변환 접근법(접근법 A) 폐기
 
-## 높은 우선순위
+### ~~Estimation Engine Phase 4: 하이브리드 확장~~ → 완료 (2026-03-26)
+- Distribution 모듈: Beta/Lognormal/Uniform fitting (scipy 없음)
+- Monte Carlo supplementary (evaluate_fermi_tree mc_summary)
+- distribution_type 24개 메트릭 선언
+- 2차례 8-Agent Panel Review (8/8 합의)
 
-### Estimation Engine Phase 4: 하이브리드 확장
-- `Estimate`에 `distribution: Distribution | None` 필드 추가
-- `Interval.to_uniform()` 변환 함수 — Monte Carlo 시뮬레이션 진입점
-- 정밀 메트릭에만 Distribution 추가 (나머지는 Interval 유지)
-- 3차 리뷰 evolution 에이전트 권장: Phase 1에서 필드만 선언, Phase 3에서 구현
+### ~~value_min_confidence 게이트 마이그레이션~~ → 완료 (2026-03-25)
+- value_spread_ratio로 전면 대체, 3개 정책 모드 모두 이행
 
-### value_min_confidence 게이트 마이그레이션
-- Estimation Engine이 confidence 대신 Interval 사용하므로, value_min_confidence 게이트를 value_spread_ratio로 대체
-- 영향 범위: policy.py, policies.yaml (reporting_strict, decision_balanced 모드)
+### ~~Reference Class Forecasting~~ → 완료 (2026-03-26)
+- 과거 outcome에서 empirical P10/P90 구간 제안
+- suggest_estimate_from_reference 도구 등록
+
+### ~~Calibration~~ → 빈도 기반 완료 (2026-03-26)
+- 빈도 기반 source_reliability 보정 (accurate×0.9 + acceptable×0.5)
+- Platt Scaling은 outcome ≥30건 축적 시 후속
 
 ## 중간 우선순위
 
@@ -31,15 +36,12 @@
 ### 도메인별 trait scoping
 - 다중 도메인 지원 시 ontology.yaml에 도메인 프로필 추가
 
-### Reference Class Forecasting
-- 유사 과거 사례 기반 추정 (FermiNode와 동등 수준의 ReferenceClassNode)
-- Evidence Engine의 수집 데이터를 참조 집단 구축 재료로 활용
+### Platt Scaling (Calibration Phase 2)
+- outcome ≥30건 축적 시 로지스틱 회귀 기반 보정으로 전환
+- metric별, source_tier별 calibration curve
 
 ## 낮은 우선순위
 
 ### 외부 온톨로지 매핑 (FIBO, SNOMED 등)
 ### 스케줄링/배치 (reality_monitoring 주기 실행)
 ### 시각화 (RLM visualizer 연동)
-### Calibration (Learning Engine 연동)
-- outcome 데이터 축적 시 Platt Scaling으로 source_reliability 보정
-- metric별, source_tier별 calibration curve

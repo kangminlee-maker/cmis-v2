@@ -1,9 +1,9 @@
 # CMIS - Contextual Market Intelligence System
 
-**버전**: v4.0.0
+**버전**: v4.1.0
 **상태**: RLM + KBD 기반 Market Intelligence OS (cmis_v2)
-**완성도**: 10/10 엔진 (Estimation Engine 신규) + 47개 LLM 도구
-**업데이트**: 2026-03-25
+**완성도**: 12/12 엔진 (Distribution + Reference Class + Calibration 신규) + 52개 LLM 도구
+**업데이트**: 2026-03-26
 
 ---
 

@@ -2,6 +2,55 @@
 
 ---
 
+## [v4.1.0] - 2026-03-26
+
+**주요 성과**: Phase 4 Distribution + Reference Class Forecasting + Calibration
+**검증**: 2차례 8-Agent Panel Review (8/8 합의), 기술 부채 해소
+
+---
+
+### Added
+
+#### Phase 4: Distribution (확률 분포)
+- `engines/distribution.py` — P10/P90 구간에서 확률 분포 fitting (scipy 없음)
+  - Beta 분포: ratio 메트릭 (중첩 탐색, bisection)
+  - Lognormal 분포: currency/count 메트릭 (닫힌 해)
+  - Uniform fallback: lo ≤ 0, 수렴 실패 시
+  - `fit_distribution()`, `infer_distribution()`, `sample()`
+- `get_distribution` 도구: LLM이 percentiles/mode/mean을 사용자에게 전달
+- `evaluate_fermi_tree()`에 `mc_summary` (Monte Carlo supplementary) 추가
+- ontology.yaml: 24개 메트릭에 `distribution_type` 선언
+
+#### Reference Class Forecasting
+- `engines/reference_class.py` — 과거 outcome에서 empirical P10/P90 제안
+  - `build_reference_class()`, `suggest_estimate()`
+  - 최소 3건 outcome 필요 (미달 시 insufficient 반환)
+- `suggest_estimate_from_reference` 도구 등록
+
+#### Calibration
+- `engines/calibration.py` — 빈도 기반 source_reliability 보정
+  - `compute_calibration()`, `calibrated_reliability()`
+  - accurate×0.9 + acceptable×0.5 (Platt Scaling은 outcome ≥30건 시 후속)
+- `get_calibration`, `get_calibrated_reliability` 도구 등록
+
+#### 시스템 프롬프트 Estimation Engine 가이드
+- Workflow A~F: 단일 추정, Fermi 분해, 제약 검증, Distribution 분석, RCF, Calibration
+- Deprecated 도구 매핑 (confidence ≠ source_reliability 차이 명시)
+- 도구명 정합성 자동 테스트 추가
+
+### Changed
+
+- `generate_from_ontology.py`: 선택적 필드 자동 passthrough (codegen 동기화 계약 해소)
+- `learning.py`: `list_outcomes_by_metric()`, `list_outcomes_by_source_tier()` 헬퍼 추가
+- `estimation.py`: `create_estimate()`에서 distribution 자동 연결, `_batch_fuse()`에서 분포 재fitting
+
+### Fixed
+
+- `MET-Net_revenue_retention` bounds 부재 → bounds [0, 3.0] + distribution_type: beta 추가
+- system_prompt.py Rule 4: `set_metric_value` 금지가 아닌 맥락 구분으로 변경
+
+---
+
 ## [v4.0.0] - 2026-03-25
 
 **주요 성과**: Estimation Engine 완전 재설계 (Belief Engine 폐기), 기술 부채 전면 정리
