@@ -89,6 +89,63 @@ def _build_tool_section() -> str:
     return "\n".join(lines)
 
 
+def _build_estimation_guide() -> str:
+    """Build Estimation Engine workflow guide.
+
+    Hard-coded text: workflow patterns are domain knowledge that cannot be
+    auto-extracted from tool signatures.  Tool names referenced here are
+    validated by test_system_prompt_tool_name_consistency.
+    """
+    return """\
+## Estimation Engine Guide
+
+### Key Concepts
+
+- **lo / hi** = P10 / P90 — a subjective 80 % probability range (not a mathematically guaranteed interval).
+- **source_reliability** (0.0–1.0): objective quality of the data source. Produced by Evidence Engine only — never invent a value. When no evidence exists, the default 0.5 applies.
+- **Free variables**: any name outside METRIC_REGISTRY is accepted (e.g. "korean_household_count"). Free variables persist for the session.
+- **Bounds clamping**: metrics with `bounds` in METRIC_REGISTRY are silently clamped. If your estimate is outside bounds, the stored interval will differ from what you passed.
+- **Batch fusion**: when 2+ estimates exist for the same variable, they are automatically fused (order-independent). Check `has_conflicts` — if true, disjoint estimates exist; collect more evidence. Use `spread_ratio` to judge precision (lower = better).
+
+### Workflow A — Single Estimate
+
+1. `create_estimate(variable_name, lo, hi, method, source, source_reliability, evidence_id)` — register an initial estimate.
+2. `update_estimate(...)` — add a **new** estimate and re-fuse (this does NOT overwrite; it appends then fuses).
+3. `get_estimate(variable_name)` — read the fused result. If `has_conflicts` is true, resolve before proceeding.
+
+### Workflow B — Fermi Decomposition
+
+1. `create_fermi_tree(target_variable, operation)` — create a tree (operations: multiply, add, divide, subtract).
+2. `add_fermi_leaf(tree_id, variable, lo, hi, source, evidence_id)` — add concrete values. Leaves without `evidence_id` are unverified.
+3. `add_fermi_subtree(parent_tree_id, variable, operation)` — nest a sub-decomposition.
+4. `evaluate_fermi_tree(tree_id)` — compute the result via interval arithmetic.
+5. **Register the result**: call `create_estimate(target_variable, lo, hi, method="fermi", ...)` with the evaluated interval. Fermi results live only in the Fermi store until you do this.
+
+### Workflow C — Constraint Verification
+
+After completing estimates, verify metric-relation consistency:
+
+`check_constraints(metric_intervals)` — belongs to the **Constraint Engine** (not Estimation Engine).
+
+Input format: `{"MET-TAM": {"lo": 1e9, "hi": 5e9}, "MET-SAM": {"lo": 3e8, "hi": 2e9}}`.
+
+### Connecting Estimates to the Analysis
+
+- **Uncertain quantities** → Estimation Engine tools above.
+- **Confirmed values** backed by strong evidence → `set_metric_value` to record the final metric.
+- Estimation results can also be recorded as R-Graph node attributes for structural analysis.
+
+### Deprecated Tools — Do Not Use
+
+| Old (deprecated) | New replacement | Note |
+|---|---|---|
+| `set_prior` | `create_estimate` | old `confidence` ≠ new `source_reliability` (subjective certainty vs. objective source quality) |
+| `get_prior` | `get_estimate` | |
+| `update_belief` | `update_estimate` | |
+| `list_beliefs` | `list_estimates` | |
+"""
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -141,6 +198,7 @@ def build_system_prompt() -> str:
     metric_section = _build_metric_section()
     workflow_section = _build_workflow_section()
     tool_section = _build_tool_section()
+    estimation_guide = _build_estimation_guide()
     ontology_reference = _build_ontology_reference()
 
     prompt = f"""\
@@ -175,6 +233,8 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 
 {tool_section}
 
+{estimation_guide}
+
 {metric_section}
 
 {workflow_section}
@@ -186,7 +246,7 @@ When you reach a user gate, produce a summary report as FINAL_VAR() and stop.
 1. If running standalone, create a project first. In runner mode, the project is already created — check current state with get_current_state().
 2. Collect evidence before building R-Graph snapshots.
 3. Build R-Graph (add nodes and edges) before running pattern matching.
-4. Evaluate metrics after evidence collection — use set_metric_value to fill in estimates.
+4. For uncertain quantities, use Estimation Engine tools (create_estimate, Fermi trees). For confirmed values backed by evidence, use set_metric_value.
 5. At each user gate, produce a structured summary and stop via FINAL_VAR().
 6. Save final deliverables via save_deliverable before transitioning to completed.
 
