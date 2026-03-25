@@ -2,6 +2,66 @@
 
 ---
 
+## [v4.0.0] - 2026-03-25
+
+**주요 성과**: Estimation Engine 완전 재설계 (Belief Engine 폐기), 기술 부채 전면 정리
+**검증**: 3차례 8-Agent Panel Review (8/8 완전 합의)
+
+---
+
+### Added
+
+#### Estimation Engine (Belief Engine 대체)
+- `engines/estimation.py` — 순수 Interval(P10/P90) 기반 추정 엔진
+  - `create_estimate()`, `update_estimate()`, `get_estimate()`, `list_estimates()`
+  - Fermi 분해 트리: `create_fermi_tree()`, `add_fermi_leaf()`, `add_fermi_subtree()`, `evaluate_fermi_tree()`
+  - Batch fusion: 순서 무관 자동 합성 (강한 재현)
+  - 자유 변수 지원 (METRIC_REGISTRY 외 임의 변수명)
+
+- `engines/interval.py` — P10/P90 구간 데이터 타입 + 구간 산술 (+, -, ×, ÷, 교집합, convex hull)
+
+- `engines/constraints.py` — 메트릭 관계 제약 전파
+  - ontology.yaml의 metric_relations에서 identity/inequality 제약 로딩
+  - 구간 축소 + 위반 감지
+
+#### ontology.yaml 확장
+- `metric_relations` 섹션 추가 (identity 6건 + inequality 3건)
+  - Revenue = N_customers × ARPU, LTV = ARPU / Churn, TAM ≥ SAM ≥ SOM 등
+
+#### Project Onboard
+- `CLAUDE.md` 생성 (domain: market-intelligence)
+- `.claude/rules/coding-conventions.md` (Python-specific)
+- `.claude/rules/project-patterns.md` (terminology, abbreviations)
+
+### Changed
+
+#### onto-review R1~R7 권장사항 구현
+- R1: check_all_gates() 입력 완전성 강제 (skipped_gates 보고)
+- R2: structure_analysis → analysis_completed snapshot precondition
+- R3: migrate_project() engine_store 데이터 실제 마이그레이션
+- R4: _STATE_ALLOWED_TOOLS에 rejected 상태 등록
+- R5: evidence_max_age_days + value_spread_ratio 실제 구현 (placeholder 제거)
+- R6: validate_gate_sync() 선언-구현 동기화 검증
+- R7: confidence 접두어 구분 (evidence/value/belief)
+
+#### 기술 부채 정리 (8건)
+- event_id uuid4 전환, 미사용 함수 삭제, generated/ 참조 연결 등
+
+#### risk_factors 구조화
+- 6종 카테고리 (capability_gap, market_risk 등) + 정량 score + portfolio 반영
+
+### Deprecated
+
+- `engines/belief.py` — estimation.py로 위임 (기존 4개 도구 인터페이스 유지)
+- `set_prior`, `get_prior`, `update_belief`, `list_beliefs` — 새 도구 사용 권장
+
+### Fixed
+
+- value.py → policy.py 역방향 의존 해소
+- ontology_migration.py PROJECTS_DIR import 누락 수정
+
+---
+
 ## [v3.5.0] - 2025-12-12
 
 **작업 시간**: 6시간 (09:00 - 19:00)
