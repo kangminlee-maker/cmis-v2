@@ -77,8 +77,8 @@ _ALL_TRAITS: dict[str, frozenset[str]] = {
 VALID_METRIC_IDS: frozenset[str] = frozenset({"MET-N_customers", "MET-Revenue", "MET-Avg_price_per_unit", "MET-TAM", "MET-SAM", "MET-SOM", "MET-Churn_rate", "MET-Gross_margin", "MET-LTV", "MET-CAC", "MET-Payback_period", "MET-ARPU", "MET-HHI_revenue", "MET-Top3_revenue_share", "MET-Top5_revenue_share", "MET-Platform_commission_fees", "MET-CapEx", "MET-Operating_margin", "MET-COGS", "MET-OPEX", "MET-Royalty_expenses", "MET-Market_growth_rate", "MET-Market_penetration_rate", "MET-Customer_concentration", "MET-Net_revenue_retention"})
 
 METRIC_REGISTRY: dict[str, dict[str, Any]] = {
-    "MET-N_customers": {"description": "목표 고객 수", "unit": "count", "aggregation": "sum", "distribution_type": "lognormal"},
-    "MET-Revenue": {"description": "연간 매출", "unit": "currency", "aggregation": "sum", "distribution_type": "lognormal"},
+    "MET-N_customers": {"description": "목표 고객 수", "unit": "count", "aggregation": "sum", "distribution_type": "lognormal", "required_evidence_tier": ['official_statistics', 'industry_reports', 'company_filings']},
+    "MET-Revenue": {"description": "연간 매출", "unit": "currency", "aggregation": "sum", "distribution_type": "lognormal", "required_evidence_tier": ['company_filings', 'official_statistics', 'industry_reports']},
     "MET-Avg_price_per_unit": {"description": "평균 단가 (매출 / 고객 수)", "unit": "currency", "aggregation": "weighted_average", "distribution_type": "lognormal"},
     "MET-TAM": {"description": "총 시장 규모 (Total Addressable Market)", "unit": "currency", "aggregation": "latest", "distribution_type": "lognormal"},
     "MET-SAM": {"description": "유효 시장 규모 (Serviceable Available Market)", "unit": "currency", "aggregation": "latest", "distribution_type": "lognormal"},
@@ -101,7 +101,7 @@ METRIC_REGISTRY: dict[str, dict[str, Any]] = {
     "MET-Market_growth_rate": {"description": "시장 성장률 (연간)", "unit": "percentage", "aggregation": "latest", "bounds": {'min': -1.0, 'max': 10.0}, "distribution_type": "beta"},
     "MET-Market_penetration_rate": {"description": "시장 침투율", "unit": "ratio", "aggregation": "latest", "bounds": {'min': 0.0, 'max': 1.0}, "distribution_type": "beta"},
     "MET-Customer_concentration": {"description": "고객 집중도 (상위 고객 매출 비중)", "unit": "ratio", "aggregation": "latest", "bounds": {'min': 0.0, 'max': 1.0}, "distribution_type": "beta"},
-    "MET-Net_revenue_retention": {"description": "순 매출 유지율 (기존 고객 기반)", "unit": "ratio", "aggregation": "latest"},
+    "MET-Net_revenue_retention": {"description": "순 매출 유지율 (기존 고객 기반)", "unit": "ratio", "aggregation": "latest", "bounds": {'min': 0.0, 'max': 3.0}, "distribution_type": "beta"},
 }
 
 

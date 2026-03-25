@@ -602,6 +602,10 @@ ontology:
       description: "순 매출 유지율 (기존 고객 기반)"
       unit: ratio
       aggregation: latest
+      bounds:
+        min: 0.0
+        max: 3.0
+      distribution_type: beta
 
   # ---------------------------------------------------------------------------
   # Metric Relations (Constraint Propagation 입력)

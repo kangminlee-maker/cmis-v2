@@ -131,22 +131,23 @@ def _generate_types(ont: dict[str, Any]) -> str:
     lines.append("")
 
     # -- METRIC_REGISTRY --
+    # Standard fields are always included; all other fields pass through
+    # automatically so that new ontology fields don't require codegen changes.
+    _STANDARD_FIELDS = {"description", "unit", "aggregation"}
     lines.append("METRIC_REGISTRY: dict[str, dict[str, Any]] = {")
     for mid, mdef in ont["metrics"].items():
-        desc = mdef["description"]
-        unit = mdef["unit"]
-        agg = mdef["aggregation"]
-        bounds = mdef.get("bounds")
-        dist_type = mdef.get("distribution_type")
         entry_parts = [
-            f'"description": "{desc}"',
-            f'"unit": "{unit}"',
-            f'"aggregation": "{agg}"',
+            f'"description": "{mdef["description"]}"',
+            f'"unit": "{mdef["unit"]}"',
+            f'"aggregation": "{mdef["aggregation"]}"',
         ]
-        if bounds is not None:
-            entry_parts.append(f'"bounds": {bounds}')
-        if dist_type is not None:
-            entry_parts.append(f'"distribution_type": "{dist_type}"')
+        for key, val in mdef.items():
+            if key in _STANDARD_FIELDS:
+                continue
+            if isinstance(val, str):
+                entry_parts.append(f'"{key}": "{val}"')
+            else:
+                entry_parts.append(f'"{key}": {val}')
         lines.append(f'    "{mid}": {{{", ".join(entry_parts)}}},')
     lines.append("}")
     lines.append("")
