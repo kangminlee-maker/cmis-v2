@@ -22,18 +22,24 @@ _ALWAYS_ALLOWED: frozenset[str] = frozenset({
     "list_projects",
     "load_policy",
     "check_compatibility",
+    "get_estimate",
+    "list_estimates",
 })
 
 _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
     "requested": frozenset({"create_project", "transition"}),
     "discovery": frozenset({
         "collect_evidence", "add_record", "get_evidence",
+        "create_estimate", "get_estimate", "list_estimates",
+        "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
         "set_prior", "get_prior", "list_beliefs",
         "check_evidence_gate", "transition", "lock_scope",
     }),
     "scope_locked": frozenset({"transition"}),
     "data_collection": frozenset({
         "collect_evidence", "add_record", "get_evidence",
+        "create_estimate", "get_estimate", "update_estimate", "list_estimates",
+        "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
         "set_prior", "get_prior", "update_belief", "list_beliefs",
         "check_evidence_gate", "transition", "add_run",
     }),
@@ -41,6 +47,8 @@ _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
         "build_snapshot", "add_node", "add_edge", "get_snapshot",
         "match_patterns", "evaluate_metrics", "set_metric_value",
         "get_metric_value", "check_value_gate", "check_all_gates",
+        "create_estimate", "get_estimate", "update_estimate",
+        "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
         "transition", "get_evidence", "add_run",
     }),
     "finding_locked": frozenset({
@@ -56,6 +64,8 @@ _STATE_ALLOWED_TOOLS: dict[str, frozenset[str]] = {
         "get_metric_value", "evaluate_metrics", "set_metric_value",
         "check_value_gate", "check_all_gates", "transition",
         "add_run", "update_belief", "set_strategy_impact",
+        "create_estimate", "get_estimate", "update_estimate",
+        "create_fermi_tree", "add_fermi_leaf", "add_fermi_subtree", "evaluate_fermi_tree",
     }),
     "synthesis": frozenset({
         "save_deliverable", "get_snapshot", "get_evidence",
@@ -628,7 +638,128 @@ class CMISTools:
             return err
 
     # ------------------------------------------------------------------
-    # Belief engine wrappers
+    # Estimation engine wrappers (new)
+    # ------------------------------------------------------------------
+
+    def create_estimate(
+        self,
+        variable_name: str,
+        lo: float,
+        hi: float,
+        method: str = "unknown",
+        source: str = "",
+        source_reliability: float = 0.5,
+        evidence_id: str = "",
+    ) -> dict[str, Any]:
+        """Create an estimation for a variable (metric or free variable)."""
+        from cmis_v2.engines.estimation import create_estimate
+
+        return self._safe_call(
+            "create_estimate",
+            create_estimate,
+            {
+                "variable_name": variable_name,
+                "lo": lo, "hi": hi,
+                "method": method, "source": source,
+                "source_reliability": source_reliability,
+                "evidence_id": evidence_id,
+                "project_id": self.project_id or "",
+            },
+        )
+
+    def get_estimate(self, variable_name: str) -> dict[str, Any]:
+        """Get the current estimation state for a variable."""
+        from cmis_v2.engines.estimation import get_estimate
+
+        return self._safe_call("get_estimate", get_estimate, {"variable_name": variable_name, "project_id": self.project_id or ""})
+
+    def update_estimate(
+        self,
+        variable_name: str,
+        lo: float,
+        hi: float,
+        method: str = "unknown",
+        source: str = "",
+        source_reliability: float = 0.5,
+        evidence_id: str = "",
+    ) -> dict[str, Any]:
+        """Add new evidence-based estimate and re-fuse."""
+        from cmis_v2.engines.estimation import update_estimate
+
+        return self._safe_call(
+            "update_estimate",
+            update_estimate,
+            {
+                "variable_name": variable_name,
+                "lo": lo, "hi": hi,
+                "method": method, "source": source,
+                "source_reliability": source_reliability,
+                "evidence_id": evidence_id,
+                "project_id": self.project_id or "",
+            },
+        )
+
+    def list_estimates(self) -> dict[str, Any]:
+        """List all current estimations."""
+        from cmis_v2.engines.estimation import list_estimates
+
+        return self._safe_call("list_estimates", list_estimates, {"project_id": self.project_id or ""})
+
+    def create_fermi_tree(
+        self,
+        target_variable: str,
+        operation: str = "multiply",
+    ) -> dict[str, Any]:
+        """Create a Fermi decomposition tree."""
+        from cmis_v2.engines.estimation import create_fermi_tree
+
+        return self._safe_call(
+            "create_fermi_tree",
+            create_fermi_tree,
+            {"target_variable": target_variable, "operation": operation, "project_id": self.project_id or ""},
+        )
+
+    def add_fermi_leaf(
+        self,
+        tree_id: str,
+        variable: str,
+        lo: float,
+        hi: float,
+        source: str = "",
+        evidence_id: str = "",
+    ) -> dict[str, Any]:
+        """Add a leaf node to a Fermi tree."""
+        from cmis_v2.engines.estimation import add_fermi_leaf
+
+        return self._safe_call(
+            "add_fermi_leaf",
+            add_fermi_leaf,
+            {"tree_id": tree_id, "variable": variable, "lo": lo, "hi": hi, "source": source, "evidence_id": evidence_id, "project_id": self.project_id or ""},
+        )
+
+    def add_fermi_subtree(
+        self,
+        parent_tree_id: str,
+        variable: str,
+        operation: str = "multiply",
+    ) -> dict[str, Any]:
+        """Add a subtree node to a Fermi tree."""
+        from cmis_v2.engines.estimation import add_fermi_subtree
+
+        return self._safe_call(
+            "add_fermi_subtree",
+            add_fermi_subtree,
+            {"parent_tree_id": parent_tree_id, "variable": variable, "operation": operation, "project_id": self.project_id or ""},
+        )
+
+    def evaluate_fermi_tree(self, tree_id: str) -> dict[str, Any]:
+        """Evaluate a Fermi tree using interval arithmetic."""
+        from cmis_v2.engines.estimation import evaluate_fermi_tree
+
+        return self._safe_call("evaluate_fermi_tree", evaluate_fermi_tree, {"tree_id": tree_id, "project_id": self.project_id or ""})
+
+    # ------------------------------------------------------------------
+    # Belief engine wrappers (DEPRECATED → Estimation Engine)
     # ------------------------------------------------------------------
 
     def set_prior(
@@ -639,7 +770,7 @@ class CMISTools:
         source: str = "expert_guess",
         distribution: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Set a prior belief for a metric."""
+        """[DEPRECATED → create_estimate] Set a prior belief for a metric."""
         from cmis_v2.engines.belief import set_prior
 
         return self._safe_call(
@@ -656,7 +787,7 @@ class CMISTools:
         )
 
     def get_prior(self, metric_id: str) -> dict[str, Any]:
-        """Get the current prior belief for a metric."""
+        """[DEPRECATED → get_estimate] Get the current prior belief."""
         from cmis_v2.engines.belief import get_prior
 
         return self._safe_call("get_prior", get_prior, {"metric_id": metric_id, "project_id": self.project_id or ""})
@@ -667,7 +798,7 @@ class CMISTools:
         new_evidence_value: float,
         evidence_confidence: float = 0.5,
     ) -> dict[str, Any]:
-        """Update belief using simple weighted average (pseudo-Bayesian)."""
+        """[DEPRECATED → update_estimate] Update belief with new evidence."""
         from cmis_v2.engines.belief import update_belief
 
         return self._safe_call(
@@ -682,7 +813,7 @@ class CMISTools:
         )
 
     def list_beliefs(self) -> dict[str, Any]:
-        """List all current beliefs."""
+        """[DEPRECATED → list_estimates] List all current beliefs."""
         from cmis_v2.engines.belief import list_beliefs
 
         return self._safe_call("list_beliefs", list_beliefs, {})
@@ -1008,47 +1139,122 @@ class CMISTools:
                     "Use as a comprehensive quality check before delivering results."
                 ),
             },
-            # --- Belief engine ---
+            # --- Estimation engine (NEW — replaces Belief engine) ---
+            "create_estimate": {
+                "tool": self.create_estimate,
+                "description": (
+                    "Create an estimation for any variable (metric or free variable). "
+                    "Uses P10/P90 interval: lo = 10% chance true value is below, hi = 10% chance above. "
+                    "Args: variable_name (str, required) - metric ID (e.g. 'MET-TAM') or free name (e.g. 'korean_household_count'); "
+                    "lo (float, required) - P10 lower bound; "
+                    "hi (float, required) - P90 upper bound; "
+                    "method (str, default 'unknown') - 'fermi', 'top_down', 'bottom_up', 'proxy', 'expert_guess'; "
+                    "source (str) - human-readable source; "
+                    "source_reliability (float, default 0.5) - 0.0 to 1.0, data source quality; "
+                    "evidence_id (str) - evidence record supporting this estimate. "
+                    "Returns: estimate dict with estimate_id, interval {lo, hi, midpoint}, point_estimate. "
+                    "Use to register any numerical estimation."
+                ),
+            },
+            "get_estimate": {
+                "tool": self.get_estimate,
+                "description": (
+                    "Get all estimations for a variable (includes all methods + fused result). "
+                    "Args: variable_name (str, required). "
+                    "Returns: dict with estimates list, fused result (if multiple), version."
+                ),
+            },
+            "update_estimate": {
+                "tool": self.update_estimate,
+                "description": (
+                    "Add a new evidence-based estimate and auto-fuse with existing estimates. "
+                    "Same args as create_estimate. Multiple estimates for the same variable are "
+                    "fused in batch (order-independent) using source_reliability as weight. "
+                    "Returns: the new estimate dict."
+                ),
+            },
+            "list_estimates": {
+                "tool": self.list_estimates,
+                "description": (
+                    "List all current estimations. No args required. "
+                    "Returns: dict with total count and list of all estimation states."
+                ),
+            },
+            "create_fermi_tree": {
+                "tool": self.create_fermi_tree,
+                "description": (
+                    "Create a Fermi decomposition tree for estimating an unknown number. "
+                    "Args: target_variable (str, required) - what to estimate (e.g. 'MET-TAM', 'pet_food_market'); "
+                    "operation (str, default 'multiply') - root operation: 'multiply', 'add', 'divide', 'subtract'. "
+                    "Returns: dict with tree_id. Add leaves with add_fermi_leaf, then evaluate with evaluate_fermi_tree."
+                ),
+            },
+            "add_fermi_leaf": {
+                "tool": self.add_fermi_leaf,
+                "description": (
+                    "Add a leaf (concrete P10/P90 range) to a Fermi tree. "
+                    "Args: tree_id (str, required) - from create_fermi_tree; "
+                    "variable (str, required) - component name (e.g. 'korean_household_count'); "
+                    "lo (float, required) - P10 lower bound; "
+                    "hi (float, required) - P90 upper bound; "
+                    "source (str) - where this value comes from; "
+                    "evidence_id (str) - evidence record ID (if absent, marked as 'unverified_leaf'). "
+                    "Returns: the new leaf node dict."
+                ),
+            },
+            "add_fermi_subtree": {
+                "tool": self.add_fermi_subtree,
+                "description": (
+                    "Add a sub-operation node to a Fermi tree (for nested decomposition). "
+                    "Args: parent_tree_id (str, required); "
+                    "variable (str, required) - what this subtree computes; "
+                    "operation (str, default 'multiply'). "
+                    "Returns: dict with subtree_id. Add leaves to this subtree_id."
+                ),
+            },
+            "evaluate_fermi_tree": {
+                "tool": self.evaluate_fermi_tree,
+                "description": (
+                    "Evaluate a Fermi tree using interval arithmetic. "
+                    "All leaves must be populated. "
+                    "Args: tree_id (str, required). "
+                    "Returns: dict with result interval {lo, hi, midpoint}, point_estimate, "
+                    "spread_ratio, unverified_leaves count."
+                ),
+            },
+            # --- Belief engine (DEPRECATED → use Estimation engine above) ---
             "set_prior": {
                 "tool": self.set_prior,
                 "description": (
+                    "[DEPRECATED — use create_estimate instead] "
                     "Set a prior belief for a metric. "
-                    "Args: metric_id (str, required) - e.g. 'MET-TAM'; "
-                    "point_estimate (float, required) - initial estimate; "
-                    "confidence (float, default 0.3) - belief_confidence: 0.0 to 1.0, "
-                    "how confident you are in this prior estimate (0.3 = low/speculative); "
-                    "source (str, default 'expert_guess') - one of 'expert_guess', 'historical', 'benchmark'; "
-                    "distribution (dict | None) - optional {'min': ..., 'max': ...} range. "
-                    "Returns: belief dict with belief_id, metric_id, point_estimate, belief_confidence, version. "
-                    "Use to establish initial estimates before evidence collection."
+                    "Args: metric_id (str), point_estimate (float), confidence (float, default 0.3), "
+                    "source (str, default 'expert_guess'). "
+                    "Returns: belief dict. Internally delegates to create_estimate()."
                 ),
             },
             "get_prior": {
                 "tool": self.get_prior,
                 "description": (
+                    "[DEPRECATED — use get_estimate instead] "
                     "Get the current prior belief for a metric. "
-                    "Args: metric_id (str, required). "
-                    "Returns: belief dict or error."
+                    "Args: metric_id (str). Returns: belief dict."
                 ),
             },
             "update_belief": {
                 "tool": self.update_belief,
                 "description": (
-                    "Update belief using new evidence (pseudo-Bayesian weighted average). "
-                    "Args: metric_id (str, required); "
-                    "new_evidence_value (float, required) - observed/estimated value; "
-                    "evidence_confidence (float, default 0.5) - evidence_confidence: 0.0 to 1.0, "
-                    "reliability of the new evidence being incorporated. "
-                    "Returns: updated belief dict with incremented version. "
-                    "Use after collecting evidence to refine estimates."
+                    "[DEPRECATED — use update_estimate instead] "
+                    "Update belief with new evidence. "
+                    "Args: metric_id (str), new_evidence_value (float), evidence_confidence (float). "
+                    "Returns: belief dict. Internally delegates to update_estimate()."
                 ),
             },
             "list_beliefs": {
                 "tool": self.list_beliefs,
                 "description": (
-                    "List all current beliefs. "
-                    "No args required. "
-                    "Returns: dict with total count and list of belief records."
+                    "[DEPRECATED — use list_estimates instead] "
+                    "List all current beliefs. Returns: belief list."
                 ),
             },
             # --- Learning engine ---
