@@ -129,6 +129,14 @@ After completing estimates, verify metric-relation consistency:
 
 Input format: `{"MET-TAM": {"lo": 1e9, "hi": 5e9}, "MET-SAM": {"lo": 3e8, "hi": 2e9}}`.
 
+### Workflow D — Distribution Analysis
+
+Registered metrics (from METRIC_REGISTRY) automatically get a fitted probability distribution (Beta for ratios, Lognormal for currency/count). Free variables get no distribution.
+
+- `get_distribution(variable_name)` — retrieve percentiles (p10/p25/p50/p75/p90), mode, mean for reporting to the user.
+- Fermi tree results include `mc_summary` with Monte Carlo percentiles alongside the primary interval arithmetic result.
+- Use distribution info to communicate uncertainty quality: narrow percentile ranges = high confidence, wide = low confidence.
+
 ### Connecting Estimates to the Analysis
 
 - **Uncertain quantities** → Estimation Engine tools above.

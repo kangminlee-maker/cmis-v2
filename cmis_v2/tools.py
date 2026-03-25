@@ -773,6 +773,53 @@ class CMISTools:
             {"metric_intervals": metric_intervals, "project_id": self.project_id or ""},
         )
 
+    def get_distribution(self, variable_name: str) -> dict[str, Any]:
+        """Get the distribution for an estimated variable.
+
+        Returns the fitted probability distribution (Beta, Lognormal, etc.)
+        with percentiles, mode, and mean. Returns null distribution if the
+        variable has no distribution (free variables or uniform-only).
+        """
+        from cmis_v2.engines.estimation import get_estimate
+
+        est = get_estimate(variable_name=variable_name, project_id=self.project_id or "")
+        if "error" in est:
+            return est
+
+        # Get distribution from fused result or latest estimate
+        dist_dict = None
+        if est.get("fused") and est["fused"].get("distribution"):
+            dist_dict = est["fused"]["distribution"]
+        elif est.get("estimates"):
+            dist_dict = est["estimates"][-1].get("distribution")
+
+        if dist_dict is None:
+            return {
+                "variable_name": variable_name,
+                "has_distribution": False,
+                "reason": "No distribution fitted (free variable or uniform-only)",
+            }
+
+        from cmis_v2.engines.distribution import Distribution
+
+        dist = Distribution.from_dict(dist_dict)
+        return {
+            "variable_name": variable_name,
+            "has_distribution": True,
+            "kind": dist.kind,
+            "params": dist.params,
+            "percentiles": {
+                "p10": round(dist.percentile(0.1), 4),
+                "p25": round(dist.percentile(0.25), 4),
+                "p50": round(dist.percentile(0.5), 4),
+                "p75": round(dist.percentile(0.75), 4),
+                "p90": round(dist.percentile(0.9), 4),
+            },
+            "mode": round(dist.mode(), 4),
+            "mean": round(dist.mean(), 4),
+            "interval": dist.interval.to_dict(),
+        }
+
     # ------------------------------------------------------------------
     # Belief engine wrappers (DEPRECATED → Estimation Engine)
     # ------------------------------------------------------------------
@@ -1246,6 +1293,16 @@ class CMISTools:
                     "Example: {'MET-TAM': {'lo': 1.5e12, 'hi': 2.5e12}, 'MET-SAM': {'lo': 0.5e12, 'hi': 1.0e12}}. "
                     "Returns: violations list, narrowed_intervals, all_passed bool. "
                     "Use after estimating multiple metrics to verify cross-metric consistency."
+                ),
+            },
+            "get_distribution": {
+                "tool": self.get_distribution,
+                "description": (
+                    "Get the fitted probability distribution for an estimated variable. "
+                    "Returns percentiles (p10/p25/p50/p75/p90), mode, mean, and distribution kind (beta/lognormal). "
+                    "Args: variable_name (str, required) - metric ID or free variable name. "
+                    "Returns: dict with has_distribution, kind, percentiles, mode, mean. "
+                    "Use to report uncertainty quality to the user: narrow percentile ranges = high confidence."
                 ),
             },
             # --- Belief engine (DEPRECATED → use Estimation engine above) ---
