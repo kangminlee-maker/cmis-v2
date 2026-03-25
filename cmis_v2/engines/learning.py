@@ -255,3 +255,74 @@ def apply_learnings(metric_id: str, project_id: str = "") -> dict[str, Any]:
         "average_actual": avg_actual,
         "updated_belief": updated,
     }
+
+
+# ---------------------------------------------------------------------------
+# Query helpers (used by reference_class, calibration engines)
+# ---------------------------------------------------------------------------
+
+
+def list_outcomes_by_metric(
+    metric_id: str,
+    project_id: str = "",
+) -> list[dict[str, Any]]:
+    """Get all outcomes for a specific metric.
+
+    Loads from engine_store when project_id is given and
+    in-memory store does not yet contain them.
+    """
+    if project_id:
+        from cmis_v2.engine_store import list_engine_keys, load_engine_data
+
+        keys = list_engine_keys(project_id, "learning")
+        for key in keys:
+            if key not in _OUTCOME_STORE:
+                data = load_engine_data(project_id, "learning", key)
+                if data is not None:
+                    _OUTCOME_STORE[key] = data
+
+    return [
+        o for o in _OUTCOME_STORE.values()
+        if o.get("metric_id") == metric_id
+    ]
+
+
+def list_outcomes_by_source_tier(
+    source_tier: str,
+    project_id: str = "",
+) -> list[dict[str, Any]]:
+    """Get all outcomes from a specific source tier.
+
+    Matches source_tier against the outcome's source field using
+    keyword-based tier detection.
+    """
+    if project_id:
+        from cmis_v2.engine_store import list_engine_keys, load_engine_data
+
+        keys = list_engine_keys(project_id, "learning")
+        for key in keys:
+            if key not in _OUTCOME_STORE:
+                data = load_engine_data(project_id, "learning", key)
+                if data is not None:
+                    _OUTCOME_STORE[key] = data
+
+    return [
+        o for o in _OUTCOME_STORE.values()
+        if _match_source_tier(o.get("source", ""), source_tier)
+    ]
+
+
+def _match_source_tier(source: str, target_tier: str) -> bool:
+    """Check if a source string matches a target source tier."""
+    source_lower = source.lower()
+
+    tier_keywords: dict[str, list[str]] = {
+        "official": ["kosis", "dart", "government", "official", "census"],
+        "curated": ["curated", "research", "academic", "journal"],
+        "commercial": ["commercial", "paid", "subscription", "gartner", "idc"],
+        "web": ["web", "blog", "news", "article", "search"],
+        "estimation_output": ["estimation", "fermi", "estimate", "predicted"],
+    }
+
+    keywords = tier_keywords.get(target_tier, [])
+    return any(kw in source_lower for kw in keywords)

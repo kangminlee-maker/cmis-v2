@@ -143,6 +143,22 @@ Registered metrics (from METRIC_REGISTRY) automatically get a fitted probability
 - **Confirmed values** backed by strong evidence → `set_metric_value` to record the final metric.
 - Estimation results can also be recorded as R-Graph node attributes for structural analysis.
 
+### Workflow E — Reference Class Forecasting
+
+Before creating estimates from scratch, check if past outcomes exist:
+
+1. `suggest_estimate_from_reference(metric_id)` — get empirical P10/P90 from past outcomes.
+2. If available, use as starting point for `create_estimate`, then refine with `update_estimate`.
+3. If insufficient data (< 3 outcomes), proceed with manual estimation.
+
+### Workflow F — Calibration
+
+After completing an analysis cycle, check prediction quality:
+
+1. `get_calibration(metric_id)` — see how past predictions performed per source tier.
+2. `get_calibrated_reliability(source_tier)` — get data-driven source_reliability when calling `create_estimate`.
+3. Calibration improves automatically as more outcomes are recorded via the Learning Engine.
+
 ### Deprecated Tools — Do Not Use
 
 | Old (deprecated) | New replacement | Note |

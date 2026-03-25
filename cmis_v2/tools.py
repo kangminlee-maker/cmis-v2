@@ -821,6 +821,26 @@ class CMISTools:
         }
 
     # ------------------------------------------------------------------
+    # Reference Class Forecasting + Calibration
+    # ------------------------------------------------------------------
+
+    def suggest_estimate_from_reference(self, metric_id: str) -> dict[str, Any]:
+        """Suggest P10/P90 interval based on past outcomes (Reference Class)."""
+        from cmis_v2.engines.reference_class import suggest_estimate
+        return self._safe_call("suggest_estimate_from_reference", suggest_estimate, {"metric_id": metric_id, "project_id": self.project_id or ""})
+
+    def get_calibration(self, metric_id: str = "") -> dict[str, Any]:
+        """Get calibration data showing prediction accuracy and reliability adjustments."""
+        from cmis_v2.engines.calibration import compute_calibration
+        return self._safe_call("get_calibration", compute_calibration, {"project_id": self.project_id or "", "metric_id": metric_id})
+
+    def get_calibrated_reliability(self, source_tier: str, metric_id: str = "") -> dict[str, Any]:
+        """Get calibrated source_reliability for a specific source tier."""
+        from cmis_v2.engines.calibration import calibrated_reliability
+        result = calibrated_reliability(source_tier=source_tier, metric_id=metric_id, project_id=self.project_id or "")
+        return {"source_tier": source_tier, "metric_id": metric_id or "(all)", "calibrated_reliability": result}
+
+    # ------------------------------------------------------------------
     # Belief engine wrappers (DEPRECATED → Estimation Engine)
     # ------------------------------------------------------------------
 
@@ -1303,6 +1323,36 @@ class CMISTools:
                     "Args: variable_name (str, required) - metric ID or free variable name. "
                     "Returns: dict with has_distribution, kind, percentiles, mode, mean. "
                     "Use to report uncertainty quality to the user: narrow percentile ranges = high confidence."
+                ),
+            },
+            # --- Reference Class Forecasting + Calibration ---
+            "suggest_estimate_from_reference": {
+                "tool": self.suggest_estimate_from_reference,
+                "description": (
+                    "Suggest an initial P10/P90 interval for a metric based on past outcomes (Reference Class Forecasting). "
+                    "Args: metric_id (str, required) - metric ID (e.g. 'MET-TAM'). "
+                    "Returns: dict with suggested_lo (P10), suggested_hi (P90), outcome_count, and statistics from past outcomes. "
+                    "If fewer than 3 past outcomes exist, returns insufficient_data. "
+                    "Use before creating estimates from scratch to check if historical data can inform the initial range."
+                ),
+            },
+            "get_calibration": {
+                "tool": self.get_calibration,
+                "description": (
+                    "Get calibration data showing how past predictions performed. "
+                    "Args: metric_id (str, optional) - filter by specific metric. "
+                    "Returns: accuracy breakdown (accurate/acceptable/poor) and suggested reliability adjustments per source tier. "
+                    "Use to understand prediction quality and adjust source_reliability accordingly."
+                ),
+            },
+            "get_calibrated_reliability": {
+                "tool": self.get_calibrated_reliability,
+                "description": (
+                    "Get calibrated source_reliability for a source tier based on past performance. "
+                    "Args: source_tier (str, required) - 'official', 'curated', 'commercial', 'web'; "
+                    "metric_id (str, optional) - filter by metric. "
+                    "Returns: calibrated reliability value (0.0-1.0). "
+                    "Use when setting source_reliability in create_estimate to get data-driven values."
                 ),
             },
             # --- Belief engine (DEPRECATED → use Estimation engine above) ---
