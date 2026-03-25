@@ -27,6 +27,7 @@
 | Evidence | 수집된 외부 데이터 (KOSIS, DART, web) | Estimate (추정 결과) |
 | Estimate | 추정 엔진이 생산한 구간 결과 | Evidence (수집 데이터) |
 | Fermi tree | 미지 숫자를 하위 요소로 분해한 트리 구조 | 단일 점추정 |
+| Distribution | Interval 위의 선택적 확률 분포 (Beta, Lognormal 등). P10/P90에서 fitting | Interval (P10/P90 구간 자체) |
 
 ## Abbreviation Registry
 

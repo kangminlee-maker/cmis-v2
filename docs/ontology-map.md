@@ -63,7 +63,7 @@
 
 | Name | Type | Description | Used By | Values |
 |------|------|-------------|---------|--------|
-| `kind` | enum | 참여자/자원의 유형 분류 | actor | company, individual, government, ngo, digital_service, physical_product |
+| `kind` | enum | 시장 참여 주체 또는 주요 자원 유형. 주체(company~ngo)와 산출물 유형(digital_service, physical_product) 구분. 산출물 유형 상세는 product 노드의 category trait 참조 | actor | company, individual, government, ngo, digital_service, physical_product |
 | `institution_type` | enum | 기관 유형 (온라인 플랫폼, 마켓플레이스 등) | actor | online_platform, marketplace, brick_and_mortar, hybrid, financial_institution, educational_institution, government_agency |
 | `market_position` | enum | 시장 내 경쟁 포지션 | actor | leader, challenger, follower, niche |
 | `value_chain_position` | enum | 가치사슬 내 위치 | actor | upstream, midstream, downstream |

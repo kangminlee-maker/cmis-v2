@@ -137,16 +137,17 @@ def _generate_types(ont: dict[str, Any]) -> str:
         unit = mdef["unit"]
         agg = mdef["aggregation"]
         bounds = mdef.get("bounds")
+        dist_type = mdef.get("distribution_type")
+        entry_parts = [
+            f'"description": "{desc}"',
+            f'"unit": "{unit}"',
+            f'"aggregation": "{agg}"',
+        ]
         if bounds is not None:
-            lines.append(
-                f'    "{mid}": {{"description": "{desc}", "unit": "{unit}", '
-                f'"aggregation": "{agg}", "bounds": {bounds}}},'
-            )
-        else:
-            lines.append(
-                f'    "{mid}": {{"description": "{desc}", "unit": "{unit}", '
-                f'"aggregation": "{agg}"}},'
-            )
+            entry_parts.append(f'"bounds": {bounds}')
+        if dist_type is not None:
+            entry_parts.append(f'"distribution_type": "{dist_type}"')
+        lines.append(f'    "{mid}": {{{", ".join(entry_parts)}}},')
     lines.append("}")
     lines.append("")
 

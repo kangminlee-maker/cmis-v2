@@ -55,6 +55,42 @@ def _try_get_bounds(variable_name: str) -> dict[str, float] | None:
         return None
 
 
+def _try_get_metric_info(variable_name: str) -> dict[str, Any] | None:
+    """Try to get full metric info from METRIC_REGISTRY."""
+    try:
+        from cmis_v2.generated.types import METRIC_REGISTRY
+        entry = METRIC_REGISTRY.get(variable_name)
+        return dict(entry) if entry else None
+    except Exception:
+        return None
+
+
+def _try_fit_distribution(interval: Interval, variable_name: str) -> dict[str, Any] | None:
+    """Fit a distribution if metric has distribution_type in METRIC_REGISTRY.
+
+    Returns Distribution.to_dict() or None for free variables / no hint.
+    """
+    info = _try_get_metric_info(variable_name)
+    if info is None:
+        return None
+
+    dist_type = info.get("distribution_type")
+    if dist_type is None:
+        # No explicit type: try inference from unit + bounds
+        unit = info.get("unit", "")
+        bounds = info.get("bounds")
+        if not unit:
+            return None
+        from cmis_v2.engines.distribution import infer_distribution
+        dist = infer_distribution(interval, unit=unit, bounds=bounds)
+        return dist.to_dict() if dist.kind != "uniform" else None
+
+    from cmis_v2.engines.distribution import fit_distribution
+    bounds = info.get("bounds")
+    dist = fit_distribution(interval, kind=dist_type, bounds=bounds)
+    return dist.to_dict()
+
+
 # ---------------------------------------------------------------------------
 # Public API: Estimates
 # ---------------------------------------------------------------------------
@@ -105,7 +141,7 @@ def create_estimate(
         "variable_name": variable_name,
         "interval": interval.to_dict(),
         "point_estimate": interval.midpoint,
-        "distribution": None,  # Phase 4: Distribution object for precision metrics
+        "distribution": _try_fit_distribution(interval, variable_name),
         "method": method,
         "source": source,
         "source_reliability": max(0.0, min(1.0, source_reliability)),
@@ -260,10 +296,14 @@ def _batch_fuse(
     # Determine recommended method (most reliable estimate's method)
     recommended_method = sorted_est[0].get("method", "unknown") if sorted_est else "unknown"
 
+    # Re-fit distribution from fused interval (inherit type from most reliable)
+    fused_distribution = _try_fit_distribution(current, variable_name)
+
     return {
         "interval": current.to_dict(),
         "point_estimate": current.midpoint,
         "spread_ratio": round(current.spread_ratio, 3) if current.midpoint != 0 else None,
+        "distribution": fused_distribution,
         "recommended_method": recommended_method,
         "estimates_count": len(estimates),
         "conflicts": conflicts,
@@ -440,8 +480,11 @@ def evaluate_fermi_tree(
             "incomplete": [c["variable"] for c in incomplete],
         }
 
-    # Evaluate recursively
+    # Evaluate recursively (interval arithmetic = primary)
     result_interval, unverified = _evaluate_node(tree)
+
+    # Monte Carlo simulation (supplementary)
+    mc_summary = _monte_carlo_evaluate(tree)
 
     tree["evaluated"] = True
     tree["result"] = result_interval.to_dict()
@@ -456,6 +499,7 @@ def evaluate_fermi_tree(
         "result": result_interval.to_dict(),
         "point_estimate": result_interval.midpoint,
         "spread_ratio": round(result_interval.spread_ratio, 3) if result_interval.midpoint != 0 else None,
+        "mc_summary": mc_summary,
         "unverified_leaves": unverified,
         "lineage": {
             "engine": "estimation",
@@ -506,6 +550,103 @@ def _evaluate_node(tree: dict[str, Any]) -> tuple[Interval, int]:
             raise ValueError(f"Unknown operation: {operation}")
 
     return result, unverified_total
+
+
+def _monte_carlo_evaluate(
+    tree: dict[str, Any],
+    n: int = 5000,
+) -> dict[str, Any]:
+    """Run Monte Carlo simulation on a Fermi tree (supplementary result).
+
+    Returns mc_summary with p10, p50, p90, mean, and uniform_leaf_count.
+    """
+    from cmis_v2.engines.distribution import sample as dist_sample
+
+    leaf_samples, uniform_count = _collect_leaf_samples(tree, n)
+    if not leaf_samples:
+        return {}
+
+    operation = tree["operation"]
+    result_samples = leaf_samples[0]
+    for ls in leaf_samples[1:]:
+        result_samples = _apply_op_samples(result_samples, ls, operation)
+
+    result_samples.sort()
+    count = len(result_samples)
+
+    return {
+        "p10": round(result_samples[max(0, int(count * 0.1))], 2),
+        "p50": round(result_samples[int(count * 0.5)], 2),
+        "p90": round(result_samples[min(count - 1, int(count * 0.9))], 2),
+        "mean": round(sum(result_samples) / count, 2),
+        "uniform_leaf_count": uniform_count,
+        "sample_size": n,
+    }
+
+
+def _collect_leaf_samples(
+    tree: dict[str, Any],
+    n: int,
+) -> tuple[list[list[float]], int]:
+    """Collect samples from all leaves/subtrees of a tree node."""
+    from cmis_v2.engines.distribution import sample as dist_sample, Distribution
+
+    all_samples: list[list[float]] = []
+    uniform_count = 0
+
+    for child in tree["children"]:
+        if child["type"] == "leaf":
+            iv = Interval.from_dict(child["interval"])
+            # Check if leaf variable has a distribution in estimation store
+            var_name = child.get("variable", "")
+            est = _ESTIMATION_STORE.get(var_name)
+            dist_dict = None
+            if est and est.get("fused") and est["fused"].get("distribution"):
+                dist_dict = est["fused"]["distribution"]
+            elif est and est.get("estimates"):
+                latest = est["estimates"][-1]
+                dist_dict = latest.get("distribution")
+
+            dist = Distribution.from_dict(dist_dict) if dist_dict else None
+            samples = dist_sample(iv, n=n, distribution=dist)
+            if dist is None:
+                uniform_count += 1
+            all_samples.append(samples)
+
+        elif child["type"] == "subtree":
+            subtree = _FERMI_STORE.get(child["subtree_id"])
+            if subtree is None:
+                continue
+            sub_samples, sub_uniform = _collect_leaf_samples(subtree, n)
+            if not sub_samples:
+                continue
+            # Combine subtree samples with its operation
+            combined = sub_samples[0]
+            for ss in sub_samples[1:]:
+                combined = _apply_op_samples(
+                    combined, ss, subtree["operation"],
+                )
+            all_samples.append(combined)
+            uniform_count += sub_uniform
+
+    return all_samples, uniform_count
+
+
+def _apply_op_samples(
+    a: list[float],
+    b: list[float],
+    operation: str,
+) -> list[float]:
+    """Apply arithmetic operation element-wise on sample lists."""
+    if operation == "multiply":
+        return [x * y for x, y in zip(a, b)]
+    if operation == "add":
+        return [x + y for x, y in zip(a, b)]
+    if operation == "subtract":
+        return [x - y for x, y in zip(a, b)]
+    if operation == "divide":
+        return [x / y if y != 0 else float("inf") for x, y in zip(a, b)]
+    return a
 
 
 def _detect_cycle(tree_id: str, visited: set[str]) -> list[str] | None:

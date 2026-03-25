@@ -423,6 +423,7 @@ ontology:
       description: "목표 고객 수"
       unit: count
       aggregation: sum
+      distribution_type: lognormal
       required_evidence_tier:
         - official_statistics
         - industry_reports
@@ -432,6 +433,7 @@ ontology:
       description: "연간 매출"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
       required_evidence_tier:
         - company_filings
         - official_statistics
@@ -441,21 +443,25 @@ ontology:
       description: "평균 단가 (매출 / 고객 수)"
       unit: currency
       aggregation: weighted_average
+      distribution_type: lognormal
 
     MET-TAM:
       description: "총 시장 규모 (Total Addressable Market)"
       unit: currency
       aggregation: latest
+      distribution_type: lognormal
 
     MET-SAM:
       description: "유효 시장 규모 (Serviceable Available Market)"
       unit: currency
       aggregation: latest
+      distribution_type: lognormal
 
     MET-SOM:
       description: "수익 가능 시장 규모 (Serviceable Obtainable Market)"
       unit: currency
       aggregation: latest
+      distribution_type: lognormal
 
     MET-Churn_rate:
       description: "고객 이탈률"
@@ -464,6 +470,7 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-Gross_margin:
       description: "매출 총이익률"
@@ -472,26 +479,31 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-LTV:
       description: "고객 생애 가치 (Lifetime Value)"
       unit: currency
       aggregation: weighted_average
+      distribution_type: lognormal
 
     MET-CAC:
       description: "고객 획득 비용 (Customer Acquisition Cost)"
       unit: currency
       aggregation: weighted_average
+      distribution_type: lognormal
 
     MET-Payback_period:
       description: "CAC 회수 기간 (개월)"
       unit: count
       aggregation: weighted_average
+      distribution_type: lognormal
 
     MET-ARPU:
       description: "사용자당 평균 매출 (Average Revenue Per User)"
       unit: currency
       aggregation: weighted_average
+      distribution_type: lognormal
 
     MET-HHI_revenue:
       description: "허핀달-허쉬만 지수 (매출 기준 시장 집중도)"
@@ -500,6 +512,7 @@ ontology:
       bounds:
         min: 0
         max: 10000
+      distribution_type: beta
 
     MET-Top3_revenue_share:
       description: "상위 3개 기업 매출 점유율 합계"
@@ -508,6 +521,7 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-Top5_revenue_share:
       description: "상위 5개 기업 매출 점유율 합계"
@@ -516,16 +530,19 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-Platform_commission_fees:
       description: "플랫폼 수수료 수익"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
 
     MET-CapEx:
       description: "자본 지출 (Capital Expenditure)"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
 
     MET-Operating_margin:
       description: "영업이익률"
@@ -534,21 +551,25 @@ ontology:
       bounds:
         min: -1.0
         max: 1.0
+      distribution_type: beta
 
     MET-COGS:
       description: "매출원가 (Cost of Goods Sold)"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
 
     MET-OPEX:
       description: "운영비 (Operating Expenditure)"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
 
     MET-Royalty_expenses:
       description: "로열티 비용"
       unit: currency
       aggregation: sum
+      distribution_type: lognormal
 
     MET-Market_growth_rate:
       description: "시장 성장률 (연간)"
@@ -557,6 +578,7 @@ ontology:
       bounds:
         min: -1.0
         max: 10.0
+      distribution_type: beta
 
     MET-Market_penetration_rate:
       description: "시장 침투율"
@@ -565,6 +587,7 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-Customer_concentration:
       description: "고객 집중도 (상위 고객 매출 비중)"
@@ -573,6 +596,7 @@ ontology:
       bounds:
         min: 0.0
         max: 1.0
+      distribution_type: beta
 
     MET-Net_revenue_retention:
       description: "순 매출 유지율 (기존 고객 기반)"
