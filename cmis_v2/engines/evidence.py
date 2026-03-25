@@ -327,8 +327,8 @@ def add_record(
         if evidence_id not in _EVIDENCE_STORE:
             return {"error": f"Evidence collection not found: {evidence_id}"}
 
-    if source_tier not in ("official", "curated", "commercial", "web"):
-        return {"error": f"Invalid source_tier: {source_tier!r}. Must be one of: official, curated, commercial, web"}
+    if source_tier not in ("official", "curated", "commercial", "web", "estimation_output"):
+        return {"error": f"Invalid source_tier: {source_tier!r}. Must be one of: official, curated, commercial, web, estimation_output"}
 
     confidence = max(0.0, min(1.0, confidence))
 

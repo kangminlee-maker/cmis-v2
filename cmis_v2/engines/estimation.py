@@ -4,11 +4,18 @@ Replaces the former Belief Engine (belief.py).  All estimation is
 interval-based (P10/P90 ranges), with no sigma/confidence conversion.
 
 Design decisions (3x 8-Agent Panel Review, 2026-03-25):
-- Pure Interval (接근법 B): lo/hi = P10/P90
+- Pure Interval (접근법 B): lo/hi = P10/P90
 - No confidence→sigma conversion (접근법 A 폐기)
 - Batch update for order independence (강한 재현)
 - Free variables supported (not limited to METRIC_REGISTRY)
 - Stepwise Fermi tree construction
+- DAG validation on Fermi trees (no circular references)
+
+Invariants:
+- source_reliability is produced by Evidence Engine only, never generated internally (C7/D-3)
+- Free variables persist in _ESTIMATION_STORE for the session duration (C1: option b)
+- Human review gate is RLM layer responsibility; this engine outputs review-ready info (C10)
+- "estimation_output" source_tier distinguishes system estimates from external data (C4)
 
 This module is designed to be called by RLM's LM as a custom_tool.
 All inputs/outputs are plain dicts (JSON-serializable).
@@ -249,10 +256,14 @@ def _batch_fuse(
     if bounds:
         current = current.clamp(bounds["min"], bounds["max"])
 
+    # Determine recommended method (most reliable estimate's method)
+    recommended_method = sorted_est[0].get("method", "unknown") if sorted_est else "unknown"
+
     return {
         "interval": current.to_dict(),
         "point_estimate": current.midpoint,
         "spread_ratio": round(current.spread_ratio, 3) if current.midpoint != 0 else None,
+        "recommended_method": recommended_method,
         "estimates_count": len(estimates),
         "conflicts": conflicts,
         "has_conflicts": len(conflicts) > 0,
@@ -410,6 +421,13 @@ def evaluate_fermi_tree(
     if not children:
         return {"error": f"Fermi tree {tree_id} has no children. Add leaves first."}
 
+    # DAG validation: detect circular references (C6)
+    cycle = _detect_cycle(tree_id, set())
+    if cycle:
+        return {
+            "error": f"Circular reference detected in Fermi tree: {' → '.join(cycle)}",
+        }
+
     # Check all leaves are populated
     incomplete = [
         c for c in children
@@ -487,3 +505,59 @@ def _evaluate_node(tree: dict[str, Any]) -> tuple[Interval, int]:
             raise ValueError(f"Unknown operation: {operation}")
 
     return result, unverified_total
+
+
+def _detect_cycle(tree_id: str, visited: set[str]) -> list[str] | None:
+    """Detect circular references in Fermi tree DAG.
+
+    Returns the cycle path if found, None otherwise.
+    """
+    if tree_id in visited:
+        return [tree_id]
+
+    tree = _FERMI_STORE.get(tree_id)
+    if tree is None:
+        return None
+
+    visited = visited | {tree_id}
+
+    for child in tree.get("children", []):
+        if child.get("type") == "subtree":
+            sub_id = child.get("subtree_id", "")
+            cycle = _detect_cycle(sub_id, visited)
+            if cycle is not None:
+                return [tree_id] + cycle
+
+    return None
+
+
+def get_variable_names(project_id: str = "") -> dict[str, Any]:
+    """Return all known variable names for collision detection (C2).
+
+    Returns dict with registered_metrics (from METRIC_REGISTRY),
+    free_variables (from _ESTIMATION_STORE), and fermi_variables.
+    """
+    registered: list[str] = []
+    try:
+        from cmis_v2.generated.types import VALID_METRIC_IDS
+        registered = sorted(VALID_METRIC_IDS)
+    except Exception:
+        pass
+
+    free_vars = sorted(
+        name for name in _ESTIMATION_STORE
+        if not name.startswith("MET-")
+    )
+
+    fermi_vars: set[str] = set()
+    for tree in _FERMI_STORE.values():
+        for child in tree.get("children", []):
+            var = child.get("variable", "")
+            if var:
+                fermi_vars.add(var)
+
+    return {
+        "registered_metrics": registered,
+        "free_variables": free_vars,
+        "fermi_variables": sorted(fermi_vars),
+    }

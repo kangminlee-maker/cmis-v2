@@ -231,10 +231,11 @@ def migrate_project(
     from cmis_v2.config import PROJECTS_DIR
     from cmis_v2.engine_store import list_engine_keys, load_engine_data, save_engine_data
 
-    engines = ["evidence", "world", "value", "pattern", "strategy", "policy", "belief", "learning"]
+    # Dynamic engine discovery: scan engine_data subdirectories instead of hardcoded list
     engine_data_dir = PROJECTS_DIR / project_id / "engine_data"
 
     if engine_data_dir.exists():
+        engines = sorted(d.name for d in engine_data_dir.iterdir() if d.is_dir())
         for engine_name in engines:
             keys = list_engine_keys(project_id, engine_name)
             for key in keys:
