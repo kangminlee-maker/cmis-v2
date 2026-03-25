@@ -1,30 +1,30 @@
-"""CMIS v2 Belief Engine — Prior/belief distribution management.
+"""CMIS v2 Belief Engine — DEPRECATED.
 
-TODO [FUTURE REVIEW]: Belief engine logic needs review and redesign.
-Current implementation provides basic prior storage and simple Bayesian
-update. The update formula, confidence propagation, and multi-source
-fusion logic should be validated against statistical best practices
-before production use.
+This module is replaced by estimation.py (Estimation Engine).
+All functions delegate to estimation.py for backward compatibility.
 
-This module is designed to be called by RLM's LM as a custom_tool.
+Deprecation reason (8-Agent Panel Review, 2026-03-25):
+- Weighted average update is not Bayesian and has confidence monotonic increase
+- No interval support, no Fermi decomposition, no constraint propagation
+- confidence→sigma conversion approach (접근법 A) rejected by 8/8 panel consensus
+- Replaced by pure Interval-based estimation (접근법 B)
+
+See: .claude/sessions/onto-review/20260325-9780126d/philosopher_synthesis.md
 """
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
-from cmis_v2.generated.validators import validate_metric_id
-
-# ---------------------------------------------------------------------------
-# Module-level store
-# ---------------------------------------------------------------------------
-
-_BELIEF_STORE: dict[str, dict] = {}
+from cmis_v2.engines.estimation import (
+    create_estimate,
+    get_estimate,
+    list_estimates,
+    update_estimate,
+)
 
 # ---------------------------------------------------------------------------
-# Public API
+# Deprecated API — delegates to Estimation Engine
 # ---------------------------------------------------------------------------
 
 
@@ -36,68 +36,72 @@ def set_prior(
     distribution: dict | None = None,
     project_id: str = "",
 ) -> dict[str, Any]:
-    """Set a prior belief for a metric.
+    """[DEPRECATED → create_estimate] Set a prior belief for a metric."""
+    # Convert confidence to a rough P10/P90 spread
+    spread = 0.5 * (1 - confidence)  # conf=0.3 → ±35%, conf=0.9 → ±5%
+    half = abs(point_estimate) * spread if point_estimate != 0 else 1.0
 
-    Args:
-        metric_id: Must be a valid MetricId.
-        point_estimate: Initial estimate.
-        confidence: How confident (0.0-1.0, default 0.3 = low).
-        source: Where this prior comes from ("expert_guess", "historical", "benchmark").
-        distribution: Optional {"min": ..., "max": ...} range.
+    lo = point_estimate - half
+    hi = point_estimate + half
 
-    Returns:
-        Dict with belief_id, metric_id, point_estimate, confidence, source,
-        distribution, version, updated_at.
-    """
-    if not validate_metric_id(metric_id):
-        return {"error": f"Invalid metric ID: {metric_id}"}
+    # Use distribution if provided
+    if distribution and distribution.get("min") is not None:
+        lo = distribution["min"]
+    if distribution and distribution.get("max") is not None:
+        hi = distribution["max"]
 
-    valid_sources = ("expert_guess", "historical", "benchmark")
-    if source not in valid_sources:
-        return {"error": f"Invalid source: {source!r}. Must be one of: {valid_sources}"}
+    result = create_estimate(
+        variable_name=metric_id,
+        lo=lo,
+        hi=hi,
+        method=source,
+        source=source,
+        source_reliability=confidence,
+        project_id=project_id,
+    )
 
-    confidence = max(0.0, min(1.0, confidence))
-    now = datetime.now().isoformat()
-
-    belief_id = f"BLF-{uuid4().hex[:6]}"
-    dist = distribution if distribution is not None else {"min": None, "max": None}
-
-    belief: dict[str, Any] = {
-        "belief_id": belief_id,
+    # Return in legacy format
+    return {
+        "belief_id": result.get("estimate_id", ""),
         "metric_id": metric_id,
-        "point_estimate": point_estimate,
+        "point_estimate": result.get("point_estimate", point_estimate),
         "confidence": confidence,
         "source": source,
-        "distribution": dist,
+        "distribution": {"min": lo, "max": hi},
         "version": 1,
-        "updated_at": now,
+        "updated_at": result.get("created_at", ""),
+        "_deprecated": "Use create_estimate() instead",
     }
-
-    _BELIEF_STORE[metric_id] = belief
-    if project_id:
-        from cmis_v2.engine_store import save_engine_data
-        save_engine_data(project_id, "belief", metric_id, belief)
-    return belief
 
 
 def get_prior(metric_id: str, project_id: str = "") -> dict[str, Any]:
-    """Get the current prior belief for a metric.
+    """[DEPRECATED → get_estimate] Get the current prior belief."""
+    result = get_estimate(metric_id, project_id)
+    if "error" in result:
+        return result
 
-    Args:
-        metric_id: The metric ID.
+    # Convert to legacy format
+    fused = result.get("fused")
+    latest = result["estimates"][-1] if result.get("estimates") else None
 
-    Returns:
-        The belief dict, or an error dict.
-    """
-    if metric_id in _BELIEF_STORE:
-        return _BELIEF_STORE[metric_id]
-    if project_id:
-        from cmis_v2.engine_store import load_engine_data
-        data = load_engine_data(project_id, "belief", metric_id)
-        if data is not None:
-            _BELIEF_STORE[metric_id] = data
-            return data
-    return {"error": f"No prior belief for metric: {metric_id}"}
+    if fused:
+        interval = fused["interval"]
+    elif latest:
+        interval = latest["interval"]
+    else:
+        return {"error": f"No estimation data for: {metric_id}"}
+
+    return {
+        "belief_id": latest.get("estimate_id", "") if latest else "",
+        "metric_id": metric_id,
+        "point_estimate": interval.get("midpoint", 0),
+        "confidence": latest.get("source_reliability", 0.5) if latest else 0.5,
+        "source": latest.get("source", "") if latest else "",
+        "distribution": {"min": interval.get("lo"), "max": interval.get("hi")},
+        "version": result.get("version", 1),
+        "updated_at": result.get("updated_at", ""),
+        "_deprecated": "Use get_estimate() instead",
+    }
 
 
 def update_belief(
@@ -106,62 +110,44 @@ def update_belief(
     evidence_confidence: float = 0.5,
     project_id: str = "",
 ) -> dict[str, Any]:
-    """Update belief using simple weighted average (pseudo-Bayesian).
+    """[DEPRECATED → update_estimate] Update belief with new evidence."""
+    spread = 0.5 * (1 - evidence_confidence)
+    half = abs(new_evidence_value) * spread if new_evidence_value != 0 else 1.0
 
-    TODO [FUTURE REVIEW]: Replace with proper Bayesian update.
-    Current formula:
-        updated = (prior * prior_conf + evidence * evd_conf) / (prior_conf + evd_conf)
-        updated_conf = min(1.0, prior_conf + evd_conf * 0.5)
+    result = update_estimate(
+        variable_name=metric_id,
+        lo=new_evidence_value - half,
+        hi=new_evidence_value + half,
+        source_reliability=evidence_confidence,
+        project_id=project_id,
+    )
 
-    This is a simplified approximation, not a true Bayesian posterior.
+    if "error" in result:
+        return result
 
-    Args:
-        metric_id: The metric ID to update.
-        new_evidence_value: New observed/estimated value.
-        evidence_confidence: Confidence in the new evidence (0.0-1.0).
+    # Get fused result
+    me = get_estimate(metric_id, project_id)
+    fused = me.get("fused", {})
+    interval = fused.get("interval", result.get("interval", {}))
 
-    Returns:
-        Updated belief dict, or an error dict.
-    """
-    if metric_id not in _BELIEF_STORE:
-        return {"error": f"No prior belief for metric: {metric_id}. Call set_prior() first."}
-
-    evidence_confidence = max(0.0, min(1.0, evidence_confidence))
-    belief = _BELIEF_STORE[metric_id]
-
-    prior_val = belief["point_estimate"]
-    prior_conf = belief["confidence"]
-
-    # Pseudo-Bayesian weighted average
-    denom = prior_conf + evidence_confidence
-    if denom == 0:
-        updated_val = new_evidence_value
-    else:
-        updated_val = (prior_val * prior_conf + new_evidence_value * evidence_confidence) / denom
-
-    updated_conf = min(1.0, prior_conf + evidence_confidence * 0.5)
-    now = datetime.now().isoformat()
-
-    belief["point_estimate"] = updated_val
-    belief["confidence"] = updated_conf
-    belief["version"] = belief["version"] + 1
-    belief["updated_at"] = now
-
-    if project_id:
-        from cmis_v2.engine_store import save_engine_data
-        save_engine_data(project_id, "belief", metric_id, belief)
-
-    return belief
+    return {
+        "belief_id": result.get("estimate_id", ""),
+        "metric_id": metric_id,
+        "point_estimate": interval.get("midpoint", new_evidence_value),
+        "confidence": evidence_confidence,
+        "source": "",
+        "distribution": {"min": interval.get("lo"), "max": interval.get("hi")},
+        "version": me.get("version", 1),
+        "updated_at": me.get("updated_at", ""),
+        "_deprecated": "Use update_estimate() instead",
+    }
 
 
 def list_beliefs(project_id: str = "") -> dict[str, Any]:
-    """List all current beliefs.
-
-    Returns:
-        Dict with total count and list of all belief records.
-    """
-    beliefs = list(_BELIEF_STORE.values())
+    """[DEPRECATED → list_estimates] List all current beliefs."""
+    result = list_estimates(project_id)
     return {
-        "total": len(beliefs),
-        "beliefs": beliefs,
+        "total": result.get("total", 0),
+        "beliefs": result.get("estimations", []),
+        "_deprecated": "Use list_estimates() instead",
     }

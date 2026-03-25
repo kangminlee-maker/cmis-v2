@@ -226,18 +226,10 @@ def set_metric_value(
             "even though evidence_summary is present."
         )
     elif evidence_summary and evidence_id:
-        # Derive min_confidence threshold from policy (default 0.3)
-        min_conf = 0.3
-        try:
-            from cmis_v2.engines.policy import _resolve_mode, _get_profile
-            mode = _resolve_mode("decision_balanced")
-            if mode:
-                vp_name = mode.get("profiles", {}).get("value", "")
-                vp = _get_profile("value", vp_name)
-                min_conf = vp.get("min_confidence", 0.3)
-        except Exception:
-            pass
-        if confidence >= min_conf:
+        # Quality status is determined by Value Engine independently.
+        # Policy Engine validates thresholds separately via check_value_gate().
+        # This avoids Value → Policy reverse dependency.
+        if confidence >= 0.3:
             record["quality"]["status"] = "ok"
         else:
             record["quality"]["status"] = "low_confidence"

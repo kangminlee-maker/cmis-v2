@@ -228,6 +228,7 @@ def migrate_project(
     _write_manifest(project_id, manifest)
 
     # 2. Migrate engine_store data (rename/remove metric/trait IDs)
+    from cmis_v2.config import PROJECTS_DIR
     from cmis_v2.engine_store import list_engine_keys, load_engine_data, save_engine_data
 
     engines = ["evidence", "world", "value", "pattern", "strategy", "policy", "belief", "learning"]
