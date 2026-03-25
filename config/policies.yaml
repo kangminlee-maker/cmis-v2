@@ -152,7 +152,6 @@ policy_pack:
         - evidence_min_sources
         - evidence_require_official_if_configured
         - evidence_max_age_days
-        - value_min_confidence
         - value_literal_ratio
         - value_spread_ratio
         - prior_ratio_limit
@@ -173,7 +172,6 @@ policy_pack:
       gates:
         - evidence_min_sources
         - evidence_max_age_days
-        - value_min_confidence
         - value_literal_ratio
         - value_spread_ratio
         - prior_ratio_limit

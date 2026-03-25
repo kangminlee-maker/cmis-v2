@@ -55,6 +55,38 @@ def _get_profile(profile_type: str, profile_name: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_spread(record: dict) -> float:
+    """Compute spread_ratio from a value record.
+
+    Works with both legacy (value + range_low/range_high) and
+    Interval-based (interval.lo/hi) records.
+    """
+    # Interval-based
+    interval = record.get("interval")
+    if interval and isinstance(interval, dict):
+        lo = interval.get("lo", 0)
+        hi = interval.get("hi", 0)
+        mid = (lo + hi) / 2
+        return (hi - lo) / abs(mid) if mid != 0 else float("inf")
+
+    # Legacy: value + range_low/range_high
+    value = record.get("value") or record.get("point_estimate")
+    lo = record.get("range_low") or record.get("low")
+    hi = record.get("range_high") or record.get("high")
+    if value and lo is not None and hi is not None:
+        try:
+            v = float(value)
+            return (float(hi) - float(lo)) / abs(v) if v != 0 else float("inf")
+        except (ValueError, TypeError):
+            pass
+    return 0.0
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -238,27 +270,29 @@ def check_value_gate(
     gates_checked = 0
     gates_passed = 0
 
-    # Gate: value_min_confidence
+    # Gate: value_min_confidence — DEPRECATED (replaced by value_spread_ratio)
+    # Estimation Engine uses Interval (P10/P90) instead of confidence.
+    # Kept for backward compatibility: if declared, uses spread_ratio as proxy.
     if "value_min_confidence" in mode_gates:
         gates_checked += 1
-        min_conf = val_profile.get("min_confidence", 0.0)
+        max_spread = val_profile.get("max_spread_ratio", 1.0)
         if not value_records:
-            passed = True  # No records to check
+            passed = True
         else:
-            below = [
+            # Use spread_ratio as confidence proxy: low spread = high confidence
+            exceeded = [
                 r for r in value_records
-                if r.get("confidence", 0.0) < min_conf
+                if _compute_spread(r) > max_spread
             ]
-            passed = len(below) == 0
+            passed = len(exceeded) == 0
 
         if passed:
             gates_passed += 1
         violations.append({
             "gate": "value_min_confidence",
-            "required": min_conf,
-            "actual_below_threshold": (
-                [r.get("metric_id", "?") for r in below] if not passed else []
-            ) if value_records else [],
+            "note": "deprecated — using spread_ratio as proxy",
+            "required_max_spread": max_spread,
+            "exceeded": [r.get("metric_id", "?") for r in exceeded] if not passed and value_records else [],
             "passed": passed,
         })
 
@@ -416,7 +450,7 @@ def check_all_gates(
                         gate_name = v.get("gate", "")
                         if gate_name == "value_min_confidence":
                             suggested_actions.append(
-                                "Increase metric confidence by collecting more evidence or using additional estimation methods."
+                                "Reduce estimation spread_ratio by narrowing interval bounds (more evidence or tighter Fermi decomposition)."
                             )
                         elif gate_name == "value_literal_ratio":
                             suggested_actions.append(
@@ -565,12 +599,13 @@ _IMPLEMENTED_GATES: frozenset[str] = frozenset({
     "evidence_min_sources",
     "evidence_require_official_if_configured",
     "evidence_max_age_days",
-    "value_min_confidence",
     "value_spread_ratio",
     "value_literal_ratio",
     "prior_ratio_limit",
     "convergence_methods_required",
 })
+# Note: value_min_confidence code is kept for backward compatibility
+# but removed from declared gates (replaced by value_spread_ratio).
 
 
 def validate_gate_sync() -> dict[str, Any]:
